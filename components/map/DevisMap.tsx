@@ -1,5 +1,6 @@
 "use client"
 
+import "leaflet/dist/leaflet.css"
 import { useEffect, useRef } from "react"
 import type { GeoPoint } from "@/lib/types"
 
@@ -24,16 +25,13 @@ export function DevisMap({ origin, destination, className }: DevisMapProps) {
     import("leaflet").then((L) => {
       if (cancelled || !containerRef.current || mapRef.current) return
 
-      // Fix default marker icons (webpack asset path issue)
+      // Fix default marker icons broken by bundler asset hashing
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       delete (L.Icon.Default.prototype as any)._getIconUrl
       L.Icon.Default.mergeOptions({
-        iconRetinaUrl:
-          "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png",
-        iconUrl:
-          "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png",
-        shadowUrl:
-          "https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png",
+        iconRetinaUrl: "/leaflet/marker-icon-2x.png",
+        iconUrl: "/leaflet/marker-icon.png",
+        shadowUrl: "/leaflet/marker-shadow.png",
       })
 
       const map = L.map(containerRef.current!, {
@@ -74,12 +72,9 @@ export function DevisMap({ origin, destination, className }: DevisMapProps) {
       }
 
       const blueIcon = new L.Icon({
-        iconUrl:
-          "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png",
-        iconRetinaUrl:
-          "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png",
-        shadowUrl:
-          "https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png",
+        iconUrl: "/leaflet/marker-icon.png",
+        iconRetinaUrl: "/leaflet/marker-icon-2x.png",
+        shadowUrl: "/leaflet/marker-shadow.png",
         iconSize: [25, 41],
         iconAnchor: [12, 41],
         popupAnchor: [1, -34],
@@ -152,13 +147,5 @@ export function DevisMap({ origin, destination, className }: DevisMapProps) {
     }
   }, [])
 
-  return (
-    <>
-      <link
-        rel="stylesheet"
-        href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
-      />
-      <div ref={containerRef} className={className ?? "h-full w-full"} />
-    </>
-  )
+  return <div ref={containerRef} className={className ?? "h-full w-full"} />
 }
