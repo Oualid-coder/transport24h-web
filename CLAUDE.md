@@ -57,6 +57,15 @@ Les route groups `(client)`, `(admin)`, `(driver)` n'apparaissent pas dans les U
 - Installer des dépendances sans approbation explicite
 - Créer des fichiers de documentation non demandés
 
+## Breaking changes Next.js 16 (vs training data)
+
+- **`middleware.ts` → `proxy.ts`** : le fichier s'appelle désormais `proxy.ts`, l'export `middleware` → `proxy`
+- **`params` et `searchParams` sont des Promises** : `const { id } = await params` (plus de destructuring direct)
+- **`cookies()` est async** : `const cookieStore = await cookies()`
+- **`useSearchParams()`** doit toujours être dans un `<Suspense>` boundary
+- **Tailwind v4** : `@import 'tailwindcss'` + `@theme inline { }` — pas de `tailwind.config.js`
+- **shadcn base-nova** utilise `@base-ui/react` (pas Radix) — `render` prop à la place de `asChild`
+
 ## Avant d'écrire du code Next.js
 
 Lire le guide pertinent dans `node_modules/next/dist/docs/` — les APIs, conventions et structure de fichiers peuvent avoir des breaking changes par rapport au training data.
