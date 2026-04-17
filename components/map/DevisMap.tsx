@@ -97,9 +97,9 @@ export function DevisMap({ origin, destination, className }: DevisMapProps) {
       }
 
       if (origin && destination) {
-        // Fetch route from OSRM
+        // Fetch route via Next.js proxy — OSRM ne doit jamais être appelé directement depuis le browser
         try {
-          const url = `https://router.project-osrm.org/route/v1/driving/${origin.lng},${origin.lat};${destination.lng},${destination.lat}?overview=full&geometries=geojson`
+          const url = `/api/route?from_lat=${origin.lat}&from_lng=${origin.lng}&to_lat=${destination.lat}&to_lng=${destination.lng}`
           const res = await fetch(url)
           if (res.ok) {
             const data = (await res.json()) as {

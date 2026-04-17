@@ -54,7 +54,7 @@ function BookingReviewCard({ booking }: { booking: Booking }) {
   const queryClient = useQueryClient()
   const [editingPrice, setEditingPrice] = useState(false)
   const [priceInput, setPriceInput] = useState(
-    String(booking.priceHT.toFixed(2)),
+    String(booking.price_ht.toFixed(2)),
   )
 
   const priceMutation = useMutation({
@@ -73,7 +73,7 @@ function BookingReviewCard({ booking }: { booking: Booking }) {
     },
   })
 
-  const date = new Date(booking.scheduledAt)
+  const date = new Date(booking.scheduled_at)
 
   return (
     <Card>
@@ -107,23 +107,28 @@ function BookingReviewCard({ booking }: { booking: Booking }) {
           <div className="flex gap-2">
             <MapPin className="mt-0.5 size-4 shrink-0 text-primary" />
             <span className="text-muted-foreground line-clamp-1">
-              {booking.pickupAddress}
+              {booking.pickup_address}
             </span>
           </div>
           <div className="flex gap-2">
             <MapPin className="mt-0.5 size-4 shrink-0 text-muted-foreground" />
             <span className="text-muted-foreground line-clamp-1">
-              {booking.deliveryAddress}
+              {booking.delivery_address}
             </span>
           </div>
         </div>
 
         <div className="flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
-          <span>{booking.truckType}</span>
-          {booking.handlers > 0 && (
-            <span>{booking.handlers} manutentionnaire{booking.handlers > 1 ? "s" : ""}</span>
+          <span>{booking.truck_type}</span>
+          {booking.helpers_count > 0 && (
+            <span>
+              {booking.helpers_count} manutentionnaire
+              {booking.helpers_count > 1 ? "s" : ""}
+            </span>
           )}
-          <span className="text-muted-foreground/60">{booking.clientPhone}</span>
+          {booking.client_phone && (
+            <span className="text-muted-foreground/60">{booking.client_phone}</span>
+          )}
         </div>
 
         {/* Prix éditable */}
@@ -145,9 +150,7 @@ function BookingReviewCard({ booking }: { booking: Booking }) {
                 size="sm"
                 className="h-7"
                 disabled={priceMutation.isPending}
-                onClick={() =>
-                  priceMutation.mutate(parseFloat(priceInput))
-                }
+                onClick={() => priceMutation.mutate(parseFloat(priceInput))}
               >
                 {priceMutation.isPending && (
                   <Loader2 className="mr-1 size-3 animate-spin" />
@@ -165,11 +168,8 @@ function BookingReviewCard({ booking }: { booking: Booking }) {
             </>
           ) : (
             <>
-              <span className="flex-1 text-sm font-medium">
-                {booking.priceHT.toFixed(2)} € HT /{" "}
-                <span className="text-primary">
-                  {booking.priceTTC.toFixed(2)} € TTC
-                </span>
+              <span className="flex-1 text-sm font-medium text-primary">
+                {booking.price_ht.toFixed(2)} € HT
               </span>
               <Button
                 size="icon"
@@ -206,7 +206,7 @@ function BookingReviewCard({ booking }: { booking: Booking }) {
 // ── Carte courses du jour ────────────────────────────────────────────────────
 
 function TodayBookingCard({ booking }: { booking: Booking }) {
-  const date = new Date(booking.scheduledAt)
+  const date = new Date(booking.scheduled_at)
   return (
     <div className="flex items-center gap-4 rounded-lg border border-border/50 bg-card p-4">
       <div className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-primary/10">
@@ -220,15 +220,16 @@ function TodayBookingCard({ booking }: { booking: Booking }) {
           })}
           {" — "}
           <span className="text-muted-foreground">
-            {booking.pickupAddress.split(",")[0]}
+            {booking.pickup_address.split(",")[0]}
           </span>
           {" → "}
           <span className="text-muted-foreground">
-            {booking.deliveryAddress.split(",")[0]}
+            {booking.delivery_address.split(",")[0]}
           </span>
         </p>
         <p className="text-xs text-muted-foreground">
-          {booking.truckType} · {booking.clientPhone}
+          {booking.truck_type}
+          {booking.client_phone ? ` · ${booking.client_phone}` : ""}
         </p>
       </div>
       <Badge variant={STATUS_VARIANT[booking.status]}>
@@ -275,7 +276,9 @@ export default function AdminDashboardPage() {
               <Calendar className="size-5 text-primary" />
             </div>
             <div>
-              <p className="text-xs text-muted-foreground">Courses aujourd'hui</p>
+              <p className="text-xs text-muted-foreground">
+                Courses aujourd&apos;hui
+              </p>
               <p className="text-2xl font-bold">{todayBookings.length}</p>
             </div>
           </CardContent>
@@ -286,7 +289,9 @@ export default function AdminDashboardPage() {
               <Package className="size-5 text-muted-foreground" />
             </div>
             <div>
-              <p className="text-xs text-muted-foreground">En attente de validation</p>
+              <p className="text-xs text-muted-foreground">
+                En attente de validation
+              </p>
               <p className="text-2xl font-bold">{pendingBookings.length}</p>
             </div>
           </CardContent>
@@ -297,9 +302,13 @@ export default function AdminDashboardPage() {
               <CheckCircle2 className="size-5 text-primary" />
             </div>
             <div>
-              <p className="text-xs text-muted-foreground">Confirmées aujourd'hui</p>
+              <p className="text-xs text-muted-foreground">
+                Confirmées aujourd&apos;hui
+              </p>
               <p className="text-2xl font-bold">
-                {todayBookings.filter((b) => b.status === "confirmed").length}
+                {
+                  todayBookings.filter((b) => b.status === "confirmed").length
+                }
               </p>
             </div>
           </CardContent>
@@ -348,7 +357,7 @@ export default function AdminDashboardPage() {
           ) : todayBookings.length === 0 ? (
             <div className="rounded-xl border border-dashed border-border py-16 text-center">
               <p className="text-muted-foreground">
-                Aucune course programmée aujourd'hui.
+                Aucune course programmée aujourd&apos;hui.
               </p>
             </div>
           ) : (
@@ -356,8 +365,8 @@ export default function AdminDashboardPage() {
               {todayBookings
                 .sort(
                   (a, b) =>
-                    new Date(a.scheduledAt).getTime() -
-                    new Date(b.scheduledAt).getTime(),
+                    new Date(a.scheduled_at).getTime() -
+                    new Date(b.scheduled_at).getTime(),
                 )
                 .map((b) => (
                   <TodayBookingCard key={b.id} booking={b} />

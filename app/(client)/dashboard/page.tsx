@@ -20,7 +20,8 @@ async function getMyBookings(): Promise<Booking[]> {
   const res = await fetch(
     `${process.env.NEXT_PUBLIC_API_URL}/bookings/me`,
     {
-      headers: { Cookie: `access_token=${token}` },
+      // Go auth middleware lit Authorization: Bearer, pas Cookie
+      headers: { Authorization: `Bearer ${token}` },
       cache: "no-store",
     },
   )
@@ -48,7 +49,7 @@ const STATUS_VARIANT: Record<
 }
 
 function BookingCard({ booking }: { booking: Booking }) {
-  const date = new Date(booking.scheduledAt)
+  const date = new Date(booking.scheduled_at)
   return (
     <Card>
       <CardHeader>
@@ -82,29 +83,30 @@ function BookingCard({ booking }: { booking: Booking }) {
           <div className="flex gap-2">
             <MapPin className="mt-0.5 size-4 shrink-0 text-primary" />
             <span className="text-muted-foreground line-clamp-1">
-              {booking.pickupAddress}
+              {booking.pickup_address}
             </span>
           </div>
           <div className="flex gap-2">
             <MapPin className="mt-0.5 size-4 shrink-0 text-muted-foreground" />
             <span className="text-muted-foreground line-clamp-1">
-              {booking.deliveryAddress}
+              {booking.delivery_address}
             </span>
           </div>
         </div>
         <div className="flex flex-wrap gap-3 text-xs text-muted-foreground">
           <span className="flex items-center gap-1">
             <Package className="size-3" />
-            {booking.truckType}
+            {booking.truck_type}
           </span>
-          {booking.handlers > 0 && (
+          {booking.helpers_count > 0 && (
             <span className="flex items-center gap-1">
               <Clock className="size-3" />
-              {booking.handlers} manutentionnaire{booking.handlers > 1 ? "s" : ""}
+              {booking.helpers_count} manutentionnaire
+              {booking.helpers_count > 1 ? "s" : ""}
             </span>
           )}
           <span className="ml-auto font-medium text-foreground">
-            {booking.priceTTC.toFixed(2)} €
+            {booking.price_ht.toFixed(2)} € HT
           </span>
         </div>
       </CardContent>

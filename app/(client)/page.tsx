@@ -1,7 +1,7 @@
 "use client"
 
 import dynamic from "next/dynamic"
-import { useState, useCallback } from "react"
+import { useState, useEffect } from "react"
 import { useQuery } from "@tanstack/react-query"
 import {
   ArrowRight,
@@ -18,7 +18,8 @@ import { Label } from "@/components/ui/label"
 import { Slider } from "@/components/ui/slider"
 import { Textarea } from "@/components/ui/textarea"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { getQuoteEstimate } from "@/lib/api"
+import { geocodeAddress, getQuoteEstimate } from "@/lib/api"
+import { TRUCK_VOLUME } from "@/lib/types"
 import type { GeoPoint, TruckType } from "@/lib/types"
 
 // Leaflet n'existe pas côté serveur
@@ -27,47 +28,11 @@ const DevisMap = dynamic(
   { ssr: false, loading: () => <div className="h-full w-full animate-pulse rounded-xl bg-muted" /> },
 )
 
-// ── Geocoding Nominatim ──────────────────────────────────────────────────────
-
-async function geocode(address: string): Promise<GeoPoint | null> {
-  if (address.trim().length < 5) return null
-  const qs = new URLSearchParams({
-    q: address,
-    format: "json",
-    limit: "1",
-    countrycodes: "fr",
-  })
-  try {
-    const res = await fetch(
-      `https://nominatim.openstreetmap.org/search?${qs.toString()}`,
-      { headers: { "Accept-Language": "fr" } },
-    )
-    if (!res.ok) return null
-    const data = (await res.json()) as Array<{
-      lat: string
-      lon: string
-      display_name: string
-    }>
-    if (!data[0]) return null
-    return {
-      lat: parseFloat(data[0].lat),
-      lng: parseFloat(data[0].lon),
-      address: data[0].display_name,
-    }
-  } catch {
-    return null
-  }
-}
-
-// ── Types camions ────────────────────────────────────────────────────────────
-
 const TRUCKS: { type: TruckType; label: string; desc: string }[] = [
   { type: "12m3", label: "12 m³", desc: "Studio / 1 pièce" },
   { type: "16m3", label: "16 m³", desc: "2–3 pièces" },
   { type: "20m3", label: "20 m³", desc: "4 pièces et +" },
 ]
-
-// ── Composant principal ──────────────────────────────────────────────────────
 
 export default function HomePage() {
   const [truckType, setTruckType] = useState<TruckType>("16m3")
@@ -80,37 +45,49 @@ export default function HomePage() {
   const [comment, setComment] = useState("")
   const [geocoding, setGeocoding] = useState<"origin" | "dest" | null>(null)
 
-  // Geocode à la fin de la saisie (blur)
-  const handleOriginBlur = useCallback(async () => {
-    if (!originInput) return
-    setGeocoding("origin")
-    const pt = await geocode(originInput)
-    setOrigin(pt)
-    setGeocoding(null)
+  // Geocode avec debounce 500ms sur chaque champ adresse
+  useEffect(() => {
+    if (originInput.trim().length < 5) {
+      setOrigin(null)
+      return
+    }
+    const timer = setTimeout(async () => {
+      setGeocoding("origin")
+      const pt = await geocodeAddress(originInput)
+      setOrigin(pt)
+      setGeocoding(null)
+    }, 500)
+    return () => clearTimeout(timer)
   }, [originInput])
 
-  const handleDestBlur = useCallback(async () => {
-    if (!destInput) return
-    setGeocoding("dest")
-    const pt = await geocode(destInput)
-    setDestination(pt)
-    setGeocoding(null)
+  useEffect(() => {
+    if (destInput.trim().length < 5) {
+      setDestination(null)
+      return
+    }
+    const timer = setTimeout(async () => {
+      setGeocoding("dest")
+      const pt = await geocodeAddress(destInput)
+      setDestination(pt)
+      setGeocoding(null)
+    }, 500)
+    return () => clearTimeout(timer)
   }, [destInput])
 
-  // Devis en temps réel
-  const quoteReady =
-    origin !== null && destination !== null
+  // Devis en temps réel dès que les deux points sont géocodés
+  const quoteReady = origin !== null && destination !== null
 
   const { data: quote, isFetching: quoteFetching } = useQuery({
     queryKey: ["quote", origin, destination, truckType, handlers],
     queryFn: () =>
       getQuoteEstimate({
-        pickupLat: origin!.lat,
-        pickupLng: origin!.lng,
-        deliveryLat: destination!.lat,
-        deliveryLng: destination!.lng,
-        truckType,
-        handlers,
+        pickup_lat: origin!.lat,
+        pickup_lng: origin!.lng,
+        delivery_lat: destination!.lat,
+        delivery_lng: destination!.lng,
+        volume_m3: TRUCK_VOLUME[truckType],
+        helpers_count: handlers,
+        truck_type: truckType,
       }),
     enabled: quoteReady,
     staleTime: 60_000,
@@ -120,7 +97,6 @@ export default function HomePage() {
     <>
       {/* ── Hero ──────────────────────────────────────────────────────────── */}
       <section className="relative overflow-hidden py-24 sm:py-32">
-        {/* Gradient background */}
         <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_80%_50%_at_50%_-20%,oklch(0.58_0.22_262/0.25),transparent)]" />
 
         <div className="mx-auto max-w-7xl px-4 sm:px-6">
@@ -135,7 +111,7 @@ export default function HomePage() {
               <br />à portée de clic
             </h1>
             <p className="mt-6 text-lg text-muted-foreground">
-              Déménagement, livraison d'encombrants, transport de matériel.
+              Déménagement, livraison d&apos;encombrants, transport de matériel.
               Obtenez un prix instantané et réservez en ligne.
             </p>
             <div className="mt-8 flex flex-wrap justify-center gap-3">
@@ -222,7 +198,6 @@ export default function HomePage() {
                         placeholder="Ex: 12 rue de la Paix, Paris"
                         value={originInput}
                         onChange={(e) => setOriginInput(e.target.value)}
-                        onBlur={handleOriginBlur}
                         className="pr-8"
                       />
                       {geocoding === "origin" && (
@@ -237,14 +212,13 @@ export default function HomePage() {
                   </div>
 
                   <div className="space-y-1.5">
-                    <Label htmlFor="dest">Adresse d'arrivée</Label>
+                    <Label htmlFor="dest">Adresse d&apos;arrivée</Label>
                     <div className="relative">
                       <Input
                         id="dest"
                         placeholder="Ex: 5 avenue Victor Hugo, Lyon"
                         value={destInput}
                         onChange={(e) => setDestInput(e.target.value)}
-                        onBlur={handleDestBlur}
                         className="pr-8"
                       />
                       {geocoding === "dest" && (
@@ -265,7 +239,12 @@ export default function HomePage() {
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2 text-sm">
                     <Users className="size-4 text-primary" />
-                    Manutentionnaires — {handlers === 0 ? "Aucun" : handlers === 1 ? "1 manutentionnaire" : "2 manutentionnaires"}
+                    Manutentionnaires —{" "}
+                    {handlers === 0
+                      ? "Aucun"
+                      : handlers === 1
+                        ? "1 manutentionnaire"
+                        : "2 manutentionnaires"}
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="px-6">
@@ -274,7 +253,9 @@ export default function HomePage() {
                     max={2}
                     step={1}
                     value={[handlers]}
-                    onValueChange={(v) => setHandlers(Array.isArray(v) ? (v[0] ?? 0) : v)}
+                    onValueChange={(v) =>
+                      setHandlers(Array.isArray(v) ? (v[0] ?? 0) : v)
+                    }
                     className="my-2"
                   />
                   <div className="mt-3 flex justify-between text-xs text-muted-foreground">
@@ -342,8 +323,8 @@ export default function HomePage() {
                 <CardContent>
                   {!quoteReady ? (
                     <p className="text-sm text-muted-foreground">
-                      Renseignez les adresses de départ et d'arrivée pour voir
-                      le prix.
+                      Renseignez les adresses de départ et d&apos;arrivée pour
+                      voir le prix.
                     </p>
                   ) : quoteFetching ? (
                     <div className="flex items-center gap-2 text-sm text-muted-foreground">
@@ -354,25 +335,27 @@ export default function HomePage() {
                     <div className="space-y-4">
                       <div className="flex items-end justify-between">
                         <span className="text-sm text-muted-foreground">
-                          Prix TTC
+                          Prix HT
                         </span>
                         <span className="text-3xl font-bold text-primary">
-                          {quote.priceTTC.toFixed(2)} €
+                          {quote.price_ht.toFixed(2)} €
                         </span>
                       </div>
                       <div className="space-y-1 text-xs text-muted-foreground">
                         <div className="flex justify-between">
                           <span>Distance</span>
-                          <span>{quote.distanceKm.toFixed(0)} km</span>
+                          <span>{quote.distance_km.toFixed(0)} km</span>
                         </div>
                         <div className="flex justify-between">
-                          <span>Durée estimée</span>
-                          <span>{quote.durationMin} min</span>
+                          <span>Volume</span>
+                          <span>{quote.volume_m3} m³</span>
                         </div>
-                        <div className="flex justify-between">
-                          <span>Prix HT</span>
-                          <span>{quote.priceHT.toFixed(2)} €</span>
-                        </div>
+                        {quote.helpers_count > 0 && (
+                          <div className="flex justify-between">
+                            <span>Manutentionnaires</span>
+                            <span>{quote.helpers_count}</span>
+                          </div>
+                        )}
                       </div>
                       {phone ? (
                         <Button
@@ -421,7 +404,7 @@ export default function HomePage() {
               {
                 icon: <CheckCircle2 className="size-5 text-primary" />,
                 title: "Prix transparents",
-                desc: "Le prix affiché est le prix final. Pas de mauvaise surprise à l'arrivée.",
+                desc: "Le prix affiché est le prix final. Pas de mauvaise surprise à l&apos;arrivée.",
               },
               {
                 icon: <Truck className="size-5 text-primary" />,
@@ -431,7 +414,7 @@ export default function HomePage() {
               {
                 icon: <Users className="size-5 text-primary" />,
                 title: "Manutentionnaires disponibles",
-                desc: "Ajoutez jusqu'à 2 manutentionnaires pour le chargement et déchargement.",
+                desc: "Ajoutez jusqu&apos;à 2 manutentionnaires pour le chargement et déchargement.",
               },
             ].map((f) => (
               <div
