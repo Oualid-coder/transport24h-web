@@ -19,7 +19,8 @@ async function getDriverBookings(): Promise<Booking[]> {
   const res = await fetch(
     `${process.env.NEXT_PUBLIC_API_URL}/driver/bookings`,
     {
-      headers: { Cookie: `access_token=${token}` },
+      // Go auth middleware lit Authorization: Bearer, pas Cookie
+      headers: { Authorization: `Bearer ${token}` },
       cache: "no-store",
     },
   )
@@ -86,11 +87,11 @@ export default async function DriverDashboardPage() {
             {upcoming
               .sort(
                 (a, b) =>
-                  new Date(a.scheduledAt).getTime() -
-                  new Date(b.scheduledAt).getTime(),
+                  new Date(a.scheduled_at).getTime() -
+                  new Date(b.scheduled_at).getTime(),
               )
               .map((b) => {
-                const date = new Date(b.scheduledAt)
+                const date = new Date(b.scheduled_at)
                 return (
                   <Card key={b.id}>
                     <CardHeader>
@@ -122,24 +123,24 @@ export default async function DriverDashboardPage() {
                       <div className="flex gap-2">
                         <MapPin className="mt-0.5 size-4 shrink-0 text-primary" />
                         <span className="text-muted-foreground line-clamp-2">
-                          {b.pickupAddress}
+                          {b.pickup_address}
                         </span>
                       </div>
                       <div className="flex gap-2">
                         <MapPin className="mt-0.5 size-4 shrink-0 text-muted-foreground/50" />
                         <span className="text-muted-foreground line-clamp-2">
-                          {b.deliveryAddress}
+                          {b.delivery_address}
                         </span>
                       </div>
                       <div className="flex items-center gap-3 pt-1 text-xs text-muted-foreground">
-                        <span>{b.truckType}</span>
-                        {b.handlers > 0 && (
+                        <span>{b.truck_type}</span>
+                        {b.helpers_count > 0 && (
                           <span>
-                            {b.handlers} manutentionnaire
-                            {b.handlers > 1 ? "s" : ""}
+                            {b.helpers_count} manutentionnaire
+                            {b.helpers_count > 1 ? "s" : ""}
                           </span>
                         )}
-                        <span>{b.clientPhone}</span>
+                        {b.client_phone && <span>{b.client_phone}</span>}
                       </div>
                     </CardContent>
                   </Card>
@@ -157,7 +158,7 @@ export default async function DriverDashboardPage() {
           </h2>
           <div className="space-y-3">
             {past.slice(0, 10).map((b) => {
-              const date = new Date(b.scheduledAt)
+              const date = new Date(b.scheduled_at)
               return (
                 <div
                   key={b.id}
@@ -169,9 +170,8 @@ export default async function DriverDashboardPage() {
                         day: "numeric",
                         month: "short",
                       })}{" "}
-                      —{" "}
-                      {b.pickupAddress.split(",")[0]} →{" "}
-                      {b.deliveryAddress.split(",")[0]}
+                      — {b.pickup_address.split(",")[0]} →{" "}
+                      {b.delivery_address.split(",")[0]}
                     </p>
                   </div>
                   <Badge variant={STATUS_VARIANT[b.status]}>

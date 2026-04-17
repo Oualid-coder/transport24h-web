@@ -30,8 +30,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { registerPartner } from "@/lib/api"
-import { ApiError } from "@/lib/api"
+import { registerPartner, ApiError } from "@/lib/api"
 import type { TruckType } from "@/lib/types"
 
 const partnerSchema = z.object({
@@ -76,7 +75,14 @@ export default function PartnersPage() {
   const onSubmit = async (data: PartnerForm) => {
     setServerError(null)
     try {
-      await registerPartner(data)
+      await registerPartner({
+        first_name: data.firstName,
+        last_name: data.lastName,
+        email: data.email,
+        phone: data.phone,
+        siret: data.siret,
+        truck_type: data.truckType,
+      })
       setSuccess(true)
     } catch (err) {
       if (err instanceof ApiError) {

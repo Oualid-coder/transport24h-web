@@ -1,19 +1,21 @@
 "use client"
 
-import { useSearchParams } from "next/navigation"
-import { Suspense, useState } from "react"
+import { useSearchParams, useRouter } from "next/navigation"
+import { Suspense, useState, useEffect } from "react"
 import { Loader2, Truck } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { createBooking, ApiError } from "@/lib/api"
+import { createSavedQuote, createBooking, ApiError } from "@/lib/api"
+import { TRUCK_VOLUME } from "@/lib/types"
 import type { TruckType } from "@/lib/types"
 
 function BookingContent() {
   const sp = useSearchParams()
+  const router = useRouter()
 
-  // Params from quote
+  // Paramètres transmis depuis le formulaire devis
   const truck = (sp.get("truck") ?? "16m3") as TruckType
   const handlers = Number(sp.get("handlers") ?? 1)
   const pickupLat = Number(sp.get("pickupLat"))
@@ -30,32 +32,66 @@ function BookingContent() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
+  // Redirect vers login si pas authentifié
+  useEffect(() => {
+    const hasToken = document.cookie.includes("access_token=")
+    if (!hasToken) {
+      router.push(
+        `/login?redirect=${encodeURIComponent(
+          window.location.pathname + window.location.search,
+        )}`,
+      )
+    }
+  }, [router])
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!scheduledAt || !scheduledTime) return
     setLoading(true)
     setError(null)
 
-    const datetime = `${scheduledAt}T${scheduledTime}:00`
+    // RFC3339 : "2026-04-20T09:00:00+02:00"
+    // On utilise l'offset local pour être correct côté backend
+    const localOffset = -new Date().getTimezoneOffset()
+    const sign = localOffset >= 0 ? "+" : "-"
+    const hh = String(Math.floor(Math.abs(localOffset) / 60)).padStart(2, "0")
+    const mm = String(Math.abs(localOffset) % 60).padStart(2, "0")
+    const scheduledAtRFC3339 = `${scheduledAt}T${scheduledTime}:00${sign}${hh}:${mm}`
 
     try {
-      const booking = await createBooking({
-        pickupLat,
-        pickupLng,
-        pickupAddress,
-        deliveryLat,
-        deliveryLng,
-        deliveryAddress,
-        truckType: truck,
-        handlers,
-        scheduledAt: datetime,
-        clientPhone: phone,
-        comment: comment || undefined,
+      // Étape 1 — Créer le devis sauvegardé (authentifié)
+      const savedQuote = await createSavedQuote({
+        pickup_address: pickupAddress,
+        pickup_lat: pickupLat,
+        pickup_lng: pickupLng,
+        delivery_address: deliveryAddress,
+        delivery_lat: deliveryLat,
+        delivery_lng: deliveryLng,
+        volume_m3: TRUCK_VOLUME[truck],
+        helpers_count: handlers,
+        truck_type: truck,
       })
-      // Redirect to payment
-      window.location.href = `/booking/payment?id=${booking.id}`
+
+      // Étape 2 — Créer la réservation avec le quote_id
+      const booking = await createBooking({
+        quote_id: savedQuote.id,
+        scheduled_at: scheduledAtRFC3339,
+        client_comment: comment || undefined,
+      })
+
+      // Redirection vers la confirmation / paiement
+      window.location.href = `/booking/confirmation?id=${booking.id}`
     } catch (err) {
       if (err instanceof ApiError) {
+        if (err.status === 401) {
+          // Session expirée — retour au login
+          router.push(
+            `/login?redirect=${encodeURIComponent(
+              window.location.pathname + window.location.search,
+            )}`,
+          )
+          return
+        }
         setError(err.message)
       } else {
         setError("Une erreur est survenue. Veuillez réessayer.")
@@ -65,10 +101,9 @@ function BookingContent() {
     }
   }
 
-  // Build tomorrow as min date
   const tomorrow = new Date()
   tomorrow.setDate(tomorrow.getDate() + 1)
-  const minDate = tomorrow.toISOString().split("T")[0]
+  const minDate = tomorrow.toISOString().split("T")[0]!
 
   return (
     <div className="mx-auto max-w-2xl px-4 py-12">
@@ -90,19 +125,27 @@ function BookingContent() {
             <div className="grid grid-cols-2 gap-x-4 gap-y-2">
               <div>
                 <p className="text-xs text-muted-foreground">Départ</p>
-                <p className="font-medium line-clamp-2">{pickupAddress || "—"}</p>
+                <p className="font-medium line-clamp-2">
+                  {pickupAddress || "—"}
+                </p>
               </div>
               <div>
                 <p className="text-xs text-muted-foreground">Arrivée</p>
-                <p className="font-medium line-clamp-2">{deliveryAddress || "—"}</p>
+                <p className="font-medium line-clamp-2">
+                  {deliveryAddress || "—"}
+                </p>
               </div>
               <div>
                 <p className="text-xs text-muted-foreground">Camion</p>
                 <p className="font-medium">{truck}</p>
               </div>
               <div>
-                <p className="text-xs text-muted-foreground">Manutentionnaires</p>
-                <p className="font-medium">{handlers === 0 ? "Aucun" : handlers}</p>
+                <p className="text-xs text-muted-foreground">
+                  Manutentionnaires
+                </p>
+                <p className="font-medium">
+                  {handlers === 0 ? "Aucun" : handlers}
+                </p>
               </div>
               {phone && (
                 <div>
@@ -157,14 +200,18 @@ function BookingContent() {
             </p>
           )}
 
-          <Button type="submit" size="lg" className="w-full" disabled={loading}>
+          <Button
+            type="submit"
+            size="lg"
+            className="w-full"
+            disabled={loading}
+          >
             {loading && <Loader2 className="mr-2 size-4 animate-spin" />}
-            Confirmer et passer au paiement
+            Confirmer la réservation
           </Button>
 
           <p className="text-center text-xs text-muted-foreground">
-            Le paiement est sécurisé. Votre réservation sera confirmée par notre
-            équipe sous 2h.
+            Votre réservation sera confirmée par notre équipe sous 2h.
           </p>
         </form>
       </div>
