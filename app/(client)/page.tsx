@@ -12,7 +12,7 @@ import {
   Truck,
   Users,
 } from "lucide-react"
-import { Button } from "@/components/ui/button"
+import { buttonVariants } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Slider } from "@/components/ui/slider"
@@ -115,10 +115,10 @@ export default function HomePage() {
               Obtenez un prix instantané et réservez en ligne.
             </p>
             <div className="mt-8 flex flex-wrap justify-center gap-3">
-              <Button size="lg" render={<a href="#devis" />}>
+              <a href="#devis" className={buttonVariants({ size: "lg" })}>
                 Obtenir mon devis gratuit
                 <ArrowRight className="ml-2 size-4" />
-              </Button>
+              </a>
             </div>
           </div>
 
@@ -358,22 +358,18 @@ export default function HomePage() {
                         )}
                       </div>
                       {phone ? (
-                        <Button
-                          className="w-full"
-                          render={
-                            <a
-                              href={`/booking?truck=${truckType}&handlers=${handlers}&pickupLat=${origin?.lat}&pickupLng=${origin?.lng}&pickup=${encodeURIComponent(origin?.address ?? "")}&deliveryLat=${destination?.lat}&deliveryLng=${destination?.lng}&delivery=${encodeURIComponent(destination?.address ?? "")}&phone=${encodeURIComponent(phone)}&comment=${encodeURIComponent(comment)}`}
-                            />
-                          }
+                        <a
+                          href={`/booking?truck=${truckType}&handlers=${handlers}&pickupLat=${origin?.lat}&pickupLng=${origin?.lng}&pickup=${encodeURIComponent(origin?.address ?? "")}&deliveryLat=${destination?.lat}&deliveryLng=${destination?.lng}&delivery=${encodeURIComponent(destination?.address ?? "")}&phone=${encodeURIComponent(phone)}&comment=${encodeURIComponent(comment)}`}
+                          className={buttonVariants({ className: "w-full" })}
                         >
                           Réserver maintenant
                           <ArrowRight className="ml-2 size-4" />
-                        </Button>
+                        </a>
                       ) : (
-                        <Button className="w-full" disabled>
+                        <span className={buttonVariants({ className: "w-full opacity-50 pointer-events-none" })}>
                           Réserver maintenant
                           <ArrowRight className="ml-2 size-4" />
-                        </Button>
+                        </span>
                       )}
                       {!phone && (
                         <p className="text-center text-xs text-muted-foreground">
