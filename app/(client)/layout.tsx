@@ -1,6 +1,6 @@
 import Link from "next/link"
 import { Truck } from "lucide-react"
-import { Button } from "@/components/ui/button"
+import { buttonVariants } from "@/components/ui/button"
 
 export default function ClientLayout({
   children,
@@ -30,12 +30,12 @@ export default function ClientLayout({
           </nav>
 
           <div className="flex items-center gap-2">
-            <Button variant="ghost" size="sm" render={<Link href="/login" />}>
+            <Link href="/login" className={buttonVariants({ variant: "ghost", size: "sm" })}>
               Connexion
-            </Button>
-            <Button size="sm" render={<Link href="/#devis" />}>
+            </Link>
+            <Link href="/#devis" className={buttonVariants({ size: "sm" })}>
               Obtenir un devis
-            </Button>
+            </Link>
           </div>
         </div>
       </header>
