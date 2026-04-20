@@ -73,6 +73,20 @@ export interface SavedQuote {
 
 // ── Réservations ──────────────────────────────────────────────────────────────
 
+// Course disponible visible par les chauffeurs avant acceptation
+// (pas de données client — elles sont masquées tant que la course n'est pas assignée)
+export interface AvailableBooking {
+  id: string
+  pickup_address: string
+  delivery_address: string
+  distance_km: number
+  volume_m3: number
+  helpers_count: number
+  truck_type: TruckType
+  price_ht: number
+  scheduled_at: string
+}
+
 // Body vers POST /bookings — mirrors Go createBookingRequest
 export interface CreateBookingBody {
   quote_id: string
