@@ -1,5 +1,7 @@
 import type {
+  AdminStats,
   Booking,
+  BookingWithClient,
   CreateBookingBody,
   CreateQuoteBody,
   EstimateBody,
@@ -143,25 +145,38 @@ export function getBookingById(id: string): Promise<Booking> {
 
 // ── Admin ─────────────────────────────────────────────────────────────────────
 
+// GET /admin/bookings?status=xxx — status optionnel : "pending_review" | "today" | omis = tous
+export function getAdminBookings(status?: string): Promise<BookingWithClient[]> {
+  const path = status
+    ? `/admin/bookings?status=${encodeURIComponent(status)}`
+    : "/admin/bookings"
+  return apiFetch<BookingWithClient[]>(path)
+}
+
+export function getAdminStats(): Promise<AdminStats> {
+  return apiFetch<AdminStats>("/admin/stats")
+}
+
+export function updateBookingPrice(id: string, priceHT: number): Promise<BookingWithClient> {
+  return apiFetch<BookingWithClient>(`/admin/bookings/${id}/price`, {
+    method: "PATCH",
+    body: JSON.stringify({ price_ht: priceHT }),
+  })
+}
+
+export function confirmBooking(id: string): Promise<BookingWithClient> {
+  return apiFetch<BookingWithClient>(`/admin/bookings/${id}/confirm`, {
+    method: "POST",
+  })
+}
+
+// Conservées pour compatibilité — préférer getAdminBookings dans les nouveaux composants
 export function getBookingsToday(): Promise<Booking[]> {
   return apiFetch<Booking[]>("/admin/bookings/today")
 }
 
 export function getPendingReviewBookings(): Promise<Booking[]> {
   return apiFetch<Booking[]>("/admin/bookings/pending-review")
-}
-
-export function updateBookingPrice(id: string, priceHT: number): Promise<Booking> {
-  return apiFetch<Booking>(`/admin/bookings/${id}/price`, {
-    method: "PATCH",
-    body: JSON.stringify({ price_ht: priceHT }),
-  })
-}
-
-export function confirmBooking(id: string): Promise<Booking> {
-  return apiFetch<Booking>(`/admin/bookings/${id}/confirm`, {
-    method: "POST",
-  })
 }
 
 // ── Auth (via Route Handler Next.js) ─────────────────────────────────────────
