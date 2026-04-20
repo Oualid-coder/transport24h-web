@@ -9,6 +9,7 @@ import type {
   GeoPoint,
   PartnerApplyBody,
   PaymentIntent,
+  RegisterBody,
   SavedQuote,
 } from "@/lib/types"
 
@@ -181,8 +182,8 @@ export function getPendingReviewBookings(): Promise<Booking[]> {
 
 // ── Auth (via Route Handler Next.js) ─────────────────────────────────────────
 
-// Passe par /api/auth/login qui stocke l'access_token en cookie
-export async function login(email: string, password: string): Promise<void> {
+// Passe par /api/auth/login qui stocke les cookies et retourne redirect_to
+export async function login(email: string, password: string): Promise<{ redirect_to: string }> {
   const res = await fetch("/api/auth/login", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -193,13 +194,20 @@ export async function login(email: string, password: string): Promise<void> {
     const body = (await res.json().catch(() => ({}))) as { error?: string }
     throw new ApiError(res.status, body.error ?? "Identifiants invalides")
   }
+  return res.json() as Promise<{ redirect_to: string }>
 }
 
 export async function logout(): Promise<void> {
-  // Suppression côté client
   document.cookie = "access_token=; path=/; max-age=0"
-  // Optionnel: notifier le backend pour invalider le refresh_token
+  document.cookie = "user_role=; path=/; max-age=0"
   await fetch("/api/auth/logout", { method: "POST", credentials: "include" }).catch(() => {})
+}
+
+export function register(body: RegisterBody): Promise<void> {
+  return apiFetch<void>("/auth/register", {
+    method: "POST",
+    body: JSON.stringify(body),
+  })
 }
 
 // ── Partenaires ───────────────────────────────────────────────────────────────

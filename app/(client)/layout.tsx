@@ -1,12 +1,16 @@
+import { cookies } from "next/headers"
 import Link from "next/link"
 import { Truck } from "lucide-react"
-import { buttonVariants } from "@/components/ui/button"
+import { NavActions } from "@/components/nav-actions"
 
-export default function ClientLayout({
+export default async function ClientLayout({
   children,
 }: {
   children: React.ReactNode
 }) {
+  const cookieStore = await cookies()
+  const isLoggedIn = !!cookieStore.get("access_token")?.value
+
   return (
     <div className="flex min-h-screen flex-col">
       <header className="sticky top-0 z-50 border-b border-border/50 bg-background/80 backdrop-blur-md">
@@ -21,22 +25,21 @@ export default function ClientLayout({
           </Link>
 
           <nav className="hidden items-center gap-6 text-sm text-muted-foreground md:flex">
-            <Link href="/#devis" className="hover:text-foreground transition-colors">
+            <Link
+              href="/#devis"
+              className="hover:text-foreground transition-colors"
+            >
               Devis
             </Link>
-            <Link href="/partners" className="hover:text-foreground transition-colors">
+            <Link
+              href="/partners"
+              className="hover:text-foreground transition-colors"
+            >
               Devenir partenaire
             </Link>
           </nav>
 
-          <div className="flex items-center gap-2">
-            <Link href="/login" className={buttonVariants({ variant: "ghost", size: "sm" })}>
-              Connexion
-            </Link>
-            <Link href="/#devis" className={buttonVariants({ size: "sm" })}>
-              Obtenir un devis
-            </Link>
-          </div>
+          <NavActions isLoggedIn={isLoggedIn} />
         </div>
       </header>
 
@@ -53,7 +56,10 @@ export default function ClientLayout({
               © {new Date().getFullYear()} Transport24h — Tous droits réservés
             </p>
             <div className="flex gap-4 text-xs text-muted-foreground">
-              <Link href="/partners" className="hover:text-foreground transition-colors">
+              <Link
+                href="/partners"
+                className="hover:text-foreground transition-colors"
+              >
                 Devenir partenaire
               </Link>
             </div>

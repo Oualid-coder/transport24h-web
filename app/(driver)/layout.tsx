@@ -1,5 +1,6 @@
 import Link from "next/link"
 import { Home, Truck } from "lucide-react"
+import { LogoutButton } from "@/components/logout-button"
 
 export default function DriverLayout({
   children,
@@ -19,17 +20,20 @@ export default function DriverLayout({
               Chauffeur
             </span>
           </div>
-          <nav className="flex items-center gap-4 text-sm text-muted-foreground">
+
+          <nav className="flex items-center gap-1 text-sm text-muted-foreground">
             <Link
               href="/driver/dashboard"
-              className="flex items-center gap-1.5 hover:text-foreground transition-colors"
+              className="flex items-center gap-1.5 rounded-lg px-3 py-2 transition-colors hover:bg-accent hover:text-foreground"
             >
               <Home className="size-4" />
-              Mes courses
+              Mes missions
             </Link>
+            <LogoutButton className="w-auto px-3 py-2" />
           </nav>
         </div>
       </header>
+
       <main className="flex-1 p-6">{children}</main>
     </div>
   )

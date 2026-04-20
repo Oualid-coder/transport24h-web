@@ -6,13 +6,12 @@ import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import * as z from "zod"
 import Link from "next/link"
-import { Loader2, Truck } from "lucide-react"
+import { CheckCircle2, Loader2, Truck } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardHeader } from "@/components/ui/card"
-import { login } from "@/lib/api"
-import { ApiError } from "@/lib/api"
+import { login, ApiError } from "@/lib/api"
 
 const loginSchema = z.object({
   email: z.email({ error: "Adresse e-mail invalide" }),
@@ -23,7 +22,8 @@ type LoginForm = z.infer<typeof loginSchema>
 
 function LoginContent() {
   const sp = useSearchParams()
-  const redirect = sp.get("redirect") ?? "/dashboard"
+  const redirectParam = sp.get("redirect")
+  const registered = sp.get("registered") === "1"
 
   const [serverError, setServerError] = useState<string | null>(null)
 
@@ -38,8 +38,9 @@ function LoginContent() {
   const onSubmit = async (data: LoginForm) => {
     setServerError(null)
     try {
-      await login(data.email, data.password)
-      window.location.href = redirect
+      const result = await login(data.email, data.password)
+      // Le ?redirect= prend la priorité sur la redirection par rôle
+      window.location.href = redirectParam ?? result.redirect_to
     } catch (err) {
       if (err instanceof ApiError && err.status === 401) {
         setServerError("Email ou mot de passe incorrect.")
@@ -59,6 +60,14 @@ function LoginContent() {
           </div>
           <h1 className="text-xl font-bold">Transport24h</h1>
         </div>
+
+        {/* Bannière inscription réussie */}
+        {registered && (
+          <div className="mb-4 flex items-center gap-2 rounded-lg border border-emerald-500/30 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-400">
+            <CheckCircle2 className="size-4 shrink-0" />
+            Compte créé ! Connectez-vous maintenant.
+          </div>
+        )}
 
         <Card>
           <CardHeader className="pb-2">
@@ -117,15 +126,25 @@ function LoginContent() {
               </Button>
             </form>
 
-            <p className="mt-4 text-center text-xs text-muted-foreground">
-              Pas encore de compte ?{" "}
-              <Link
-                href="/partners"
-                className="text-primary underline-offset-4 hover:underline"
-              >
-                Devenir partenaire
-              </Link>
-            </p>
+            <div className="mt-5 space-y-1.5 text-center text-xs text-muted-foreground">
+              <p>
+                Pas encore de compte ?{" "}
+                <Link
+                  href="/register"
+                  className="text-primary underline-offset-4 hover:underline"
+                >
+                  Créer un compte client
+                </Link>
+              </p>
+              <p>
+                <Link
+                  href="/partners"
+                  className="text-primary underline-offset-4 hover:underline"
+                >
+                  Devenir chauffeur partenaire
+                </Link>
+              </p>
+            </div>
           </CardContent>
         </Card>
       </div>
