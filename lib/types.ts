@@ -101,6 +101,29 @@ export interface Booking {
   updated_at: string
 }
 
+// ── Admin ─────────────────────────────────────────────────────────────────────
+
+export type PaymentStatus = "paid" | "pending" | "none"
+
+// Booking enrichi retourné par les endpoints admin — inclut les infos client
+// et le statut de paiement. Étend Booking en rendant client_phone requis.
+export interface BookingWithClient extends Omit<Booking, "client_phone"> {
+  client_phone: string
+  client_first_name: string
+  client_last_name: string
+  client_email: string
+  payment_status: PaymentStatus
+  last4?: string    // 4 derniers chiffres CB — présent si payment_status === "paid"
+  price_ttc: number // price_ht × 1.20 calculé côté backend
+}
+
+export interface AdminStats {
+  revenue_today: number   // CA du jour en € HT
+  bookings_today: number  // nombre total de courses du jour
+  pending_count: number   // courses en attente de validation
+  paid_count: number      // courses avec paiement reçu
+}
+
 // ── Auth ──────────────────────────────────────────────────────────────────────
 
 export interface LoginInput {
