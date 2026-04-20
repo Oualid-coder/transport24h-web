@@ -75,6 +75,34 @@ async function apiFetch<T>(
 
 // ── Geocoding Nominatim ───────────────────────────────────────────────────────
 
+type NominatimResult = { lat: string; lon: string; display_name: string }
+
+// Retourne jusqu'à 5 suggestions pour l'autocomplete
+export async function searchAddresses(query: string): Promise<GeoPoint[]> {
+  if (query.trim().length < 3) return []
+  const qs = new URLSearchParams({
+    q: query,
+    format: "json",
+    limit: "5",
+    countrycodes: "fr",
+  })
+  try {
+    const res = await fetch(
+      `https://nominatim.openstreetmap.org/search?${qs.toString()}`,
+      { headers: { "Accept-Language": "fr" } },
+    )
+    if (!res.ok) return []
+    const data = (await res.json()) as NominatimResult[]
+    return data.map((item) => ({
+      lat: parseFloat(item.lat),
+      lng: parseFloat(item.lon),
+      address: item.display_name,
+    }))
+  } catch {
+    return []
+  }
+}
+
 export async function geocodeAddress(address: string): Promise<GeoPoint | null> {
   if (address.trim().length < 5) return null
   const qs = new URLSearchParams({

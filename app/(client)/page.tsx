@@ -1,7 +1,7 @@
 "use client"
 
 import dynamic from "next/dynamic"
-import { useState, useEffect } from "react"
+import { useState } from "react"
 import { useQuery } from "@tanstack/react-query"
 import {
   ArrowRight,
@@ -12,13 +12,15 @@ import {
   Truck,
   Users,
 } from "lucide-react"
+
 import { buttonVariants } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Slider } from "@/components/ui/slider"
 import { Textarea } from "@/components/ui/textarea"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { geocodeAddress, getQuoteEstimate } from "@/lib/api"
+import { AddressInput } from "@/components/AddressInput"
+import { getQuoteEstimate } from "@/lib/api"
 import { TRUCK_VOLUME } from "@/lib/types"
 import type { GeoPoint, TruckType } from "@/lib/types"
 
@@ -37,42 +39,10 @@ const TRUCKS: { type: TruckType; label: string; desc: string }[] = [
 export default function HomePage() {
   const [truckType, setTruckType] = useState<TruckType>("16m3")
   const [handlers, setHandlers] = useState(1)
-  const [originInput, setOriginInput] = useState("")
-  const [destInput, setDestInput] = useState("")
   const [origin, setOrigin] = useState<GeoPoint | null>(null)
   const [destination, setDestination] = useState<GeoPoint | null>(null)
   const [phone, setPhone] = useState("")
   const [comment, setComment] = useState("")
-  const [geocoding, setGeocoding] = useState<"origin" | "dest" | null>(null)
-
-  // Geocode avec debounce 500ms sur chaque champ adresse
-  useEffect(() => {
-    if (originInput.trim().length < 5) {
-      setOrigin(null)
-      return
-    }
-    const timer = setTimeout(async () => {
-      setGeocoding("origin")
-      const pt = await geocodeAddress(originInput)
-      setOrigin(pt)
-      setGeocoding(null)
-    }, 500)
-    return () => clearTimeout(timer)
-  }, [originInput])
-
-  useEffect(() => {
-    if (destInput.trim().length < 5) {
-      setDestination(null)
-      return
-    }
-    const timer = setTimeout(async () => {
-      setGeocoding("dest")
-      const pt = await geocodeAddress(destInput)
-      setDestination(pt)
-      setGeocoding(null)
-    }, 500)
-    return () => clearTimeout(timer)
-  }, [destInput])
 
   // Devis en temps réel dès que les deux points sont géocodés
   const quoteReady = origin !== null && destination !== null
@@ -192,44 +162,20 @@ export default function HomePage() {
                 <CardContent className="space-y-4">
                   <div className="space-y-1.5">
                     <Label htmlFor="origin">Adresse de départ</Label>
-                    <div className="relative">
-                      <Input
-                        id="origin"
-                        placeholder="Ex: 12 rue de la Paix, Paris"
-                        value={originInput}
-                        onChange={(e) => setOriginInput(e.target.value)}
-                        className="pr-8"
-                      />
-                      {geocoding === "origin" && (
-                        <Loader2 className="absolute right-2.5 top-1/2 -translate-y-1/2 size-4 animate-spin text-muted-foreground" />
-                      )}
-                    </div>
-                    {origin && (
-                      <p className="text-xs text-primary truncate">
-                        ✓ {origin.address}
-                      </p>
-                    )}
+                    <AddressInput
+                      id="origin"
+                      placeholder="Ex: 12 rue de la Paix, Paris"
+                      onSelect={setOrigin}
+                    />
                   </div>
 
                   <div className="space-y-1.5">
                     <Label htmlFor="dest">Adresse d&apos;arrivée</Label>
-                    <div className="relative">
-                      <Input
-                        id="dest"
-                        placeholder="Ex: 5 avenue Victor Hugo, Lyon"
-                        value={destInput}
-                        onChange={(e) => setDestInput(e.target.value)}
-                        className="pr-8"
-                      />
-                      {geocoding === "dest" && (
-                        <Loader2 className="absolute right-2.5 top-1/2 -translate-y-1/2 size-4 animate-spin text-muted-foreground" />
-                      )}
-                    </div>
-                    {destination && (
-                      <p className="text-xs text-primary truncate">
-                        ✓ {destination.address}
-                      </p>
-                    )}
+                    <AddressInput
+                      id="dest"
+                      placeholder="Ex: 5 avenue Victor Hugo, Lyon"
+                      onSelect={setDestination}
+                    />
                   </div>
                 </CardContent>
               </Card>
