@@ -1,6 +1,31 @@
 import { NextRequest, NextResponse } from "next/server"
+import type { UserRole } from "@/lib/types"
 
 const API_URL = process.env.API_URL ?? process.env.NEXT_PUBLIC_API_URL
+
+// Décode le payload d'un JWT sans vérifier la signature.
+// La vérification a déjà été faite par le backend Go — on lit juste le rôle.
+function decodeJWTClaims(token: string): Record<string, unknown> | null {
+  try {
+    const payload = token.split(".")[1]
+    if (!payload) return null
+    const json = Buffer.from(
+      payload.replace(/-/g, "+").replace(/_/g, "/"),
+      "base64",
+    ).toString("utf-8")
+    return JSON.parse(json) as Record<string, unknown>
+  } catch {
+    return null
+  }
+}
+
+function redirectForRole(role: string): string {
+  switch (role) {
+    case "admin":  return "/admin/dashboard"
+    case "driver": return "/driver/dashboard"
+    default:       return "/dashboard"
+  }
+}
 
 export async function POST(request: NextRequest) {
   let body: unknown
@@ -31,12 +56,23 @@ export async function POST(request: NextRequest) {
 
   const data = await backendRes.json() as { access_token: string; expires_in: number }
 
-  const response = NextResponse.json({ ok: true })
+  // Extraire le rôle depuis les claims JWT
+  const claims = decodeJWTClaims(data.access_token)
+  const role = (typeof claims?.role === "string" ? claims.role : "client") as UserRole
+  const redirectTo = redirectForRole(role)
 
-  // access_token stocké en cookie lisible par JS (non-httpOnly) pour que
-  // apiFetch côté client puisse l'injecter dans l'Authorization header.
-  // La sensibilité est limitée : TTL court, refresh_token reste httpOnly.
+  const response = NextResponse.json({ ok: true, redirect_to: redirectTo })
+
+  // access_token — non-httpOnly pour que apiFetch client puisse injecter le header
   response.cookies.set("access_token", data.access_token, {
+    path: "/",
+    sameSite: "lax",
+    secure: process.env.NODE_ENV === "production",
+    maxAge: data.expires_in,
+  })
+
+  // user_role — non-httpOnly pour que la navbar server puisse lire le rôle
+  response.cookies.set("user_role", role, {
     path: "/",
     sameSite: "lax",
     secure: process.env.NODE_ENV === "production",

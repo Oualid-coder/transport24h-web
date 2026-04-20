@@ -136,11 +136,12 @@ export interface LoginResponse {
   ok: true
 }
 
-export interface RegisterInput {
+// Body vers POST /auth/register — snake_case
+export interface RegisterBody {
   email: string
   password: string
-  firstName: string
-  lastName: string
+  first_name: string
+  last_name: string
   phone?: string
 }
 
