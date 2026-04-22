@@ -14,7 +14,13 @@ import type {
   SavedQuote,
 } from "@/lib/types"
 
-const BASE_URL = process.env.NEXT_PUBLIC_API_URL
+// Toutes les requêtes authentifiées passent par le proxy Next.js (/api/proxy).
+// Le Route Handler lit le cookie httpOnly access_token côté serveur et injecte
+// le header Authorization: Bearer — résout le problème cross-origin (3000 → 8080).
+const PROXY_BASE = "/api/proxy"
+
+// URL directe du backend — réservée aux routes publiques sans auth (ex: /quotes/estimate)
+const PUBLIC_API_URL = process.env.NEXT_PUBLIC_API_URL
 
 export class ApiError extends Error {
   constructor(
@@ -26,25 +32,15 @@ export class ApiError extends Error {
   }
 }
 
-// Lit le token JWT stocké dans le cookie access_token (non-httpOnly)
-function getAccessToken(): string | undefined {
-  if (typeof document === "undefined") return undefined
-  const match = document.cookie.match(/(?:^|;\s*)access_token=([^;]*)/)
-  return match ? decodeURIComponent(match[1]) : undefined
-}
-
 async function apiFetch<T>(
   path: string,
   init?: RequestInit,
 ): Promise<T> {
-  const url = `${BASE_URL}${path}`
-  const token = getAccessToken()
+  const url = `${PROXY_BASE}${path}`
 
   const res = await fetch(url, {
-    credentials: "include",
     headers: {
       "Content-Type": "application/json",
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
       ...init?.headers,
     },
     ...init,
@@ -135,12 +131,18 @@ export async function geocodeAddress(address: string): Promise<GeoPoint | null> 
 
 // ── Devis ─────────────────────────────────────────────────────────────────────
 
-// POST /quotes/estimate — public, pas de JWT
-export function getQuoteEstimate(body: EstimateBody): Promise<EstimateResult> {
-  return apiFetch<EstimateResult>("/quotes/estimate", {
+// POST /quotes/estimate — public, pas de JWT → appel direct, pas de proxy
+export async function getQuoteEstimate(body: EstimateBody): Promise<EstimateResult> {
+  const res = await fetch(`${PUBLIC_API_URL}/quotes/estimate`, {
     method: "POST",
+    headers: { "Content-Type": "application/json" },
     body: JSON.stringify(body),
   })
+  if (!res.ok) {
+    const data = (await res.json().catch(() => ({}))) as { error?: string }
+    throw new ApiError(res.status, data.error ?? res.statusText)
+  }
+  return res.json() as Promise<EstimateResult>
 }
 
 // POST /quotes/ — authentifié
@@ -229,24 +231,30 @@ export function getPendingReviewBookings(): Promise<Booking[]> {
 
 // ── Auth (via Route Handler Next.js) ─────────────────────────────────────────
 
-// Passe par /api/auth/login qui stocke les cookies et retourne redirect_to
-export async function login(email: string, password: string): Promise<{ redirect_to: string }> {
+// Passe par /api/auth/login (Route Handler).
+// Le serveur pose les cookies et retourne un 302 — fetch le suit automatiquement.
+// res.url après le follow est l'URL de destination finale (ex: /dashboard).
+export async function login(
+  email: string,
+  password: string,
+  redirectTo?: string,
+): Promise<{ redirect_to: string }> {
   const res = await fetch("/api/auth/login", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    credentials: "include",
-    body: JSON.stringify({ email, password }),
+    body: JSON.stringify({ email, password, ...(redirectTo ? { redirect: redirectTo } : {}) }),
   })
   if (!res.ok) {
     const body = (await res.json().catch(() => ({}))) as { error?: string }
     throw new ApiError(res.status, body.error ?? "Identifiants invalides")
   }
-  return res.json() as Promise<{ redirect_to: string }>
+  // fetch a suivi le 302 — res.url est l'URL absolue de destination
+  return { redirect_to: res.url }
 }
 
 export async function logout(): Promise<void> {
-  document.cookie = "access_token=; path=/; max-age=0"
-  document.cookie = "user_role=; path=/; max-age=0"
+  // access_token est httpOnly — seul le Route Handler peut l'effacer côté serveur.
+  // user_role est effacé par le même Route Handler.
   await fetch("/api/auth/logout", { method: "POST", credentials: "include" }).catch(() => {})
 }
 

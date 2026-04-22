@@ -1,7 +1,7 @@
 "use client"
 
 import { useSearchParams, useRouter } from "next/navigation"
-import { Suspense, useState, useEffect } from "react"
+import { Suspense, useState } from "react"
 import { Loader2, Truck } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -31,18 +31,6 @@ function BookingContent() {
   const [scheduledTime, setScheduledTime] = useState("09:00")
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
-
-  // Redirect vers login si pas authentifié
-  useEffect(() => {
-    const hasToken = document.cookie.includes("access_token=")
-    if (!hasToken) {
-      router.push(
-        `/login?redirect=${encodeURIComponent(
-          window.location.pathname + window.location.search,
-        )}`,
-      )
-    }
-  }, [router])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
