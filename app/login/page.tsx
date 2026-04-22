@@ -38,9 +38,9 @@ function LoginContent() {
   const onSubmit = async (data: LoginForm) => {
     setServerError(null)
     try {
-      const result = await login(data.email, data.password)
-      // Le ?redirect= prend la priorité sur la redirection par rôle
-      window.location.href = redirectParam ?? result.redirect_to
+      // redirectParam est transmis au serveur — le 302 cible déjà la bonne URL
+      const result = await login(data.email, data.password, redirectParam ?? undefined)
+      window.location.href = result.redirect_to
     } catch (err) {
       if (err instanceof ApiError && err.status === 401) {
         setServerError("Email ou mot de passe incorrect.")
