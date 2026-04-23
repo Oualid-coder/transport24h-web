@@ -15,6 +15,32 @@ export type BookingStatus =
 
 export type UserRole = "client" | "admin" | "driver"
 
+// ── Chauffeur (retourné par /admin/drivers) ───────────────────────────────────
+
+export interface Driver {
+  id: string
+  first_name: string
+  last_name: string
+  email: string
+  phone: string
+}
+
+// ── Candidature partenaire ────────────────────────────────────────────────────
+
+export type PartnerStatus = "pending" | "approved" | "rejected"
+
+export interface PartnerApplication {
+  id: string
+  first_name: string
+  last_name: string
+  email: string
+  phone: string
+  siret: string
+  truck_type: TruckType
+  status: PartnerStatus
+  created_at: string
+}
+
 // ── Localisation ──────────────────────────────────────────────────────────────
 
 export interface GeoPoint {
