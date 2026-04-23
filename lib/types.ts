@@ -97,6 +97,7 @@ export interface CreateBookingBody {
 // Réponse complète d'un booking (Go retourne les champs du devis dénormalisés)
 export interface Booking {
   id: string
+  reference: string      // ex: "T24H-2026-0001" — référence lisible retournée par l'API
   status: BookingStatus
   quote_id: string
   // Dénormalisé depuis le devis lié
