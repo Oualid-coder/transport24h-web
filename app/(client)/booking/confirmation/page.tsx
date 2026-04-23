@@ -1,15 +1,37 @@
 "use client"
 
 import { useSearchParams } from "next/navigation"
-import { Suspense } from "react"
-import { CheckCircle2, LayoutDashboard, Home } from "lucide-react"
+import { Suspense, useEffect, useState } from "react"
+import { CheckCircle2, Home, LayoutDashboard, Loader2 } from "lucide-react"
 import { buttonVariants } from "@/components/ui/button"
 import Link from "next/link"
+import { getBookingById } from "@/lib/api"
+import type { Booking } from "@/lib/types"
 
 function ConfirmationContent() {
   const sp = useSearchParams()
   const id = sp.get("id") ?? ""
-  const shortId = id.slice(0, 8).toUpperCase()
+
+  const [booking, setBooking] = useState<Booking | null>(null)
+  const [error, setError] = useState(false)
+
+  useEffect(() => {
+    if (!id) {
+      setError(true)
+      return
+    }
+    getBookingById(id)
+      .then(setBooking)
+      .catch(() => setError(true))
+  }, [id])
+
+  if (!error && !booking) {
+    return (
+      <div className="flex min-h-[70vh] items-center justify-center">
+        <Loader2 className="size-6 animate-spin text-muted-foreground" />
+      </div>
+    )
+  }
 
   return (
     <div className="flex min-h-[70vh] items-center justify-center px-4">
@@ -25,11 +47,11 @@ function ConfirmationContent() {
           sous 2h pour confirmer les détails.
         </p>
 
-        {shortId && (
+        {booking && (
           <div className="mt-6 rounded-xl border border-border/50 bg-card px-6 py-4">
             <p className="text-xs text-muted-foreground">Référence de réservation</p>
             <p className="mt-1 font-mono text-2xl font-bold tracking-widest text-primary">
-              {shortId}
+              {booking.reference}
             </p>
           </div>
         )}
