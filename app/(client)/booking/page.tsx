@@ -1,7 +1,7 @@
 "use client"
 
 import { useSearchParams, useRouter } from "next/navigation"
-import { Suspense, useState } from "react"
+import { Suspense, useState, useEffect } from "react"
 import { Loader2, Truck } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -11,35 +11,90 @@ import { createSavedQuote, createBooking, ApiError } from "@/lib/api"
 import { TRUCK_VOLUME } from "@/lib/types"
 import type { TruckType } from "@/lib/types"
 
+const DRAFT_KEY = "booking_draft"
+
+interface BookingDraft {
+  truck: TruckType
+  handlers: number
+  pickupLat: number
+  pickupLng: number
+  pickup: string
+  deliveryLat: number
+  deliveryLng: number
+  delivery: string
+  phone: string
+  comment: string
+}
+
+function draftFromSearchParams(
+  sp: Omit<URLSearchParams, "append" | "delete" | "set" | "sort">,
+): BookingDraft {
+  return {
+    truck: (sp.get("truck") ?? "16m3") as TruckType,
+    handlers: Number(sp.get("handlers") ?? 1),
+    pickupLat: Number(sp.get("pickupLat")),
+    pickupLng: Number(sp.get("pickupLng")),
+    pickup: sp.get("pickup") ?? "",
+    deliveryLat: Number(sp.get("deliveryLat")),
+    deliveryLng: Number(sp.get("deliveryLng")),
+    delivery: sp.get("delivery") ?? "",
+    phone: sp.get("phone") ?? "",
+    comment: sp.get("comment") ?? "",
+  }
+}
+
 function BookingContent() {
   const sp = useSearchParams()
   const router = useRouter()
 
-  // Paramètres transmis depuis le formulaire devis
-  const truck = (sp.get("truck") ?? "16m3") as TruckType
-  const handlers = Number(sp.get("handlers") ?? 1)
-  const pickupLat = Number(sp.get("pickupLat"))
-  const pickupLng = Number(sp.get("pickupLng"))
-  const pickupAddress = sp.get("pickup") ?? ""
-  const deliveryLat = Number(sp.get("deliveryLat"))
-  const deliveryLng = Number(sp.get("deliveryLng"))
-  const deliveryAddress = sp.get("delivery") ?? ""
-  const phone = sp.get("phone") ?? ""
-  const comment = sp.get("comment") ?? ""
-
+  // null = auth/restore en cours ; undefined = pas de draft disponible
+  const [draft, setDraft] = useState<BookingDraft | null | undefined>(null)
   const [scheduledAt, setScheduledAt] = useState("")
   const [scheduledTime, setScheduledTime] = useState("09:00")
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
+  useEffect(() => {
+    // user_role est non-httpOnly — lisible depuis document.cookie
+    const isLoggedIn = document.cookie.includes("user_role=")
+
+    if (!isLoggedIn) {
+      // Conserve les params dans sessionStorage avant de quitter
+      if (sp.has("truck")) {
+        sessionStorage.setItem(DRAFT_KEY, JSON.stringify(draftFromSearchParams(sp)))
+      }
+      router.replace("/login?redirect=/booking")
+      return
+    }
+
+    // Cas 1 : arrivée directe depuis le formulaire devis (URL contient les params)
+    if (sp.has("truck")) {
+      const d = draftFromSearchParams(sp)
+      sessionStorage.setItem(DRAFT_KEY, JSON.stringify(d))
+      setDraft(d)
+      return
+    }
+
+    // Cas 2 : retour après login (URL vide) — restaure depuis sessionStorage
+    const saved = sessionStorage.getItem(DRAFT_KEY)
+    if (saved) {
+      try {
+        setDraft(JSON.parse(saved) as BookingDraft)
+      } catch {
+        setDraft(undefined)
+      }
+    } else {
+      setDraft(undefined)
+    }
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!scheduledAt || !scheduledTime) return
+    if (!scheduledAt || !scheduledTime || !draft) return
     setLoading(true)
     setError(null)
 
-    // RFC3339 : "2026-04-20T09:00:00+02:00"
-    // On utilise l'offset local pour être correct côté backend
+    // RFC3339 avec offset local : "2026-04-20T09:00:00+02:00"
     const localOffset = -new Date().getTimezoneOffset()
     const sign = localOffset >= 0 ? "+" : "-"
     const hh = String(Math.floor(Math.abs(localOffset) / 60)).padStart(2, "0")
@@ -47,37 +102,31 @@ function BookingContent() {
     const scheduledAtRFC3339 = `${scheduledAt}T${scheduledTime}:00${sign}${hh}:${mm}`
 
     try {
-      // Étape 1 — Créer le devis sauvegardé (authentifié)
       const savedQuote = await createSavedQuote({
-        pickup_address: pickupAddress,
-        pickup_lat: pickupLat,
-        pickup_lng: pickupLng,
-        delivery_address: deliveryAddress,
-        delivery_lat: deliveryLat,
-        delivery_lng: deliveryLng,
-        volume_m3: TRUCK_VOLUME[truck],
-        helpers_count: handlers,
-        truck_type: truck,
+        pickup_address: draft.pickup,
+        pickup_lat: draft.pickupLat,
+        pickup_lng: draft.pickupLng,
+        delivery_address: draft.delivery,
+        delivery_lat: draft.deliveryLat,
+        delivery_lng: draft.deliveryLng,
+        volume_m3: TRUCK_VOLUME[draft.truck],
+        helpers_count: draft.handlers,
+        truck_type: draft.truck,
       })
 
-      // Étape 2 — Créer la réservation avec le quote_id
       const booking = await createBooking({
         quote_id: savedQuote.id,
         scheduled_at: scheduledAtRFC3339,
-        client_comment: comment || undefined,
+        client_comment: draft.comment || undefined,
       })
 
-      // Redirection vers la confirmation / paiement
+      // Nettoie le draft après confirmation réussie
+      sessionStorage.removeItem(DRAFT_KEY)
       window.location.href = `/booking/confirmation?id=${booking.id}`
     } catch (err) {
       if (err instanceof ApiError) {
         if (err.status === 401) {
-          // Session expirée — retour au login
-          router.push(
-            `/login?redirect=${encodeURIComponent(
-              window.location.pathname + window.location.search,
-            )}`,
-          )
+          router.push("/login?redirect=/booking")
           return
         }
         setError(err.message)
@@ -92,6 +141,29 @@ function BookingContent() {
   const tomorrow = new Date()
   tomorrow.setDate(tomorrow.getDate() + 1)
   const minDate = tomorrow.toISOString().split("T")[0]!
+
+  // Auth/restore en cours
+  if (draft === null) {
+    return (
+      <div className="flex min-h-[50vh] items-center justify-center">
+        <Loader2 className="size-6 animate-spin text-muted-foreground" />
+      </div>
+    )
+  }
+
+  // Aucun draft disponible (arrivée directe sans params ni sessionStorage)
+  if (draft === undefined) {
+    return (
+      <div className="mx-auto max-w-2xl px-4 py-12 text-center">
+        <p className="text-muted-foreground">
+          Aucune demande de transport en cours.
+        </p>
+        <a href="/#devis" className="mt-4 inline-block text-sm text-primary underline-offset-4 hover:underline">
+          Faire un devis
+        </a>
+      </div>
+    )
+  }
 
   return (
     <div className="mx-auto max-w-2xl px-4 py-12">
@@ -113,38 +185,32 @@ function BookingContent() {
             <div className="grid grid-cols-2 gap-x-4 gap-y-2">
               <div>
                 <p className="text-xs text-muted-foreground">Départ</p>
-                <p className="font-medium line-clamp-2">
-                  {pickupAddress || "—"}
-                </p>
+                <p className="line-clamp-2 font-medium">{draft.pickup || "—"}</p>
               </div>
               <div>
                 <p className="text-xs text-muted-foreground">Arrivée</p>
-                <p className="font-medium line-clamp-2">
-                  {deliveryAddress || "—"}
-                </p>
+                <p className="line-clamp-2 font-medium">{draft.delivery || "—"}</p>
               </div>
               <div>
                 <p className="text-xs text-muted-foreground">Camion</p>
-                <p className="font-medium">{truck}</p>
+                <p className="font-medium">{draft.truck}</p>
               </div>
               <div>
-                <p className="text-xs text-muted-foreground">
-                  Manutentionnaires
-                </p>
+                <p className="text-xs text-muted-foreground">Manutentionnaires</p>
                 <p className="font-medium">
-                  {handlers === 0 ? "Aucun" : handlers}
+                  {draft.handlers === 0 ? "Aucun" : draft.handlers}
                 </p>
               </div>
-              {phone && (
+              {draft.phone && (
                 <div>
                   <p className="text-xs text-muted-foreground">Téléphone</p>
-                  <p className="font-medium">{phone}</p>
+                  <p className="font-medium">{draft.phone}</p>
                 </div>
               )}
-              {comment && (
+              {draft.comment && (
                 <div className="col-span-2">
                   <p className="text-xs text-muted-foreground">Commentaire</p>
-                  <p className="font-medium">{comment}</p>
+                  <p className="font-medium">{draft.comment}</p>
                 </div>
               )}
             </div>
@@ -188,12 +254,7 @@ function BookingContent() {
             </p>
           )}
 
-          <Button
-            type="submit"
-            size="lg"
-            className="w-full"
-            disabled={loading}
-          >
+          <Button type="submit" size="lg" className="w-full" disabled={loading}>
             {loading && <Loader2 className="mr-2 size-4 animate-spin" />}
             Confirmer la réservation
           </Button>
