@@ -5,10 +5,12 @@ import type {
   BookingWithClient,
   CreateBookingBody,
   CreateQuoteBody,
+  Driver,
   EstimateBody,
   EstimateResult,
   GeoPoint,
   PartnerApplyBody,
+  PartnerApplication,
   PaymentIntent,
   RegisterBody,
   SavedQuote,
@@ -200,6 +202,40 @@ export function confirmBooking(id: string): Promise<BookingWithClient> {
   return apiFetch<BookingWithClient>(`/admin/bookings/${id}/confirm`, {
     method: "POST",
   })
+}
+
+// ── Admin — chauffeurs & partenaires ─────────────────────────────────────────
+
+// GET /admin/drivers — liste des chauffeurs actifs
+export function getAdminDrivers(): Promise<Driver[]> {
+  return apiFetch<Driver[]>("/admin/drivers")
+}
+
+// PUT /admin/bookings/{id}/assign — assigne un chauffeur à une course
+// Retourne 409 si un chauffeur est déjà assigné
+export function assignDriver(bookingId: string, driverId: string): Promise<BookingWithClient> {
+  return apiFetch<BookingWithClient>(`/admin/bookings/${bookingId}/assign`, {
+    method: "PUT",
+    body: JSON.stringify({ driver_id: driverId }),
+  })
+}
+
+// GET /admin/partners?status=xxx — candidatures partenaires (status optionnel)
+export function getAdminPartners(status?: string): Promise<PartnerApplication[]> {
+  const path = status
+    ? `/admin/partners?status=${encodeURIComponent(status)}`
+    : "/admin/partners"
+  return apiFetch<PartnerApplication[]>(path)
+}
+
+// PUT /admin/partners/{id}/approve
+export function approvePartner(id: string): Promise<PartnerApplication> {
+  return apiFetch<PartnerApplication>(`/admin/partners/${id}/approve`, { method: "PUT" })
+}
+
+// PUT /admin/partners/{id}/reject
+export function rejectPartner(id: string): Promise<PartnerApplication> {
+  return apiFetch<PartnerApplication>(`/admin/partners/${id}/reject`, { method: "PUT" })
 }
 
 // ── Chauffeur ─────────────────────────────────────────────────────────────────
