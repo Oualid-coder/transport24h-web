@@ -216,6 +216,10 @@ export interface PaymentIntent {
   currency: string
 }
 
+export interface SetupIntentResponse {
+  client_secret: string
+}
+
 // ── Config tarification (admin) ───────────────────────────────────────────────
 
 export interface PricingConfig {

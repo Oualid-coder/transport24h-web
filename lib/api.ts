@@ -14,6 +14,7 @@ import type {
   PaymentIntent,
   RegisterBody,
   SavedQuote,
+  SetupIntentResponse,
 } from "@/lib/types"
 
 // Toutes les requêtes authentifiées passent par le proxy Next.js (/api/proxy).
@@ -317,5 +318,19 @@ export function createPaymentIntent(bookingId: string): Promise<PaymentIntent> {
   return apiFetch<PaymentIntent>("/payments/intent", {
     method: "POST",
     body: JSON.stringify({ booking_id: bookingId }),
+  })
+}
+
+export function createSetupIntent(bookingId: string): Promise<SetupIntentResponse> {
+  return apiFetch<SetupIntentResponse>("/payments/setup-intent", {
+    method: "POST",
+    body: JSON.stringify({ booking_id: bookingId }),
+  })
+}
+
+export function confirmSetupIntent(bookingId: string, paymentMethodId: string): Promise<void> {
+  return apiFetch<void>("/payments/confirm-setup", {
+    method: "POST",
+    body: JSON.stringify({ booking_id: bookingId, payment_method_id: paymentMethodId }),
   })
 }
