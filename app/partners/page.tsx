@@ -42,15 +42,17 @@ const partnerSchema = z.object({
     .string()
     .min(2, { error: "Nom trop court" })
     .trim(),
-  email: z.email({ error: "E-mail invalide" }).trim(),
+  email: z.string().email({ error: "Adresse e-mail invalide" }).trim(),
   phone: z
     .string()
-    .regex(/^(\+33|0)[0-9]{9}$/, { error: "Numéro de téléphone invalide" })
-    .trim(),
+    .trim()
+    .regex(/^(0|\+33)[1-9][0-9]{8}$/, {
+      error: "Numéro invalide — ex : 0612345678 ou +33612345678",
+    }),
   siret: z
     .string()
-    .regex(/^[0-9]{14}$/, { error: "Le SIRET doit contenir 14 chiffres" })
-    .trim(),
+    .trim()
+    .regex(/^[0-9]{14}$/, { error: "Le SIRET doit contenir exactement 14 chiffres" }),
   truckType: z.enum(["12m3", "16m3", "20m3"], {
     error: "Sélectionnez un type de camion",
   }),
