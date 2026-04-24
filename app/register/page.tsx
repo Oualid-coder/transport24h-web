@@ -17,17 +17,18 @@ const registerSchema = z
   .object({
     firstName: z.string().min(2, { error: "Prénom trop court" }).trim(),
     lastName: z.string().min(2, { error: "Nom trop court" }).trim(),
-    email: z.email({ error: "Adresse e-mail invalide" }).trim(),
+    email: z.string().email({ error: "Adresse e-mail invalide" }).trim(),
     phone: z
       .string()
       .trim()
-      .refine((v) => !v || /^(\+33|0)[0-9]{9}$/.test(v), {
-        message: "Numéro de téléphone invalide",
+      .refine((v) => !v || /^(0|\+33)[1-9][0-9]{8}$/.test(v), {
+        message: "Numéro invalide — ex : 0612345678 ou +33612345678",
       })
       .optional(),
     password: z
       .string()
-      .min(8, { error: "8 caractères minimum" }),
+      .min(8, { error: "8 caractères minimum" })
+      .regex(/[0-9]/, { message: "Le mot de passe doit contenir au moins un chiffre" }),
     confirmPassword: z.string(),
   })
   .refine((d) => d.password === d.confirmPassword, {
