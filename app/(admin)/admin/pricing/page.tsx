@@ -1,10 +1,11 @@
 "use client"
 
 import { useState } from "react"
-import { Loader2, Save } from "lucide-react"
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
+import { Info, Loader2, Save } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
+import { Badge } from "@/components/ui/badge"
 import {
   Card,
   CardContent,
@@ -12,43 +13,145 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card"
-import { Separator } from "@/components/ui/separator"
+import { BackButton } from "@/components/BackButton"
+import { getPricingConfig, updatePricing, ApiError } from "@/lib/api"
 import type { PricingConfig } from "@/lib/types"
 
-// Placeholder : l'endpoint de config tarif sera ajouté côté backend
-const DEFAULT_PRICING: PricingConfig = {
-  pricePerKmTier1: 2.5,
-  pricePerKmTier2: 2.0,
-  pricePerKmTier3: 1.8,
-  truckPricePerM3: {
-    "12m3": 45,
-    "16m3": 55,
-    "20m3": 65,
-  },
-  handlerHourlyRate: 35,
+// ── Ligne du tableau ──────────────────────────────────────────────────────────
+
+function formatDistance(row: PricingConfig): string {
+  if (row.distance_max_km === null) {
+    return `${row.distance_min_km} km et +`
+  }
+  return `${row.distance_min_km} → ${row.distance_max_km} km`
 }
 
-export default function PricingPage() {
-  const [config, setConfig] = useState<PricingConfig>(DEFAULT_PRICING)
-  const [saving, setSaving] = useState(false)
+function PricingRow({ row }: { row: PricingConfig }) {
+  const queryClient = useQueryClient()
+  const initialValue = row.is_fixed_price
+    ? (row.price_fixed ?? 0)
+    : (row.price_per_km ?? 0)
+  const [draft, setDraft] = useState(String(initialValue))
   const [saved, setSaved] = useState(false)
+  const [error, setError] = useState<string | null>(null)
 
-  const handleSave = async () => {
-    setSaving(true)
-    // TODO: connecter à PUT /admin/pricing quand l'endpoint existe
-    await new Promise((r) => setTimeout(r, 800))
-    setSaving(false)
-    setSaved(true)
-    setTimeout(() => setSaved(false), 2000)
+  const mutation = useMutation({
+    mutationFn: (value: number) =>
+      updatePricing(
+        row.id,
+        row.is_fixed_price ? { price_fixed: value } : { price_per_km: value },
+      ),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["admin-pricing"] })
+      setSaved(true)
+      setError(null)
+      setTimeout(() => setSaved(false), 2000)
+    },
+    onError: (err) => {
+      setError(
+        err instanceof ApiError ? err.message : "Erreur lors de la sauvegarde.",
+      )
+    },
+  })
+
+  const handleSave = () => {
+    const value = parseFloat(draft)
+    if (isNaN(value) || value < 0) return
+    mutation.mutate(value)
   }
 
-  const setField = <K extends keyof PricingConfig>(
-    key: K,
-    value: PricingConfig[K],
-  ) => setConfig((prev) => ({ ...prev, [key]: value }))
+  const isFirstInterval = row.distance_min_km === 0
+  const priceUnit = row.is_fixed_price ? "€" : "€ / km"
 
   return (
-    <div className="max-w-2xl space-y-8">
+    <>
+      <tr className="border-b border-border/50 last:border-0">
+        <td className="py-3 pr-4 text-sm font-medium">{row.label}</td>
+        <td className="py-3 pr-4 font-mono text-sm text-muted-foreground whitespace-nowrap">
+          {formatDistance(row)}
+        </td>
+        <td className="py-3 pr-4">
+          <Badge
+            variant={row.is_fixed_price ? "secondary" : "outline"}
+            className="text-xs"
+          >
+            {row.is_fixed_price ? "Prix fixe" : "Prix / km"}
+          </Badge>
+        </td>
+        <td className="py-3 pr-4">
+          <div className="flex items-center gap-2">
+            <Input
+              type="number"
+              step="0.01"
+              min="0"
+              value={draft}
+              onChange={(e) => {
+                setDraft(e.target.value)
+                setSaved(false)
+              }}
+              className="h-8 w-28 text-sm"
+            />
+            <span className="text-xs text-muted-foreground whitespace-nowrap">
+              {priceUnit}
+            </span>
+          </div>
+        </td>
+        <td className="py-3">
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={handleSave}
+            disabled={mutation.isPending}
+          >
+            {mutation.isPending ? (
+              <Loader2 className="mr-1.5 size-3.5 animate-spin" />
+            ) : (
+              <Save className="mr-1.5 size-3.5" />
+            )}
+            {saved ? "Enregistré !" : "Sauvegarder"}
+          </Button>
+        </td>
+      </tr>
+
+      {isFirstInterval && (
+        <tr>
+          <td colSpan={5} className="pb-3 pt-1">
+            <div className="flex items-start gap-2 rounded-lg border border-blue-500/20 bg-blue-500/5 px-3 py-2">
+              <Info className="mt-0.5 size-3.5 shrink-0 text-blue-500" />
+              <p className="text-xs text-muted-foreground">
+                <span className="font-medium text-foreground">
+                  Prix fixe de mise à disposition
+                </span>{" "}
+                — protège contre les abus pour les très courtes distances.
+              </p>
+            </div>
+          </td>
+        </tr>
+      )}
+
+      {error && (
+        <tr>
+          <td colSpan={5} className="pb-2">
+            <p className="text-xs text-destructive">{error}</p>
+          </td>
+        </tr>
+      )}
+    </>
+  )
+}
+
+// ── Page ──────────────────────────────────────────────────────────────────────
+
+export default function PricingPage() {
+  const { data: intervals, isLoading, error } = useQuery<PricingConfig[]>({
+    queryKey: ["admin-pricing"],
+    queryFn: getPricingConfig,
+  })
+
+  return (
+    <div className="max-w-3xl space-y-8">
+      <BackButton href="/admin/dashboard" />
+
       <div>
         <h1 className="text-3xl font-bold">Tarification</h1>
         <p className="mt-1 text-muted-foreground">
@@ -56,116 +159,49 @@ export default function PricingPage() {
         </p>
       </div>
 
-      {/* Prix au km par tranche */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Prix au kilomètre</CardTitle>
-          <CardDescription>
-            Tarif dégressif par tranche de distance
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          {(
-            [
-              ["pricePerKmTier1", "0 — 20 km"],
-              ["pricePerKmTier2", "20 — 50 km"],
-              ["pricePerKmTier3", "50 km et +"],
-            ] as const
-          ).map(([field, label]) => (
-            <div key={field} className="flex items-center gap-4">
-              <Label className="w-36 shrink-0 text-sm">{label}</Label>
-              <div className="flex items-center gap-2">
-                <Input
-                  type="number"
-                  step="0.01"
-                  min="0"
-                  value={config[field]}
-                  onChange={(e) =>
-                    setField(field, parseFloat(e.target.value))
-                  }
-                  className="w-28"
-                />
-                <span className="text-sm text-muted-foreground">€ / km</span>
-              </div>
-            </div>
-          ))}
-        </CardContent>
-      </Card>
+      {isLoading && (
+        <div className="flex justify-center py-12">
+          <Loader2 className="size-6 animate-spin text-muted-foreground" />
+        </div>
+      )}
 
-      {/* Prix par m³ selon type camion */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Prix de base par type de camion</CardTitle>
-          <CardDescription>Forfait de base selon le volume</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          {(["12m3", "16m3", "20m3"] as const).map((truck) => (
-            <div key={truck} className="flex items-center gap-4">
-              <Label className="w-36 shrink-0 text-sm">Camion {truck}</Label>
-              <div className="flex items-center gap-2">
-                <Input
-                  type="number"
-                  step="1"
-                  min="0"
-                  value={config.truckPricePerM3[truck]}
-                  onChange={(e) =>
-                    setField("truckPricePerM3", {
-                      ...config.truckPricePerM3,
-                      [truck]: parseFloat(e.target.value),
-                    })
-                  }
-                  className="w-28"
-                />
-                <span className="text-sm text-muted-foreground">€ forfait</span>
-              </div>
-            </div>
-          ))}
-        </CardContent>
-      </Card>
-
-      {/* Manutentionnaires */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Manutentionnaires</CardTitle>
-          <CardDescription>
-            Tarif horaire facturé par manutentionnaire
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="flex items-center gap-4">
-            <Label className="w-36 shrink-0 text-sm">Taux horaire</Label>
-            <div className="flex items-center gap-2">
-              <Input
-                type="number"
-                step="0.5"
-                min="0"
-                value={config.handlerHourlyRate}
-                onChange={(e) =>
-                  setField("handlerHourlyRate", parseFloat(e.target.value))
-                }
-                className="w-28"
-              />
-              <span className="text-sm text-muted-foreground">€ / heure</span>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      <Separator />
-
-      <div className="flex items-center gap-4">
-        <Button onClick={handleSave} disabled={saving}>
-          {saving ? (
-            <Loader2 className="mr-2 size-4 animate-spin" />
-          ) : (
-            <Save className="mr-2 size-4" />
-          )}
-          {saved ? "Enregistré !" : "Enregistrer les tarifs"}
-        </Button>
-        <p className="text-xs text-muted-foreground">
-          Les modifications s'appliquent immédiatement aux nouveaux devis.
+      {error && (
+        <p className="rounded-lg border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive">
+          {error instanceof ApiError
+            ? error.message
+            : "Impossible de charger la configuration."}
         </p>
-      </div>
+      )}
+
+      {intervals && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Intervalles de distance</CardTitle>
+            <CardDescription>
+              {intervals.length} tranches — prix fixe ou au kilomètre selon la
+              distance
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="overflow-x-auto">
+            <table className="w-full min-w-[560px]">
+              <thead>
+                <tr className="border-b border-border text-xs text-muted-foreground">
+                  <th className="pb-2 pr-4 text-left font-medium">Label</th>
+                  <th className="pb-2 pr-4 text-left font-medium">Distance</th>
+                  <th className="pb-2 pr-4 text-left font-medium">Type</th>
+                  <th className="pb-2 pr-4 text-left font-medium">Prix</th>
+                  <th className="pb-2 text-left font-medium">Action</th>
+                </tr>
+              </thead>
+              <tbody>
+                {intervals.map((row) => (
+                  <PricingRow key={row.id} row={row} />
+                ))}
+              </tbody>
+            </table>
+          </CardContent>
+        </Card>
+      )}
     </div>
   )
 }

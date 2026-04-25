@@ -12,6 +12,7 @@ import type {
   PartnerApplyBody,
   PartnerApplication,
   PaymentIntent,
+  PricingConfig,
   RegisterBody,
   SavedQuote,
   SetupIntentResponse,
@@ -332,5 +333,18 @@ export function confirmSetupIntent(bookingId: string, paymentMethodId: string): 
   return apiFetch<void>("/payments/confirm-setup", {
     method: "POST",
     body: JSON.stringify({ booking_id: bookingId, payment_method_id: paymentMethodId }),
+  })
+}
+
+// ── Tarification (admin) ──────────────────────────────────────────────────────
+
+export function getPricingConfig(): Promise<PricingConfig[]> {
+  return apiFetch<PricingConfig[]>("/admin/pricing")
+}
+
+export function updatePricing(id: string, body: Partial<PricingConfig>): Promise<PricingConfig> {
+  return apiFetch<PricingConfig>(`/admin/pricing/${id}`, {
+    method: "PUT",
+    body: JSON.stringify(body),
   })
 }
