@@ -223,9 +223,11 @@ export interface SetupIntentResponse {
 // ── Config tarification (admin) ───────────────────────────────────────────────
 
 export interface PricingConfig {
-  pricePerKmTier1: number
-  pricePerKmTier2: number
-  pricePerKmTier3: number
-  truckPricePerM3: Record<TruckType, number>
-  handlerHourlyRate: number
+  id: string
+  label: string
+  distance_min_km: number
+  distance_max_km: number | null
+  price_fixed: number | null
+  price_per_km: number | null
+  is_fixed_price: boolean
 }
