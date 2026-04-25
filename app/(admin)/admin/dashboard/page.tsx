@@ -37,6 +37,7 @@ import type {
   Driver,
   PaymentStatus,
 } from "@/lib/types"
+import { BackButton } from "@/components/BackButton"
 
 // ── Constantes d'affichage ───────────────────────────────────────────────────
 
@@ -539,6 +540,7 @@ export default function AdminDashboardPage() {
 
   return (
     <div className="space-y-8">
+      <BackButton href="/" />
       {/* En-tête */}
       <div>
         <h1 className="text-3xl font-bold">Dashboard</h1>

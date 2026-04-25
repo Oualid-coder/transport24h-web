@@ -11,6 +11,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardHeader } from "@/components/ui/card"
 import { register, ApiError } from "@/lib/api"
+import { BackButton } from "@/components/BackButton"
 import { useState } from "react"
 
 const registerSchema = z
@@ -73,7 +74,10 @@ export default function RegisterPage() {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center px-4 py-12">
+    <div className="relative flex min-h-screen items-center justify-center px-4 py-12">
+      <div className="absolute top-4 left-4">
+        <BackButton href="/login" />
+      </div>
       <div className="w-full max-w-sm">
         {/* Logo */}
         <div className="mb-8 flex flex-col items-center gap-2">

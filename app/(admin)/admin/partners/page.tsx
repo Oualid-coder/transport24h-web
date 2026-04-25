@@ -16,6 +16,7 @@ import { Card, CardContent } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { approvePartner, getAdminPartners, rejectPartner } from "@/lib/api"
 import type { PartnerApplication, PartnerStatus } from "@/lib/types"
+import { BackButton } from "@/components/BackButton"
 
 // ── Constantes ────────────────────────────────────────────────────────────────
 
@@ -202,6 +203,7 @@ function PartnerList({ status }: { status?: PartnerStatus }) {
 export default function AdminPartnersPage() {
   return (
     <div className="space-y-8">
+      <BackButton href="/admin/dashboard" />
       <div>
         <h1 className="text-3xl font-bold">Candidatures chauffeurs</h1>
         <p className="mt-1 text-muted-foreground">

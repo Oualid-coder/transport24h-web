@@ -12,6 +12,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardHeader } from "@/components/ui/card"
 import { login, ApiError } from "@/lib/api"
+import { BackButton } from "@/components/BackButton"
 
 const loginSchema = z.object({
   email: z.email({ error: "Adresse e-mail invalide" }),
@@ -51,7 +52,10 @@ function LoginContent() {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center px-4">
+    <div className="relative flex min-h-screen items-center justify-center px-4">
+      <div className="absolute top-4 left-4">
+        <BackButton href="/" />
+      </div>
       <div className="w-full max-w-sm">
         {/* Logo */}
         <div className="mb-8 flex flex-col items-center gap-2">

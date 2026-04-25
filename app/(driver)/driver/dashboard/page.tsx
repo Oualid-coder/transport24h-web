@@ -21,6 +21,7 @@ import {
   ApiError,
 } from "@/lib/api"
 import type { AvailableBooking, Booking, BookingStatus } from "@/lib/types"
+import { BackButton } from "@/components/BackButton"
 
 // ── Constantes ───────────────────────────────────────────────────────────────
 
@@ -273,6 +274,7 @@ export default function DriverDashboardPage() {
 
   return (
     <div className="mx-auto max-w-3xl space-y-10 px-4 py-8">
+      <BackButton href="/" />
       {/* En-tête */}
       <div>
         <h1 className="text-2xl font-bold">Tableau de bord</h1>

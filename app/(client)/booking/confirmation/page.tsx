@@ -6,6 +6,7 @@ import { CheckCircle2, Home, LayoutDashboard, Loader2 } from "lucide-react"
 import { buttonVariants } from "@/components/ui/button"
 import Link from "next/link"
 import { getBookingById } from "@/lib/api"
+import { BackButton } from "@/components/BackButton"
 import type { Booking } from "@/lib/types"
 
 function ConfirmationContent() {
@@ -34,7 +35,10 @@ function ConfirmationContent() {
   }
 
   return (
-    <div className="flex min-h-[70vh] items-center justify-center px-4">
+    <div className="relative flex min-h-[70vh] items-center justify-center px-4">
+      <div className="absolute top-4 left-4">
+        <BackButton href="/" />
+      </div>
       <div className="w-full max-w-md text-center">
         {/* Icône succès */}
         <div className="mx-auto mb-6 flex size-20 items-center justify-center rounded-full bg-emerald-500/10">
