@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { createSavedQuote, createBooking, ApiError } from "@/lib/api"
+import { BackButton } from "@/components/BackButton"
 import { TRUCK_VOLUME } from "@/lib/types"
 import type { TruckType } from "@/lib/types"
 
@@ -167,6 +168,9 @@ function BookingContent() {
 
   return (
     <div className="mx-auto max-w-2xl px-4 py-12">
+      <div className="mb-6">
+        <BackButton href="/" />
+      </div>
       <h1 className="mb-2 text-3xl font-bold">Confirmer la réservation</h1>
       <p className="mb-8 text-muted-foreground">
         Vérifiez les détails et choisissez la date de votre transport.

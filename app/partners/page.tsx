@@ -32,6 +32,7 @@ import {
 } from "@/components/ui/select"
 import { registerPartner, ApiError } from "@/lib/api"
 import type { TruckType } from "@/lib/types"
+import { BackButton } from "@/components/BackButton"
 
 const partnerSchema = z.object({
   firstName: z
@@ -97,7 +98,10 @@ export default function PartnersPage() {
 
   if (success) {
     return (
-      <div className="flex min-h-[70vh] flex-col items-center justify-center px-4 text-center">
+      <div className="relative flex min-h-[70vh] flex-col items-center justify-center px-4 text-center">
+        <div className="absolute top-4 left-4">
+          <BackButton href="/" />
+        </div>
         <div className="flex size-16 items-center justify-center rounded-full bg-primary/10">
           <CheckCircle2 className="size-8 text-primary" />
         </div>
@@ -115,6 +119,9 @@ export default function PartnersPage() {
 
   return (
     <div>
+      <div className="px-4 pt-4">
+        <BackButton href="/" />
+      </div>
       {/* Hero */}
       <section className="border-b border-border/50 py-20">
         <div className="mx-auto max-w-4xl px-4 sm:px-6">

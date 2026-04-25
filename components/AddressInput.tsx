@@ -104,7 +104,7 @@ export function AddressInput({ id, placeholder, onSelect }: AddressInputProps) {
       )}
 
       {isOpen && (
-        <ul className="absolute z-50 mt-1 w-full overflow-hidden rounded-lg border border-border bg-popover shadow-lg">
+        <ul className="absolute z-[9999] mt-1 w-full overflow-hidden rounded-lg border border-border bg-popover shadow-lg">
           {suggestions.length === 0 ? (
             <li className="px-3 py-2 text-sm text-muted-foreground">
               Aucun résultat
