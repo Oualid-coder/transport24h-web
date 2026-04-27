@@ -56,7 +56,7 @@ function CheckoutForm({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!stripe || !elements) return
+    if (loading || !stripe || !elements) return
     setLoading(true)
     setError(null)
 

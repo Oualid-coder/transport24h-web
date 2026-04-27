@@ -91,7 +91,7 @@ function BookingContent() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!scheduledAt || !scheduledTime || !draft) return
+    if (loading || !scheduledAt || !scheduledTime || !draft) return
     setLoading(true)
     setError(null)
 
