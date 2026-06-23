@@ -111,7 +111,7 @@ export default function PartnersPage() {
           les 24h pour valider votre profil.
         </p>
         <Button className="mt-8" render={<Link href="/" />}>
-          Retour à l'accueil
+          Retour à l&apos;accueil
         </Button>
       </div>
     )

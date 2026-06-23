@@ -46,9 +46,9 @@ export function NavActions({ isLoggedIn }: NavActionsProps) {
       >
         Connexion
       </Link>
-      <a href="/#devis" className={buttonVariants({ size: "sm" })}>
+      <Link href="/#devis" className={buttonVariants({ size: "sm" })}>
         Obtenir un devis
-      </a>
+      </Link>
     </div>
   )
 }

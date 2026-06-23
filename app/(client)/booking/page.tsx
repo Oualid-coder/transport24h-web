@@ -1,5 +1,6 @@
 "use client"
 
+import Link from "next/link"
 import { useSearchParams, useRouter } from "next/navigation"
 import { Suspense, useState, useEffect } from "react"
 import { Loader2, Truck } from "lucide-react"
@@ -159,9 +160,9 @@ function BookingContent() {
         <p className="text-muted-foreground">
           Aucune demande de transport en cours.
         </p>
-        <a href="/#devis" className="mt-4 inline-block text-sm text-primary underline-offset-4 hover:underline">
+        <Link href="/#devis" className="mt-4 inline-block text-sm text-primary underline-offset-4 hover:underline">
           Faire un devis
-        </a>
+        </Link>
       </div>
     )
   }
