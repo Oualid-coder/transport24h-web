@@ -236,10 +236,7 @@ function PaymentContent() {
   const [fetchError, setFetchError] = useState<string | null>(null)
 
   useEffect(() => {
-    if (!bookingId) {
-      setFetchError("Identifiant de réservation manquant.")
-      return
-    }
+    if (!bookingId) return
 
     Promise.all([getBookingById(bookingId), createSetupIntent(bookingId)])
       .then(([b, si]) => {
@@ -255,11 +252,13 @@ function PaymentContent() {
       })
   }, [bookingId])
 
-  if (fetchError) {
+  const displayError = !bookingId ? "Identifiant de réservation manquant." : fetchError
+
+  if (displayError) {
     return (
       <div className="mx-auto max-w-lg px-4 py-12">
         <p className="rounded-lg border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive">
-          {fetchError}
+          {displayError}
         </p>
       </div>
     )

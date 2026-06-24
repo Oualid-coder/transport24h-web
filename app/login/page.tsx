@@ -1,6 +1,6 @@
 "use client"
 
-import { useSearchParams } from "next/navigation"
+import { useSearchParams, useRouter } from "next/navigation"
 import { Suspense, useState } from "react"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
@@ -26,6 +26,7 @@ function LoginContent() {
   const redirectParam = sp.get("redirect")
   const registered = sp.get("registered") === "1"
 
+  const router = useRouter()
   const [serverError, setServerError] = useState<string | null>(null)
 
   const {
@@ -41,7 +42,7 @@ function LoginContent() {
     try {
       // redirectParam est transmis au serveur — le 302 cible déjà la bonne URL
       const result = await login(data.email, data.password, redirectParam ?? undefined)
-      window.location.href = result.redirect_to
+      router.push(result.redirect_to)
     } catch (err) {
       if (err instanceof ApiError && err.status === 401) {
         setServerError("Email ou mot de passe incorrect.")

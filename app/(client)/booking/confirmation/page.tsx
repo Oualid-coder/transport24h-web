@@ -17,16 +17,13 @@ function ConfirmationContent() {
   const [error, setError] = useState(false)
 
   useEffect(() => {
-    if (!id) {
-      setError(true)
-      return
-    }
+    if (!id) return
     getBookingById(id)
       .then(setBooking)
       .catch(() => setError(true))
   }, [id])
 
-  if (!error && !booking) {
+  if (id && !error && !booking) {
     return (
       <div className="flex min-h-[70vh] items-center justify-center">
         <Loader2 className="size-6 animate-spin text-muted-foreground" />

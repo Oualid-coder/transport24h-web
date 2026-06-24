@@ -40,19 +40,19 @@ export function AddressInput({ id, placeholder, onSelect }: AddressInputProps) {
     // Réinitialise le flag de sélection à chaque frappe
     didSelectRef.current = false
 
-    if (value.trim().length < 3) {
-      setSuggestions([])
-      setIsOpen(false)
-      return
-    }
-
+    const delay = value.trim().length < 3 ? 0 : 300
     const timer = setTimeout(async () => {
+      if (value.trim().length < 3) {
+        setSuggestions([])
+        setIsOpen(false)
+        return
+      }
       setIsLoading(true)
       const results = await searchAddresses(value)
       setSuggestions(results)
       setIsOpen(true)
       setIsLoading(false)
-    }, 300)
+    }, delay)
 
     return () => clearTimeout(timer)
   }, [value])
