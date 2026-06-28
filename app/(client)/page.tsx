@@ -1,6 +1,7 @@
 "use client"
 
 import dynamic from "next/dynamic"
+import Image from "next/image"
 import { useState } from "react"
 import { useQuery } from "@tanstack/react-query"
 import {
@@ -30,14 +31,14 @@ const DevisMap = dynamic(
   { ssr: false, loading: () => <div className="h-full w-full animate-pulse rounded-xl bg-muted" /> },
 )
 
-const TRUCKS: { type: TruckType; label: string; desc: string }[] = [
-  { type: "12m3", label: "12 m³", desc: "Studio / 1 pièce" },
-  { type: "16m3", label: "16 m³", desc: "2–3 pièces" },
-  { type: "20m3", label: "20 m³", desc: "4 pièces et +" },
+const TRUCKS: { type: TruckType; label: string; image: string }[] = [
+  { type: "6m3",  label: "6 m³",  image: "/vehicles/sprinter6.png"  },
+  { type: "12m3", label: "12 m³", image: "/vehicles/sprinter12.png" },
+  { type: "20m3", label: "20 m³", image: "/vehicles/sprinter20.png" },
 ]
 
 export default function HomePage() {
-  const [truckType, setTruckType] = useState<TruckType>("16m3")
+  const [truckType, setTruckType] = useState<TruckType>("12m3")
   const [handlers, setHandlers] = useState(1)
   const [origin, setOrigin] = useState<GeoPoint | null>(null)
   const [destination, setDestination] = useState<GeoPoint | null>(null)
@@ -134,17 +135,24 @@ export default function HomePage() {
                     {TRUCKS.map((t) => (
                       <button
                         key={t.type}
+                        type="button"
                         onClick={() => setTruckType(t.type)}
-                        className={`rounded-lg border p-3 text-left transition-all ${
+                        className={`rounded-lg border p-3 text-center transition-all ${
                           truckType === t.type
                             ? "border-primary bg-primary/10 text-foreground"
                             : "border-border/50 bg-card hover:border-border hover:bg-accent"
                         }`}
                       >
-                        <div className="font-semibold text-sm">{t.label}</div>
-                        <div className="mt-0.5 text-xs text-muted-foreground">
-                          {t.desc}
+                        <div className="relative mx-auto mb-2 h-[100px] w-full">
+                          <Image
+                            src={t.image}
+                            alt={t.label}
+                            fill
+                            className="object-contain"
+                            sizes="160px"
+                          />
                         </div>
+                        <div className="font-semibold text-sm">{t.label}</div>
                       </button>
                     ))}
                   </div>
