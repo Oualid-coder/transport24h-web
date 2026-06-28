@@ -1,5 +1,6 @@
+import Image from "next/image"
 import Link from "next/link"
-import { LayoutDashboard, Settings, Truck, Users } from "lucide-react"
+import { LayoutDashboard, Settings, Users } from "lucide-react"
 import { LogoutButton } from "@/components/logout-button"
 
 const NAV_ITEMS = [
@@ -19,9 +20,13 @@ export default function AdminLayout({
       <aside className="fixed inset-y-0 left-0 z-50 flex w-60 flex-col border-r border-border/50 bg-card">
         {/* Logo */}
         <div className="flex h-16 items-center gap-2.5 border-b border-border/50 px-5">
-          <div className="flex size-7 items-center justify-center rounded-md bg-primary">
-            <Truck className="size-3.5 text-primary-foreground" />
-          </div>
+          <Image
+            src="/logo-transport24h.png"
+            alt="Transport24h"
+            width={84}
+            height={28}
+            className="h-7 w-auto object-contain"
+          />
           <span className="text-sm font-semibold">Transport24h</span>
           <span className="ml-auto rounded bg-primary/20 px-1.5 py-0.5 text-[10px] font-medium text-primary">
             Admin

@@ -1,6 +1,6 @@
 import { cookies } from "next/headers"
+import Image from "next/image"
 import Link from "next/link"
-import { Truck } from "lucide-react"
 import { NavActions } from "@/components/nav-actions"
 
 export default async function ClientLayout({
@@ -16,9 +16,13 @@ export default async function ClientLayout({
       <header className="sticky top-0 z-50 border-b border-border/50 bg-background/80 backdrop-blur-md">
         <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6">
           <Link href="/" className="flex items-center gap-2.5">
-            <div className="flex size-8 items-center justify-center rounded-lg bg-primary">
-              <Truck className="size-4 text-primary-foreground" />
-            </div>
+            <Image
+              src="/logo-transport24h.png"
+              alt="Transport24h"
+              width={108}
+              height={36}
+              className="h-9 w-auto object-contain"
+            />
             <span className="text-base font-semibold tracking-tight">
               Transport24h
             </span>
@@ -49,7 +53,14 @@ export default async function ClientLayout({
         <div className="mx-auto max-w-7xl px-4 sm:px-6">
           <div className="flex flex-col items-center justify-between gap-4 sm:flex-row">
             <div className="flex items-center gap-2">
-              <Truck className="size-4 text-primary" />
+              <Image
+                src="/logo-transport24h.png"
+                alt=""
+                width={64}
+                height={20}
+                className="h-5 w-auto object-contain"
+                aria-hidden="true"
+              />
               <span className="text-sm font-medium">Transport24h</span>
             </div>
             <p className="text-xs text-muted-foreground">
