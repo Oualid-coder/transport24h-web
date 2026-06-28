@@ -1,8 +1,8 @@
-export type TruckType = "12m3" | "16m3" | "20m3"
+export type TruckType = "6m3" | "12m3" | "20m3"
 
 export const TRUCK_VOLUME: Record<TruckType, number> = {
+  "6m3": 6,
   "12m3": 12,
-  "16m3": 16,
   "20m3": 20,
 }
 

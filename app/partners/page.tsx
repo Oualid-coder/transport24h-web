@@ -54,7 +54,7 @@ const partnerSchema = z.object({
     .string()
     .trim()
     .regex(/^[0-9]{14}$/, { error: "Le SIRET doit contenir exactement 14 chiffres" }),
-  truckType: z.enum(["12m3", "16m3", "20m3"], {
+  truckType: z.enum(["6m3", "12m3", "20m3"], {
     error: "Sélectionnez un type de camion",
   }),
 })
@@ -284,9 +284,9 @@ export default function PartnersPage() {
                       <SelectValue placeholder="Sélectionnez un volume" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="12m3">12 m³ — Studio / 1 pièce</SelectItem>
-                      <SelectItem value="16m3">16 m³ — 2–3 pièces</SelectItem>
-                      <SelectItem value="20m3">20 m³ — 4 pièces et +</SelectItem>
+                      <SelectItem value="6m3">6 m³</SelectItem>
+                      <SelectItem value="12m3">12 m³</SelectItem>
+                      <SelectItem value="20m3">20 m³</SelectItem>
                     </SelectContent>
                   </Select>
                   {errors.truckType && (

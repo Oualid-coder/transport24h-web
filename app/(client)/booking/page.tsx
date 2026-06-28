@@ -32,7 +32,7 @@ function draftFromSearchParams(
   sp: Omit<URLSearchParams, "append" | "delete" | "set" | "sort">,
 ): BookingDraft {
   return {
-    truck: (sp.get("truck") ?? "16m3") as TruckType,
+    truck: (sp.get("truck") ?? "12m3") as TruckType,
     handlers: Number(sp.get("handlers") ?? 1),
     pickupLat: Number(sp.get("pickupLat")),
     pickupLng: Number(sp.get("pickupLng")),
