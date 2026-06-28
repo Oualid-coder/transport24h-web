@@ -26,19 +26,6 @@ function CheckoutForm({
   const router = useRouter()
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [isDark, setIsDark] = useState(false)
-
-  useEffect(() => {
-    const check = () =>
-      setIsDark(document.documentElement.classList.contains("dark"))
-    check()
-    const obs = new MutationObserver(check)
-    obs.observe(document.documentElement, {
-      attributes: true,
-      attributeFilter: ["class"],
-    })
-    return () => obs.disconnect()
-  }, [])
 
   const priceTTC = Math.round(booking.price_ht * 1.2 * 100) / 100
 
@@ -107,11 +94,11 @@ function CheckoutForm({
   const cardOptions = {
     style: {
       base: {
-        color: isDark ? "#e5e7eb" : "#111827",
+        color: "#111827",
         fontFamily: "ui-sans-serif, system-ui, -apple-system, sans-serif",
         fontSize: "14px",
-        iconColor: isDark ? "#9ca3af" : "#6b7280",
-        "::placeholder": { color: isDark ? "#4b5563" : "#9ca3af" },
+        iconColor: "#6b7280",
+        "::placeholder": { color: "#9ca3af" },
       },
       invalid: { color: "#ef4444", iconColor: "#ef4444" },
     },
@@ -182,8 +169,8 @@ function CheckoutForm({
         </Card>
 
         {/* Info débit différé */}
-        <div className="flex items-start gap-2.5 rounded-lg border border-blue-500/20 bg-blue-500/5 px-4 py-3">
-          <Lock className="mt-0.5 size-4 shrink-0 text-blue-500" />
+        <div className="flex items-start gap-2.5 rounded-lg border border-green/20 bg-green-light px-4 py-3">
+          <Lock className="mt-0.5 size-4 shrink-0 text-primary" />
           <p className="text-sm text-muted-foreground">
             <span className="font-medium text-foreground">
               Aucun débit immédiat.

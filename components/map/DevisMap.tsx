@@ -41,7 +41,7 @@ export function DevisMap({ origin, destination, className }: DevisMapProps) {
       })
 
       L.tileLayer(
-        "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png",
+        "https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png",
         {
           attribution:
             '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/">CARTO</a>',
@@ -71,17 +71,19 @@ export function DevisMap({ origin, destination, className }: DevisMapProps) {
         routeLayerRef.current = null
       }
 
-      const blueIcon = new L.Icon({
-        iconUrl: "/leaflet/marker-icon.png",
-        iconRetinaUrl: "/leaflet/marker-icon-2x.png",
-        shadowUrl: "/leaflet/marker-shadow.png",
-        iconSize: [25, 41],
-        iconAnchor: [12, 41],
-        popupAnchor: [1, -34],
+      const greenIcon = L.divIcon({
+        className: "",
+        html: `<svg width="24" height="36" viewBox="0 0 24 36" xmlns="http://www.w3.org/2000/svg">
+          <path d="M12 0C5.373 0 0 5.373 0 12c0 8.25 12 24 12 24s12-15.75 12-24C24 5.373 18.627 0 12 0z" fill="#2E7D32"/>
+          <circle cx="12" cy="12" r="5" fill="white"/>
+        </svg>`,
+        iconSize: [24, 36],
+        iconAnchor: [12, 36],
+        popupAnchor: [0, -36],
       })
 
       if (origin) {
-        const m = L.marker([origin.lat, origin.lng], { icon: blueIcon })
+        const m = L.marker([origin.lat, origin.lng], { icon: greenIcon })
           .addTo(map)
           .bindPopup(`<b>Départ</b><br>${origin.address}`)
         markersRef.current.push(m)
@@ -89,7 +91,7 @@ export function DevisMap({ origin, destination, className }: DevisMapProps) {
 
       if (destination) {
         const m = L.marker([destination.lat, destination.lng], {
-          icon: blueIcon,
+          icon: greenIcon,
         })
           .addTo(map)
           .bindPopup(`<b>Arrivée</b><br>${destination.address}`)
@@ -113,7 +115,7 @@ export function DevisMap({ origin, destination, className }: DevisMapProps) {
                 ([lng, lat]) => [lat, lng] as [number, number],
               )
               routeLayerRef.current = L.polyline(latlngs, {
-                color: "#3b82f6",
+                color: "#2E7D32",
                 weight: 4,
                 opacity: 0.8,
               }).addTo(map)

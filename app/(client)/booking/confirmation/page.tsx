@@ -38,8 +38,8 @@ function ConfirmationContent() {
       </div>
       <div className="w-full max-w-md text-center">
         {/* Icône succès */}
-        <div className="mx-auto mb-6 flex size-20 items-center justify-center rounded-full bg-emerald-500/10">
-          <CheckCircle2 className="size-10 text-emerald-500" />
+        <div className="mx-auto mb-6 flex size-20 items-center justify-center rounded-full bg-green-light">
+          <CheckCircle2 className="size-10 text-primary" />
         </div>
 
         <h1 className="text-2xl font-bold">Réservation confirmée !</h1>
@@ -49,7 +49,7 @@ function ConfirmationContent() {
         </p>
 
         {booking && (
-          <div className="mt-6 rounded-xl border border-border/50 bg-card px-6 py-4">
+          <div className="mt-6 rounded-lg border border-border/50 bg-card px-6 py-4">
             <p className="text-xs text-muted-foreground">Référence de réservation</p>
             <p className="mt-1 font-mono text-2xl font-bold tracking-widest text-primary">
               {booking.reference}
