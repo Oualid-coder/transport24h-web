@@ -68,7 +68,10 @@ export default function HomePage() {
     <>
       {/* ── Hero ──────────────────────────────────────────────────────────── */}
       <section className="relative overflow-hidden py-24 sm:py-32">
-        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_80%_50%_at_50%_-20%,oklch(0.58_0.22_262/0.25),transparent)]" />
+        {/* Cercle décoratif principal — vert clair, coin haut-droit */}
+        <div aria-hidden="true" className="pointer-events-none absolute -right-32 -top-28 size-[500px] rounded-full bg-green-light" />
+        {/* Cercle décoratif secondaire — vert moyen, légèrement en retrait */}
+        <div aria-hidden="true" className="pointer-events-none absolute right-8 top-36 size-[280px] rounded-full bg-green-mid opacity-50" />
 
         <div className="mx-auto max-w-7xl px-4 sm:px-6">
           <div className="mx-auto max-w-3xl text-center">
