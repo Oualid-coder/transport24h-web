@@ -51,7 +51,8 @@ export default async function ClientLayout({
 
       <footer className="border-t border-border/50 py-10">
         <div className="mx-auto max-w-7xl px-4 sm:px-6">
-          <div className="flex flex-col items-center justify-between gap-4 sm:flex-row">
+          <div className="flex flex-col items-center justify-between gap-6 sm:flex-row sm:items-start">
+            {/* Logo + identité */}
             <div className="flex items-center gap-2">
               <Image
                 src="/logo-transport24h.png"
@@ -63,14 +64,25 @@ export default async function ClientLayout({
               />
               <span className="text-sm font-medium">Transport24h</span>
             </div>
-            <p className="text-xs text-muted-foreground">
-              © {new Date().getFullYear()} Transport24h — Tous droits réservés
-            </p>
-            <div className="flex gap-4 text-xs text-muted-foreground">
-              <Link
-                href="/partners"
-                className="hover:text-foreground transition-colors"
-              >
+
+            {/* Infos légales société */}
+            <div className="text-center text-xs text-muted-foreground space-y-1">
+              <p>© {new Date().getFullYear()} TRANSPORT24H.FR — Tous droits réservés</p>
+              <p>SAS au capital de 5 400 € · SIREN 992 485 623</p>
+            </div>
+
+            {/* Liens */}
+            <div className="flex flex-wrap justify-center gap-x-4 gap-y-2 text-xs text-muted-foreground sm:justify-end">
+              <Link href="/mentions-legales" className="hover:text-foreground transition-colors">
+                Mentions légales
+              </Link>
+              <Link href="/cgv" className="hover:text-foreground transition-colors">
+                CGV
+              </Link>
+              <Link href="/politique-de-confidentialite" className="hover:text-foreground transition-colors">
+                Confidentialité
+              </Link>
+              <Link href="/partners" className="hover:text-foreground transition-colors">
                 Devenir partenaire
               </Link>
             </div>
