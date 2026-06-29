@@ -116,8 +116,8 @@ function PricingRow({ row }: { row: PricingConfig }) {
       {isFirstInterval && (
         <tr>
           <td colSpan={5} className="pb-3 pt-1">
-            <div className="flex items-start gap-2 rounded-lg border border-blue-500/20 bg-blue-500/5 px-3 py-2">
-              <Info className="mt-0.5 size-3.5 shrink-0 text-blue-500" />
+            <div className="flex items-start gap-2 rounded-lg border border-green/20 bg-green-light px-3 py-2">
+              <Info className="mt-0.5 size-3.5 shrink-0 text-primary" />
               <p className="text-xs text-muted-foreground">
                 <span className="font-medium text-foreground">
                   Prix fixe de mise à disposition

@@ -160,7 +160,7 @@ export default function PartnersPage() {
             ].map((f) => (
               <div
                 key={f.title}
-                className="flex gap-4 rounded-xl border border-border/50 bg-card p-5"
+                className="flex gap-4 rounded-lg border border-border/50 bg-card p-5"
               >
                 <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-primary/10">
                   {f.icon}

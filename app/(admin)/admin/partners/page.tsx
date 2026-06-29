@@ -30,7 +30,7 @@ const STATUS_CONFIG: Record<
   },
   approved: {
     label: "Approuvé",
-    className: "border-emerald-500/30 bg-emerald-500/15 text-emerald-400",
+    className: "border-primary/30 bg-primary/10 text-primary",
   },
   rejected: {
     label: "Rejeté",
@@ -182,7 +182,7 @@ function PartnerList({ status }: { status?: PartnerStatus }) {
 
   if (partners.length === 0) {
     return (
-      <div className="rounded-xl border border-dashed border-border py-16 text-center">
+      <div className="rounded-lg border border-dashed border-border py-16 text-center">
         <User className="mx-auto mb-3 size-10 text-muted-foreground/30" />
         <p className="text-muted-foreground">Aucune candidature.</p>
       </div>

@@ -306,7 +306,7 @@ export default function DriverDashboardPage() {
             <Loader2 className="size-5 animate-spin text-muted-foreground" />
           </div>
         ) : available.length === 0 ? (
-          <div className="rounded-xl border border-dashed border-border py-12 text-center">
+          <div className="rounded-lg border border-dashed border-border py-12 text-center">
             <Package className="mx-auto mb-2 size-8 text-muted-foreground/30" />
             <p className="text-sm text-muted-foreground">
               Aucune course disponible pour l&apos;instant.
@@ -347,7 +347,7 @@ export default function DriverDashboardPage() {
             <Loader2 className="size-5 animate-spin text-muted-foreground" />
           </div>
         ) : upcoming.length === 0 ? (
-          <div className="rounded-xl border border-dashed border-border py-12 text-center">
+          <div className="rounded-lg border border-dashed border-border py-12 text-center">
             <CheckCircle2 className="mx-auto mb-2 size-8 text-muted-foreground/30" />
             <p className="text-sm text-muted-foreground">
               Aucune mission assignée.

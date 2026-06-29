@@ -66,7 +66,7 @@ const PAYMENT_CONFIG: Record<
 > = {
   paid: {
     label: "Payé",
-    className: "border-emerald-500/30 bg-emerald-500/15 text-emerald-400",
+    className: "border-primary/30 bg-primary/10 text-primary",
   },
   pending: {
     label: "Paiement en attente",
@@ -128,7 +128,7 @@ function AssignDriverModal({
       />
 
       {/* Panneau */}
-      <div className="relative z-10 flex w-full max-w-md flex-col overflow-hidden rounded-xl border border-border bg-background shadow-2xl">
+      <div className="relative z-10 flex w-full max-w-md flex-col overflow-hidden rounded-lg border border-border bg-background shadow-2xl">
         {/* En-tête */}
         <div className="flex items-center justify-between border-b border-border px-5 py-4">
           <h2 className="font-semibold">Assigner un chauffeur</h2>
@@ -191,7 +191,7 @@ function AssignDriverModal({
           <div
             className={`border-t border-border px-5 py-3 text-sm ${
               msg.type === "success"
-                ? "text-emerald-400"
+                ? "text-primary"
                 : "text-destructive"
             }`}
           >
@@ -513,7 +513,7 @@ function BookingList({ status }: { status?: string }) {
 
   if (sorted.length === 0) {
     return (
-      <div className="rounded-xl border border-dashed border-border py-16 text-center">
+      <div className="rounded-lg border border-dashed border-border py-16 text-center">
         <CheckCircle2 className="mx-auto mb-3 size-10 text-muted-foreground/30" />
         <p className="text-muted-foreground">Aucune réservation.</p>
       </div>
@@ -575,7 +575,7 @@ export default function AdminDashboardPage() {
           loading={statsLoading}
         />
         <StatCard
-          icon={<CreditCard className="size-5 text-emerald-400" />}
+          icon={<CreditCard className="size-5 text-primary" />}
           label="Paiements reçus"
           value={stats ? String(stats.paid_count) : "—"}
           loading={statsLoading}

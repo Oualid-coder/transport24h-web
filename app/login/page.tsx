@@ -6,7 +6,8 @@ import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import * as z from "zod"
 import Link from "next/link"
-import { CheckCircle2, Loader2, Truck } from "lucide-react"
+import { CheckCircle2, Loader2 } from "lucide-react"
+import Image from "next/image"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -60,15 +61,15 @@ function LoginContent() {
       <div className="w-full max-w-sm">
         {/* Logo */}
         <div className="mb-8 flex flex-col items-center gap-2">
-          <div className="flex size-12 items-center justify-center rounded-xl bg-primary">
-            <Truck className="size-6 text-primary-foreground" />
+          <div className="flex size-12 items-center justify-center rounded-lg bg-primary">
+            <Image src="/logo-transport24h.png" alt="Transport24h" width={32} height={32} className="object-contain" />
           </div>
           <h1 className="text-xl font-bold">Transport24h</h1>
         </div>
 
         {/* Bannière inscription réussie */}
         {registered && (
-          <div className="mb-4 flex items-center gap-2 rounded-lg border border-emerald-500/30 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-400">
+          <div className="mb-4 flex items-center gap-2 rounded-lg border border-primary/30 bg-primary/10 px-4 py-3 text-sm text-primary">
             <CheckCircle2 className="size-4 shrink-0" />
             Compte créé ! Connectez-vous maintenant.
           </div>
