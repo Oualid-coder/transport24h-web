@@ -1,0 +1,10 @@
+User-agent: *
+Allow: /
+
+Disallow: /dashboard
+Disallow: /admin/
+Disallow: /driver/
+Disallow: /booking/payment
+Disallow: /booking/confirmation
+
+Sitemap: https://transport24h.fr/sitemap.xml
