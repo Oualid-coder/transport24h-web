@@ -68,12 +68,13 @@ export default function HomePage() {
     <>
       {/* ── Hero ──────────────────────────────────────────────────────────── */}
       <section className="relative overflow-hidden py-24 sm:py-32">
-        {/* Cercle décoratif principal — vert clair, coin haut-droit */}
-        <div aria-hidden="true" className="pointer-events-none absolute -right-32 -top-28 size-[500px] rounded-full bg-green-light" />
-        {/* Cercle décoratif secondaire — vert moyen, légèrement en retrait */}
-        <div aria-hidden="true" className="pointer-events-none absolute right-8 top-36 size-[280px] rounded-full bg-green-mid opacity-50" />
+        {/* Cercle décoratif principal — réduit sur mobile pour ne pas envahir le viewport */}
+        <div aria-hidden="true" className="pointer-events-none absolute -right-20 -top-20 size-[260px] rounded-full bg-green-light sm:-right-32 sm:-top-28 sm:size-[500px]" />
+        {/* Cercle décoratif secondaire — masqué sur mobile (trop intrusif à 375px) */}
+        <div aria-hidden="true" className="pointer-events-none absolute right-8 top-36 hidden rounded-full bg-green-mid opacity-50 sm:block sm:size-[280px]" />
 
-        <div className="mx-auto max-w-7xl px-4 sm:px-6">
+        {/* relative : passe le contenu au-dessus des cercles absolute dans le stacking context */}
+        <div className="relative mx-auto max-w-7xl px-4 sm:px-6">
           <div className="mx-auto max-w-3xl text-center">
             <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-primary/30 bg-primary/10 px-4 py-1.5 text-sm text-primary">
               <CheckCircle2 className="size-3.5" />
