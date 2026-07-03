@@ -70,7 +70,10 @@ export async function POST(request: NextRequest) {
 
   // Retourne un 302 avec les cookies déjà posés — le browser traite Set-Cookie
   // avant de suivre la redirection, donc proxy.ts voit le cookie sur la prochaine requête.
-  const response = NextResponse.redirect(new URL(destination, request.url))
+  // En prod derrière nginx, request.url expose l'origine interne (0.0.0.0:3000).
+  // NEXT_PUBLIC_APP_URL contient le domaine public ; request.url sert de fallback en dev.
+  const baseUrl = process.env.NEXT_PUBLIC_APP_URL ?? request.url
+  const response = NextResponse.redirect(new URL(destination, baseUrl))
 
   // access_token httpOnly — lu par le Route Handler proxy et le middleware proxy.ts
   response.cookies.set("access_token", data.access_token, {
