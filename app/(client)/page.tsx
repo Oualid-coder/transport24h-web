@@ -21,6 +21,7 @@ import { Slider } from "@/components/ui/slider"
 import { Textarea } from "@/components/ui/textarea"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { AddressInput } from "@/components/AddressInput"
+import { DecorativeBlobs } from "@/components/DecorativeBlobs"
 import { getQuoteEstimate } from "@/lib/api"
 import { TRUCK_VOLUME } from "@/lib/types"
 import type { GeoPoint, TruckType } from "@/lib/types"
@@ -67,14 +68,30 @@ export default function HomePage() {
   return (
     <>
       {/* ── Hero ──────────────────────────────────────────────────────────── */}
-      <section className="relative overflow-hidden py-24 sm:py-32">
-        {/* Cercle décoratif principal — réduit sur mobile pour ne pas envahir le viewport */}
-        <div aria-hidden="true" className="pointer-events-none absolute -right-20 -top-20 size-[260px] rounded-full bg-green-light sm:-right-32 sm:-top-28 sm:size-[500px]" />
-        {/* Cercle décoratif secondaire — masqué sur mobile (trop intrusif à 375px) */}
-        <div aria-hidden="true" className="pointer-events-none absolute right-8 top-36 hidden rounded-full bg-green-mid opacity-50 sm:block sm:size-[280px]" />
-
-        {/* relative : passe le contenu au-dessus des cercles absolute dans le stacking context */}
-        <div className="relative mx-auto max-w-7xl px-4 sm:px-6">
+      {/* isolate crée un stacking context : les blobs à -z-10 restent derrière TOUT le contenu */}
+      <section className="relative isolate overflow-hidden py-24 sm:py-32">
+        <DecorativeBlobs
+          blobs={[
+            {
+              colorClass: "bg-green-light",
+              size: "clamp(120px, 35vw, 520px)",
+              position: {
+                right: "clamp(-130px, -10vw, -20px)",
+                top: "clamp(-90px, -7vw, -20px)",
+              },
+            },
+            {
+              colorClass: "bg-green-mid",
+              size: "clamp(80px, 20vw, 280px)",
+              opacity: 0.5,
+              position: {
+                right: "clamp(8px, 2vw, 32px)",
+                top: "clamp(100px, 18vw, 144px)",
+              },
+            },
+          ]}
+        />
+        <div className="mx-auto max-w-7xl px-4 sm:px-6">
           <div className="mx-auto max-w-3xl text-center">
             <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-primary/30 bg-primary/10 px-4 py-1.5 text-sm text-primary">
               <CheckCircle2 className="size-3.5" />
