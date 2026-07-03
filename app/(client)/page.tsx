@@ -181,7 +181,7 @@ export default function HomePage() {
               </Card>
 
               {/* Adresses */}
-              <Card>
+              <Card className="!overflow-visible">
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2 text-sm">
                     <MapPin className="size-4 text-primary" />
