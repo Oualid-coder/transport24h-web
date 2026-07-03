@@ -13,7 +13,7 @@ const csp = [
   // Fonts servies localement par next/font — pas besoin de fonts.googleapis.com
   "font-src 'self'",
   // API backend + Stripe (paiement + fraud detection)
-  `connect-src 'self' ${apiOrigin} https://api.stripe.com https://hooks.stripe.com`,
+  `connect-src 'self' ${apiOrigin} https://api.stripe.com https://hooks.stripe.com https://nominatim.openstreetmap.org`,
   // Stripe Elements s'affiche dans un iframe
   "frame-src https://js.stripe.com",
   "frame-ancestors 'none'",

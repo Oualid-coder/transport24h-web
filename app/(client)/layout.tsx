@@ -23,7 +23,7 @@ export default async function ClientLayout({
               height={36}
               className="h-9 w-auto object-contain"
             />
-            <span className="text-base font-semibold tracking-tight">
+            <span className="hidden sm:inline text-base font-semibold tracking-tight">
               Transport24h
             </span>
           </Link>
