@@ -270,8 +270,8 @@ export function getPendingReviewBookings(): Promise<Booking[]> {
 // ── Auth (via Route Handler Next.js) ─────────────────────────────────────────
 
 // Passe par /api/auth/login (Route Handler).
-// Le serveur pose les cookies et retourne un 302 — fetch le suit automatiquement.
-// res.url après le follow est l'URL de destination finale (ex: /dashboard).
+// Le serveur pose les cookies httpOnly et retourne 200 JSON { redirect_to: "/path" }.
+// On évite le 302 qui ferait suivre fetch() vers l'origine interne du conteneur.
 export async function login(
   email: string,
   password: string,
@@ -286,8 +286,7 @@ export async function login(
     const body = (await res.json().catch(() => ({}))) as { error?: string }
     throw new ApiError(res.status, body.error ?? "Identifiants invalides")
   }
-  // fetch a suivi le 302 — res.url est l'URL absolue de destination
-  return { redirect_to: res.url }
+  return res.json() as Promise<{ redirect_to: string }>
 }
 
 export async function logout(): Promise<void> {
