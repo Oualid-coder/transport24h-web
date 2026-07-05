@@ -20,6 +20,8 @@ export function AddressInput({ id, placeholder, onSelect }: AddressInputProps) {
   const containerRef = useRef<HTMLDivElement>(null)
   // Vrai dès qu'une suggestion (ou le fallback) a été sélectionnée pour l'input en cours
   const didSelectRef = useRef(false)
+  // Empêche le debounce de relancer une recherche après un setValue programmatique
+  const isSelectingRef = useRef(false)
 
   // Ferme la dropdown au clic en dehors du composant
   useEffect(() => {
@@ -37,6 +39,11 @@ export function AddressInput({ id, placeholder, onSelect }: AddressInputProps) {
 
   // Recherche avec debounce 300ms
   useEffect(() => {
+    // setValue appelé par handleSelect — pas de nouvelle recherche
+    if (isSelectingRef.current) {
+      isSelectingRef.current = false
+      return
+    }
     // Réinitialise le flag de sélection à chaque frappe
     didSelectRef.current = false
 
@@ -59,6 +66,7 @@ export function AddressInput({ id, placeholder, onSelect }: AddressInputProps) {
 
   const handleSelect = useCallback(
     (point: GeoPoint) => {
+      isSelectingRef.current = true
       didSelectRef.current = true
       setValue(point.address)
       setSuggestions([])
