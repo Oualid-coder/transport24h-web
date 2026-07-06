@@ -1,6 +1,8 @@
 import { cookies } from "next/headers"
 import { redirect } from "next/navigation"
-import { Calendar, Clock, MapPin, Package } from "lucide-react"
+import Link from "next/link"
+import { Calendar, Clock, CreditCard, MapPin, Package } from "lucide-react"
+import { buttonVariants } from "@/components/ui/button"
 import {
   Card,
   CardContent,
@@ -30,6 +32,8 @@ async function getMyBookings(): Promise<Booking[]> {
 }
 
 const STATUS_LABEL: Record<BookingStatus, string> = {
+  awaiting_payment: "En attente de paiement",
+  payment_failed: "Paiement échoué",
   pending_review: "En attente",
   confirmed: "Confirmé",
   in_progress: "En cours",
@@ -41,6 +45,8 @@ const STATUS_VARIANT: Record<
   BookingStatus,
   "default" | "secondary" | "destructive" | "outline"
 > = {
+  awaiting_payment: "outline",
+  payment_failed: "destructive",
   pending_review: "secondary",
   confirmed: "default",
   in_progress: "default",
@@ -109,6 +115,24 @@ function BookingCard({ booking }: { booking: Booking }) {
             {booking.price_ht.toFixed(2)} € HT
           </span>
         </div>
+        {booking.status === "awaiting_payment" && (
+          <Link
+            href={`/booking/payment?id=${booking.id}`}
+            className={buttonVariants({ size: "sm", className: "w-full" })}
+          >
+            <CreditCard className="mr-2 size-3.5" />
+            Reprendre le paiement
+          </Link>
+        )}
+        {booking.status === "payment_failed" && (
+          <Link
+            href={`/booking/payment?id=${booking.id}`}
+            className={buttonVariants({ variant: "destructive", size: "sm", className: "w-full" })}
+          >
+            <CreditCard className="mr-2 size-3.5" />
+            Mettre à jour mon paiement
+          </Link>
+        )}
       </CardContent>
     </Card>
   )
@@ -118,7 +142,7 @@ export default async function DashboardPage() {
   const bookings = await getMyBookings()
 
   const upcoming = bookings.filter((b) =>
-    ["pending_review", "confirmed", "in_progress"].includes(b.status),
+    ["awaiting_payment", "payment_failed", "pending_review", "confirmed", "in_progress"].includes(b.status),
   )
   const history = bookings.filter((b) =>
     ["completed", "cancelled"].includes(b.status),

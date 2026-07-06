@@ -1,6 +1,7 @@
 "use client"
 
-import { useRouter } from "next/navigation"
+import { useRouter, useSearchParams } from "next/navigation"
+import { Suspense } from "react"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import * as z from "zod"
@@ -13,6 +14,8 @@ import { Card, CardContent, CardHeader } from "@/components/ui/card"
 import { register, ApiError } from "@/lib/api"
 import { BackButton } from "@/components/BackButton"
 import { useState } from "react"
+
+function RegisterContent() {
 
 const registerSchema = z
   .object({
@@ -39,7 +42,9 @@ const registerSchema = z
 
 type RegisterForm = z.infer<typeof registerSchema>
 
-export default function RegisterPage() {
+  const sp = useSearchParams()
+  const redirectParam = sp.get("redirect")
+
   const router = useRouter()
   const [serverError, setServerError] = useState<string | null>(null)
 
@@ -61,7 +66,10 @@ export default function RegisterPage() {
         password: data.password,
         phone: data.phone || undefined,
       })
-      router.push("/login?registered=1")
+      const loginUrl = redirectParam
+        ? `/login?registered=1&redirect=${encodeURIComponent(redirectParam)}`
+        : "/login?registered=1"
+      router.push(loginUrl)
     } catch (err) {
       if (err instanceof ApiError && err.status === 409) {
         setServerError("Un compte existe déjà avec cet e-mail.")
@@ -240,5 +248,13 @@ export default function RegisterPage() {
         </Card>
       </div>
     </div>
+  )
+}
+
+export default function RegisterPage() {
+  return (
+    <Suspense fallback={null}>
+      <RegisterContent />
+    </Suspense>
   )
 }

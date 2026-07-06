@@ -7,6 +7,8 @@ export const TRUCK_VOLUME: Record<TruckType, number> = {
 }
 
 export type BookingStatus =
+  | "awaiting_payment"
+  | "payment_failed"
   | "pending_review"
   | "confirmed"
   | "in_progress"

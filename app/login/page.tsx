@@ -136,7 +136,7 @@ function LoginContent() {
               <p>
                 Pas encore de compte ?{" "}
                 <Link
-                  href="/register"
+                  href={`/register${redirectParam ? `?redirect=${encodeURIComponent(redirectParam)}` : ""}`}
                   className="text-primary underline-offset-4 hover:underline"
                 >
                   Créer un compte client

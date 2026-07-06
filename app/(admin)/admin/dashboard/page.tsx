@@ -42,6 +42,8 @@ import { BackButton } from "@/components/BackButton"
 // ── Constantes d'affichage ───────────────────────────────────────────────────
 
 const STATUS_LABEL: Record<BookingStatus, string> = {
+  awaiting_payment: "En attente de paiement",
+  payment_failed: "Paiement échoué",
   pending_review: "À valider",
   confirmed: "Confirmé",
   in_progress: "En cours",
@@ -53,6 +55,8 @@ const STATUS_VARIANT: Record<
   BookingStatus,
   "default" | "secondary" | "destructive" | "outline"
 > = {
+  awaiting_payment: "outline",
+  payment_failed: "destructive",
   pending_review: "secondary",
   confirmed: "default",
   in_progress: "default",
