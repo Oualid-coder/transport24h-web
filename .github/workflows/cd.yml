@@ -39,6 +39,7 @@ jobs:
           push: true
           build-args: |
             NEXT_PUBLIC_API_URL=https://api.transport24h.fr
+            NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=${{ secrets.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY }}
           tags: |
             ghcr.io/${{ env.OWNER }}/t24h-web:latest
             ghcr.io/${{ env.OWNER }}/t24h-web:${{ github.sha }}
