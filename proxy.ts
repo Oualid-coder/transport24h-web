@@ -13,7 +13,7 @@ export function proxy(request: NextRequest): NextResponse {
   const token = request.cookies.get("access_token")?.value
   if (!token) {
     const loginUrl = new URL("/login", request.url)
-    loginUrl.searchParams.set("redirect", pathname)
+    loginUrl.searchParams.set("redirect", pathname + request.nextUrl.search)
     return NextResponse.redirect(loginUrl)
   }
 
