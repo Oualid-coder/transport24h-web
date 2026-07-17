@@ -10,6 +10,7 @@ import { Loader2, Truck } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { PasswordInput } from "@/components/PasswordInput"
 import { Card, CardContent, CardHeader } from "@/components/ui/card"
 import { register, ApiError } from "@/lib/api"
 import { BackButton } from "@/components/BackButton"
@@ -184,9 +185,8 @@ type RegisterForm = z.infer<typeof registerSchema>
               {/* Mot de passe */}
               <div className="space-y-1.5">
                 <Label htmlFor="password">Mot de passe</Label>
-                <Input
+                <PasswordInput
                   id="password"
-                  type="password"
                   placeholder="8 caractères minimum"
                   autoComplete="new-password"
                   aria-invalid={!!errors.password}
@@ -202,9 +202,8 @@ type RegisterForm = z.infer<typeof registerSchema>
               {/* Confirmation */}
               <div className="space-y-1.5">
                 <Label htmlFor="confirmPassword">Confirmer le mot de passe</Label>
-                <Input
+                <PasswordInput
                   id="confirmPassword"
-                  type="password"
                   placeholder="••••••••"
                   autoComplete="new-password"
                   aria-invalid={!!errors.confirmPassword}
