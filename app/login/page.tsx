@@ -11,6 +11,7 @@ import Image from "next/image"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { PasswordInput } from "@/components/PasswordInput"
 import { Card, CardContent, CardHeader } from "@/components/ui/card"
 import { login, ApiError } from "@/lib/api"
 import { BackButton } from "@/components/BackButton"
@@ -103,9 +104,8 @@ function LoginContent() {
 
               <div className="space-y-1.5">
                 <Label htmlFor="password">Mot de passe</Label>
-                <Input
+                <PasswordInput
                   id="password"
-                  type="password"
                   placeholder="••••••••"
                   autoComplete="current-password"
                   aria-invalid={!!errors.password}
