@@ -1,16 +1,44 @@
 "use client"
 
 import { loadStripe } from "@stripe/stripe-js"
-import { Elements, CardElement, useStripe, useElements } from "@stripe/react-stripe-js"
+import {
+  Elements,
+  CardNumberElement,
+  CardExpiryElement,
+  CardCvcElement,
+  useStripe,
+  useElements,
+} from "@stripe/react-stripe-js"
 import { useSearchParams, useRouter } from "next/navigation"
 import { Suspense, useEffect, useState } from "react"
 import { Calendar, CreditCard, Lock, Loader2, MapPin, Package } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { createSetupIntent, confirmSetupIntent, getBookingById, ApiError } from "@/lib/api"
 import type { Booking } from "@/lib/types"
 
 const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY ?? "")
+
+const STRIPE_ELEMENT_STYLE = {
+  base: {
+    color: "#111827",
+    fontFamily: "ui-sans-serif, system-ui, -apple-system, sans-serif",
+    fontSize: "14px",
+    iconColor: "#6b7280",
+    "::placeholder": { color: "#9ca3af" },
+  },
+  invalid: { color: "#ef4444", iconColor: "#ef4444" },
+}
+
+function StripeFieldWrapper({ children }: { children: React.ReactNode }) {
+  return (
+    <div className="rounded-md border border-input bg-background px-3 py-2.5">
+      {children}
+    </div>
+  )
+}
 
 // ── Formulaire Stripe (doit être enfant de <Elements>) ────────────────────────
 
@@ -24,22 +52,31 @@ function CheckoutForm({
   const stripe = useStripe()
   const elements = useElements()
   const router = useRouter()
+
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [cardholderName, setCardholderName] = useState("")
+  const [numberComplete, setNumberComplete] = useState(false)
+  const [expiryComplete, setExpiryComplete] = useState(false)
+  const [cvcComplete, setCvcComplete] = useState(false)
+
+  const stripeReady = !!stripe && !!elements
+  const allComplete =
+    numberComplete &&
+    expiryComplete &&
+    cvcComplete &&
+    cardholderName.trim().length > 0
 
   const priceTTC = Math.round(booking.price_ht * 1.2 * 100) / 100
 
-  const scheduledDate = new Date(booking.scheduled_at).toLocaleDateString(
-    "fr-FR",
-    {
-      weekday: "long",
-      day: "numeric",
-      month: "long",
-      year: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
-    },
-  )
+  const scheduledDate = new Date(booking.scheduled_at).toLocaleDateString("fr-FR", {
+    weekday: "long",
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  })
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -47,15 +84,20 @@ function CheckoutForm({
     setLoading(true)
     setError(null)
 
-    const card = elements.getElement(CardElement)
-    if (!card) {
+    const cardNumber = elements.getElement(CardNumberElement)
+    if (!cardNumber) {
       setLoading(false)
       return
     }
 
     const { setupIntent, error: stripeErr } = await stripe.confirmCardSetup(
       clientSecret,
-      { payment_method: { card } },
+      {
+        payment_method: {
+          card: cardNumber,
+          billing_details: { name: cardholderName.trim() },
+        },
+      },
     )
 
     if (stripeErr) {
@@ -66,11 +108,8 @@ function CheckoutForm({
 
     const pm = setupIntent?.payment_method
     let pmId: string | undefined
-    if (typeof pm === "string") {
-      pmId = pm
-    } else if (pm && "id" in pm) {
-      pmId = pm.id
-    }
+    if (typeof pm === "string") pmId = pm
+    else if (pm && "id" in pm) pmId = pm.id
 
     if (!pmId) {
       setError("Impossible de récupérer la méthode de paiement.")
@@ -89,19 +128,6 @@ function CheckoutForm({
       )
       setLoading(false)
     }
-  }
-
-  const cardOptions = {
-    style: {
-      base: {
-        color: "#111827",
-        fontFamily: "ui-sans-serif, system-ui, -apple-system, sans-serif",
-        fontSize: "14px",
-        iconColor: "#6b7280",
-        "::placeholder": { color: "#9ca3af" },
-      },
-      invalid: { color: "#ef4444", iconColor: "#ef4444" },
-    },
   }
 
   return (
@@ -161,10 +187,79 @@ function CheckoutForm({
               Coordonnées bancaires
             </CardTitle>
           </CardHeader>
-          <CardContent>
-            <div className="rounded-md border border-input bg-background px-3 py-2.5">
-              <CardElement options={cardOptions} />
-            </div>
+          <CardContent className="space-y-4">
+            {!stripeReady ? (
+              <div className="space-y-3" aria-busy="true" aria-label="Chargement du formulaire de paiement">
+                <div className="space-y-1.5">
+                  <div className="h-3.5 w-28 animate-pulse rounded bg-muted" />
+                  <div className="h-10 animate-pulse rounded-md bg-muted" />
+                </div>
+                <div className="space-y-1.5">
+                  <div className="h-3.5 w-28 animate-pulse rounded bg-muted" />
+                  <div className="h-10 animate-pulse rounded-md bg-muted" />
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1.5">
+                    <div className="h-3.5 w-20 animate-pulse rounded bg-muted" />
+                    <div className="h-10 animate-pulse rounded-md bg-muted" />
+                  </div>
+                  <div className="space-y-1.5">
+                    <div className="h-3.5 w-20 animate-pulse rounded bg-muted" />
+                    <div className="h-10 animate-pulse rounded-md bg-muted" />
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <>
+                {/* Nom du titulaire */}
+                <div className="space-y-1.5">
+                  <Label htmlFor="cardholder-name" className="text-xs">
+                    Nom du titulaire
+                  </Label>
+                  <Input
+                    id="cardholder-name"
+                    type="text"
+                    placeholder="Jean Dupont"
+                    autoComplete="cc-name"
+                    value={cardholderName}
+                    onChange={(e) => setCardholderName(e.target.value)}
+                  />
+                </div>
+
+                {/* Numéro de carte */}
+                <div className="space-y-1.5">
+                  <Label className="text-xs">Numéro de carte</Label>
+                  <StripeFieldWrapper>
+                    <CardNumberElement
+                      options={{ style: STRIPE_ELEMENT_STYLE, showIcon: true }}
+                      onChange={(e) => setNumberComplete(e.complete)}
+                    />
+                  </StripeFieldWrapper>
+                </div>
+
+                {/* Expiration + CVC */}
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1.5">
+                    <Label className="text-xs">Date d'expiration</Label>
+                    <StripeFieldWrapper>
+                      <CardExpiryElement
+                        options={{ style: STRIPE_ELEMENT_STYLE }}
+                        onChange={(e) => setExpiryComplete(e.complete)}
+                      />
+                    </StripeFieldWrapper>
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label className="text-xs">Code de sécurité</Label>
+                    <StripeFieldWrapper>
+                      <CardCvcElement
+                        options={{ style: STRIPE_ELEMENT_STYLE }}
+                        onChange={(e) => setCvcComplete(e.complete)}
+                      />
+                    </StripeFieldWrapper>
+                  </div>
+                </div>
+              </>
+            )}
           </CardContent>
         </Card>
 
@@ -172,9 +267,7 @@ function CheckoutForm({
         <div className="flex items-start gap-2.5 rounded-lg border border-green/20 bg-green-light px-4 py-3">
           <Lock className="mt-0.5 size-4 shrink-0 text-primary" />
           <p className="text-sm text-muted-foreground">
-            <span className="font-medium text-foreground">
-              Aucun débit immédiat.
-            </span>{" "}
+            <span className="font-medium text-foreground">Aucun débit immédiat.</span>{" "}
             Votre carte sera débitée de{" "}
             <span className="font-medium text-foreground">
               {priceTTC.toFixed(2)} €
@@ -193,10 +286,12 @@ function CheckoutForm({
           type="submit"
           size="lg"
           className="w-full"
-          disabled={loading || !stripe || !elements}
+          disabled={loading || !stripeReady || !allComplete}
         >
           {loading ? (
             <Loader2 className="mr-2 size-4 animate-spin" />
+          ) : allComplete ? (
+            <CreditCard className="mr-2 size-4" />
           ) : (
             <Lock className="mr-2 size-4" />
           )}
