@@ -32,9 +32,17 @@ const STRIPE_ELEMENT_STYLE = {
   invalid: { color: "#ef4444", iconColor: "#ef4444" },
 }
 
-function StripeFieldWrapper({ children }: { children: React.ReactNode }) {
+function StripeFieldWrapper({
+  children,
+  hasError,
+}: {
+  children: React.ReactNode
+  hasError?: boolean
+}) {
   return (
-    <div className="rounded-md border border-input bg-background px-3 py-2.5">
+    <div
+      className={`rounded-md border bg-background px-3 py-2.5 transition-colors ${hasError ? "border-destructive" : "border-input"}`}
+    >
       {children}
     </div>
   )
@@ -56,9 +64,13 @@ function CheckoutForm({
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [cardholderName, setCardholderName] = useState("")
+  const [nameTouched, setNameTouched] = useState(false)
   const [numberComplete, setNumberComplete] = useState(false)
   const [expiryComplete, setExpiryComplete] = useState(false)
   const [cvcComplete, setCvcComplete] = useState(false)
+  const [numberError, setNumberError] = useState<string | null>(null)
+  const [expiryError, setExpiryError] = useState<string | null>(null)
+  const [cvcError, setCvcError] = useState<string | null>(null)
 
   const stripeReady = !!stripe && !!elements
   const allComplete =
@@ -78,14 +90,23 @@ function CheckoutForm({
     minute: "2-digit",
   })
 
+  const nameError = nameTouched && cardholderName.trim().length === 0
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (loading || !stripe || !elements) return
+    if (loading) return
+
+    if (!stripe || !elements) {
+      setError("Le formulaire de paiement n'est pas encore prêt. Veuillez patienter.")
+      return
+    }
+
     setLoading(true)
     setError(null)
 
     const cardNumber = elements.getElement(CardNumberElement)
     if (!cardNumber) {
+      setError("Une erreur inattendue est survenue. Veuillez recharger la page.")
       setLoading(false)
       return
     }
@@ -222,40 +243,65 @@ function CheckoutForm({
                     placeholder="Jean Dupont"
                     autoComplete="cc-name"
                     value={cardholderName}
+                    aria-invalid={nameError}
                     onChange={(e) => setCardholderName(e.target.value)}
+                    onBlur={() => setNameTouched(true)}
                   />
+                  {nameError && (
+                    <p className="text-xs text-destructive">
+                      Le nom du titulaire est requis.
+                    </p>
+                  )}
                 </div>
 
                 {/* Numéro de carte */}
                 <div className="space-y-1.5">
                   <Label className="text-xs">Numéro de carte</Label>
-                  <StripeFieldWrapper>
+                  <StripeFieldWrapper hasError={!!numberError}>
                     <CardNumberElement
                       options={{ style: STRIPE_ELEMENT_STYLE, showIcon: true }}
-                      onChange={(e) => setNumberComplete(e.complete)}
+                      onChange={(e) => {
+                        setNumberComplete(e.complete)
+                        setNumberError(e.error?.message ?? null)
+                      }}
                     />
                   </StripeFieldWrapper>
+                  {numberError && (
+                    <p className="text-xs text-destructive">{numberError}</p>
+                  )}
                 </div>
 
                 {/* Expiration + CVC */}
                 <div className="grid grid-cols-2 gap-3">
                   <div className="space-y-1.5">
                     <Label className="text-xs">Date d'expiration</Label>
-                    <StripeFieldWrapper>
+                    <StripeFieldWrapper hasError={!!expiryError}>
                       <CardExpiryElement
                         options={{ style: STRIPE_ELEMENT_STYLE }}
-                        onChange={(e) => setExpiryComplete(e.complete)}
+                        onChange={(e) => {
+                          setExpiryComplete(e.complete)
+                          setExpiryError(e.error?.message ?? null)
+                        }}
                       />
                     </StripeFieldWrapper>
+                    {expiryError && (
+                      <p className="text-xs text-destructive">{expiryError}</p>
+                    )}
                   </div>
                   <div className="space-y-1.5">
                     <Label className="text-xs">Code de sécurité</Label>
-                    <StripeFieldWrapper>
+                    <StripeFieldWrapper hasError={!!cvcError}>
                       <CardCvcElement
                         options={{ style: STRIPE_ELEMENT_STYLE }}
-                        onChange={(e) => setCvcComplete(e.complete)}
+                        onChange={(e) => {
+                          setCvcComplete(e.complete)
+                          setCvcError(e.error?.message ?? null)
+                        }}
                       />
                     </StripeFieldWrapper>
+                    {cvcError && (
+                      <p className="text-xs text-destructive">{cvcError}</p>
+                    )}
                   </div>
                 </div>
               </>
