@@ -8,6 +8,7 @@ import {
   CreditCard,
   Euro,
   Loader2,
+  Mail,
   MapPin,
   MessageSquare,
   PencilLine,
@@ -27,6 +28,7 @@ import {
   getAdminBookings,
   getAdminDrivers,
   getAdminStats,
+  sendInvoice,
   updateBookingPrice,
   ApiError,
 } from "@/lib/api"
@@ -252,6 +254,7 @@ function BookingCard({
   const [editingPrice, setEditingPrice] = useState(false)
   const [priceInput, setPriceInput] = useState(fmt(booking.price_ht))
   const [assignOpen, setAssignOpen] = useState(false)
+  const [invoiceMsg, setInvoiceMsg] = useState<{ type: "success" | "error"; text: string } | null>(null)
 
   const priceTVA = booking.price_ttc - booking.price_ht
 
@@ -271,6 +274,20 @@ function BookingCard({
       queryClient.setQueryData<BookingWithClient[]>(queryKey, (old) =>
         old?.map((b) => (b.id === updated.id ? updated : b)),
       )
+    },
+  })
+
+  const sendMutation = useMutation({
+    mutationFn: (invoiceId: string) => sendInvoice(invoiceId),
+    onSuccess: () => {
+      setInvoiceMsg({ type: "success", text: "Facture envoyée avec succès." })
+    },
+    onError: (err) => {
+      const text =
+        err instanceof ApiError
+          ? err.message
+          : "Erreur lors de l'envoi de la facture."
+      setInvoiceMsg({ type: "error", text })
     },
   })
 
@@ -475,7 +492,39 @@ function BookingCard({
               <UserPlus className="mr-1.5 size-3.5" />
               Assigner un chauffeur
             </Button>
+            {booking.invoice_id && (
+              <Button
+                size="sm"
+                variant="outline"
+                className="flex-1"
+                disabled={sendMutation.isPending}
+                onClick={() => {
+                  setInvoiceMsg(null)
+                  sendMutation.mutate(booking.invoice_id!)
+                }}
+              >
+                {sendMutation.isPending ? (
+                  <Loader2 className="mr-1.5 size-3.5 animate-spin" />
+                ) : (
+                  <Mail className="mr-1.5 size-3.5" />
+                )}
+                Envoyer la facture
+              </Button>
+            )}
           </div>
+
+          {/* ── Feedback envoi facture ───────────────────────────────────── */}
+          {invoiceMsg && (
+            <p
+              className={`text-xs ${
+                invoiceMsg.type === "success"
+                  ? "text-primary"
+                  : "text-destructive"
+              }`}
+            >
+              {invoiceMsg.text}
+            </p>
+          )}
         </CardContent>
       </Card>
 

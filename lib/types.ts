@@ -156,8 +156,9 @@ export interface BookingWithClient extends Omit<Booking, "client_phone"> {
   client_last_name: string
   client_email: string
   payment_status: PaymentStatus
-  last4?: string    // 4 derniers chiffres CB — présent si payment_status === "paid"
-  price_ttc: number // price_ht × 1.20 calculé côté backend
+  last4?: string       // 4 derniers chiffres CB — présent si payment_status === "paid"
+  price_ttc: number    // price_ht × 1.20 calculé côté backend
+  invoice_id?: string  // présent si une facture (FACT ou AVOIR) a été générée
 }
 
 export interface AdminStats {

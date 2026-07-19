@@ -206,6 +206,13 @@ export function confirmBooking(id: string): Promise<BookingWithClient> {
   })
 }
 
+// POST /admin/invoices/{id}/send — envoie la facture par email au client
+export function sendInvoice(invoiceId: string): Promise<{ status: string }> {
+  return apiFetch<{ status: string }>(`/admin/invoices/${invoiceId}/send`, {
+    method: "POST",
+  })
+}
+
 // ── Admin — chauffeurs & partenaires ─────────────────────────────────────────
 
 // GET /admin/drivers — liste des chauffeurs actifs
