@@ -77,6 +77,19 @@ async function apiFetch<T>(
 
 type NominatimResult = { lat: string; lon: string; display_name: string }
 
+// Nominatim encode certains caractères dans display_name (&#39; pour l'apostrophe,
+// &amp; pour &). React affiche le texte brut sans décoder les entités HTML —
+// on décode ici, à la source, avant de stocker dans GeoPoint.address.
+function decodeHtmlEntities(str: string): string {
+  return str
+    .replace(/&amp;/g, "&")
+    .replace(/&#39;/g, "'")
+    .replace(/&apos;/g, "'")
+    .replace(/&quot;/g, '"')
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+}
+
 // Retourne jusqu'à 5 suggestions pour l'autocomplete
 export async function searchAddresses(query: string): Promise<GeoPoint[]> {
   if (query.trim().length < 3) return []
@@ -96,7 +109,7 @@ export async function searchAddresses(query: string): Promise<GeoPoint[]> {
     return data.map((item) => ({
       lat: parseFloat(item.lat),
       lng: parseFloat(item.lon),
-      address: item.display_name,
+      address: decodeHtmlEntities(item.display_name),
     }))
   } catch {
     return []
@@ -126,7 +139,7 @@ export async function geocodeAddress(address: string): Promise<GeoPoint | null> 
     return {
       lat: parseFloat(data[0].lat),
       lng: parseFloat(data[0].lon),
-      address: data[0].display_name,
+      address: decodeHtmlEntities(data[0].display_name),
     }
   } catch {
     return null

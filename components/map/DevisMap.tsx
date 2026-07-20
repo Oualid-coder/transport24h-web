@@ -10,6 +10,17 @@ interface DevisMapProps {
   className?: string
 }
 
+// Les adresses sont injectées dans du HTML Leaflet via template literal —
+// on échappe & < > " ' pour éviter la corruption du popup.
+function escapeHtml(str: string): string {
+  return str
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;")
+}
+
 export function DevisMap({ origin, destination, className }: DevisMapProps) {
   const containerRef = useRef<HTMLDivElement>(null)
   const mapRef = useRef<import("leaflet").Map | null>(null)
@@ -85,7 +96,7 @@ export function DevisMap({ origin, destination, className }: DevisMapProps) {
       if (origin) {
         const m = L.marker([origin.lat, origin.lng], { icon: greenIcon })
           .addTo(map)
-          .bindPopup(`<b>Départ</b><br>${origin.address}`)
+          .bindPopup(`<b>Départ</b><br>${escapeHtml(origin.address)}`)
         markersRef.current.push(m)
       }
 
@@ -94,7 +105,7 @@ export function DevisMap({ origin, destination, className }: DevisMapProps) {
           icon: greenIcon,
         })
           .addTo(map)
-          .bindPopup(`<b>Arrivée</b><br>${destination.address}`)
+          .bindPopup(`<b>Arrivée</b><br>${escapeHtml(destination.address)}`)
         markersRef.current.push(m)
       }
 
