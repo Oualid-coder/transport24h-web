@@ -117,7 +117,7 @@ export default function HomePage() {
           {/* Stats */}
           <div className="mx-auto mt-16 grid max-w-3xl grid-cols-3 gap-4 text-center">
             {[
-              { value: "4 500+", label: "Transports réalisés" },
+              { value: "Professionnels", label: "Contactez-nous pour un forfait sur-mesure" },
               { value: "98%", label: "Clients satisfaits" },
               { value: "< 2h", label: "Délai de réponse" },
             ].map((s) => (
