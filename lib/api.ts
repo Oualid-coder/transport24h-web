@@ -16,6 +16,8 @@ import type {
   RegisterBody,
   SavedQuote,
   SetupIntentResponse,
+  TruckSurcharge,
+  TruckType,
 } from "@/lib/types"
 
 // Toutes les requêtes authentifiées passent par le proxy Next.js (/api/proxy).
@@ -365,5 +367,21 @@ export function updatePricing(id: string, body: Partial<PricingConfig>): Promise
   return apiFetch<PricingConfig>(`/admin/pricing/${id}`, {
     method: "PUT",
     body: JSON.stringify(body),
+  })
+}
+
+// GET /admin/truck-surcharge — liste des 3 surcharges (6m3 / 12m3 / 20m3)
+export function getTruckSurcharges(): Promise<TruckSurcharge[]> {
+  return apiFetch<TruckSurcharge[]>("/admin/truck-surcharge")
+}
+
+// PUT /admin/truck-surcharge/{truck_type} — met à jour la surcharge HT d'un type
+export function updateTruckSurcharge(
+  truckType: TruckType,
+  surchargeHt: number,
+): Promise<TruckSurcharge> {
+  return apiFetch<TruckSurcharge>(`/admin/truck-surcharge/${truckType}`, {
+    method: "PUT",
+    body: JSON.stringify({ surcharge_ht: surchargeHt }),
   })
 }

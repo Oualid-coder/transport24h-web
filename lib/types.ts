@@ -225,6 +225,11 @@ export interface SetupIntentResponse {
 
 // ── Config tarification (admin) ───────────────────────────────────────────────
 
+export interface TruckSurcharge {
+  truck_type: TruckType
+  surcharge_ht: number
+}
+
 export interface PricingConfig {
   id: string
   label: string

@@ -14,8 +14,8 @@ import {
   CardTitle,
 } from "@/components/ui/card"
 import { BackButton } from "@/components/BackButton"
-import { getPricingConfig, updatePricing, ApiError } from "@/lib/api"
-import type { PricingConfig } from "@/lib/types"
+import { getPricingConfig, getTruckSurcharges, updatePricing, updateTruckSurcharge, ApiError } from "@/lib/api"
+import type { PricingConfig, TruckSurcharge } from "@/lib/types"
 
 // ── Ligne du tableau ──────────────────────────────────────────────────────────
 
@@ -140,6 +140,141 @@ function PricingRow({ row }: { row: PricingConfig }) {
   )
 }
 
+// ── Ligne surcharge camion ────────────────────────────────────────────────────
+
+function TruckSurchargeRow({ row }: { row: TruckSurcharge }) {
+  const queryClient = useQueryClient()
+  const [draft, setDraft] = useState(String(row.surcharge_ht))
+  const [saved, setSaved] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  const mutation = useMutation({
+    mutationFn: (value: number) => updateTruckSurcharge(row.truck_type, value),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["admin-truck-surcharges"] })
+      setSaved(true)
+      setError(null)
+      setTimeout(() => setSaved(false), 2000)
+    },
+    onError: (err) => {
+      setError(
+        err instanceof ApiError ? err.message : "Erreur lors de la sauvegarde.",
+      )
+    },
+  })
+
+  const handleSave = () => {
+    const value = parseFloat(draft)
+    if (isNaN(value) || value < 0) return
+    mutation.mutate(value)
+  }
+
+  return (
+    <>
+      <tr className="border-b border-border/50 last:border-0">
+        <td className="py-3 pr-4 text-sm font-medium">
+          {row.truck_type.replace("m3", " m³")}
+        </td>
+        <td className="py-3 pr-4">
+          <div className="flex items-center gap-2">
+            <Input
+              type="number"
+              step="0.01"
+              min="0"
+              value={draft}
+              onChange={(e) => {
+                setDraft(e.target.value)
+                setSaved(false)
+              }}
+              className="h-8 w-28 text-sm"
+            />
+            <span className="text-xs text-muted-foreground whitespace-nowrap">
+              € HT
+            </span>
+          </div>
+        </td>
+        <td className="py-3">
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={handleSave}
+            disabled={mutation.isPending}
+          >
+            {mutation.isPending ? (
+              <Loader2 className="mr-1.5 size-3.5 animate-spin" />
+            ) : (
+              <Save className="mr-1.5 size-3.5" />
+            )}
+            {saved ? "Enregistré !" : "Sauvegarder"}
+          </Button>
+        </td>
+      </tr>
+
+      {error && (
+        <tr>
+          <td colSpan={3} className="pb-2">
+            <p className="text-xs text-destructive">{error}</p>
+          </td>
+        </tr>
+      )}
+    </>
+  )
+}
+
+// ── Section surcharges camion ─────────────────────────────────────────────────
+
+function TruckSurchargesCard() {
+  const { data: surcharges, isLoading, error } = useQuery<TruckSurcharge[]>({
+    queryKey: ["admin-truck-surcharges"],
+    queryFn: getTruckSurcharges,
+  })
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>Surcharge par type de camion</CardTitle>
+        <CardDescription>
+          Montant fixe ajouté au prix de base selon le véhicule sélectionné
+        </CardDescription>
+      </CardHeader>
+      <CardContent>
+        {isLoading && (
+          <div className="flex justify-center py-6">
+            <Loader2 className="size-5 animate-spin text-muted-foreground" />
+          </div>
+        )}
+
+        {error && (
+          <p className="text-sm text-destructive">
+            {error instanceof ApiError
+              ? error.message
+              : "Impossible de charger les surcharges."}
+          </p>
+        )}
+
+        {surcharges && (
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead>
+                <tr className="border-b border-border text-xs text-muted-foreground">
+                  <th className="pb-2 pr-4 text-left font-medium">Camion</th>
+                  <th className="pb-2 pr-4 text-left font-medium">Surcharge HT</th>
+                  <th className="pb-2 text-left font-medium">Action</th>
+                </tr>
+              </thead>
+              <tbody>
+                {surcharges.map((row) => (
+                  <TruckSurchargeRow key={row.truck_type} row={row} />
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  )
+}
+
 // ── Page ──────────────────────────────────────────────────────────────────────
 
 export default function PricingPage() {
@@ -172,6 +307,8 @@ export default function PricingPage() {
             : "Impossible de charger la configuration."}
         </p>
       )}
+
+      <TruckSurchargesCard />
 
       {intervals && (
         <Card>
