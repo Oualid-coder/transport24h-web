@@ -45,6 +45,7 @@ export default function HomePage() {
   const [destination, setDestination] = useState<GeoPoint | null>(null)
   const [phone, setPhone] = useState("")
   const [comment, setComment] = useState("")
+  const [hazmatAcknowledged, setHazmatAcknowledged] = useState(false)
 
   // Devis en temps réel dès que les deux points sont géocodés
   const quoteReady = origin !== null && destination !== null
@@ -332,7 +333,34 @@ export default function HomePage() {
                           </div>
                         )}
                       </div>
-                      {phone ? (
+                      {/* Avertissement matières dangereuses */}
+                      <div className="space-y-2 rounded-lg border border-amber-500/30 bg-amber-500/5 p-3">
+                        <p className="text-xs text-muted-foreground">
+                          <span className="font-medium text-foreground">
+                            Matières dangereuses interdites
+                          </span>{" "}
+                          — Le transport de produits inflammables, chimiques, ou
+                          de toute matière dangereuse identifiée par un
+                          pictogramme de danger est strictement interdit. Le
+                          client est seul responsable du contenu transporté.
+                        </p>
+                        <label className="flex cursor-pointer items-start gap-2 text-xs">
+                          <input
+                            type="checkbox"
+                            checked={hazmatAcknowledged}
+                            onChange={(e) =>
+                              setHazmatAcknowledged(e.target.checked)
+                            }
+                            className="mt-0.5 shrink-0 accent-primary"
+                          />
+                          <span>
+                            Je confirme ne transporter aucun produit
+                            inflammable, chimique, ou dangereux identifié par
+                            un pictogramme de danger.
+                          </span>
+                        </label>
+                      </div>
+                      {phone && hazmatAcknowledged ? (
                         <a
                           href={`/booking?truck=${truckType}&handlers=${handlers}&pickupLat=${origin?.lat}&pickupLng=${origin?.lng}&pickup=${encodeURIComponent(origin?.address ?? "")}&deliveryLat=${destination?.lat}&deliveryLng=${destination?.lng}&delivery=${encodeURIComponent(destination?.address ?? "")}&phone=${encodeURIComponent(phone)}&comment=${encodeURIComponent(comment)}`}
                           className={buttonVariants({ className: "w-full" })}

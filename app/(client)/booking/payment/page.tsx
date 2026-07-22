@@ -71,6 +71,7 @@ function CheckoutForm({
   const [numberError, setNumberError] = useState<string | null>(null)
   const [expiryError, setExpiryError] = useState<string | null>(null)
   const [cvcError, setCvcError] = useState<string | null>(null)
+  const [hazmatAcknowledged, setHazmatAcknowledged] = useState(false)
 
   const stripeReady = !!stripe && !!elements
   const allComplete =
@@ -322,6 +323,31 @@ function CheckoutForm({
           </p>
         </div>
 
+        {/* Avertissement matières dangereuses */}
+        <div className="space-y-2 rounded-lg border border-amber-500/30 bg-amber-500/5 p-4">
+          <p className="text-xs text-muted-foreground">
+            <span className="font-medium text-foreground">
+              Matières dangereuses interdites
+            </span>{" "}
+            — Le transport de produits inflammables, chimiques, ou de toute
+            matière dangereuse identifiée par un pictogramme de danger est
+            strictement interdit. Le client est seul responsable du contenu
+            transporté.
+          </p>
+          <label className="flex cursor-pointer items-start gap-2 text-xs">
+            <input
+              type="checkbox"
+              checked={hazmatAcknowledged}
+              onChange={(e) => setHazmatAcknowledged(e.target.checked)}
+              className="mt-0.5 shrink-0 accent-primary"
+            />
+            <span>
+              Je confirme ne transporter aucun produit inflammable, chimique,
+              ou dangereux identifié par un pictogramme de danger.
+            </span>
+          </label>
+        </div>
+
         {error && (
           <p className="rounded-lg border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive">
             {error}
@@ -332,7 +358,7 @@ function CheckoutForm({
           type="submit"
           size="lg"
           className="w-full"
-          disabled={loading || !stripeReady || !allComplete}
+          disabled={loading || !stripeReady || !allComplete || !hazmatAcknowledged}
         >
           {loading ? (
             <Loader2 className="mr-2 size-4 animate-spin" />
