@@ -8,9 +8,10 @@ import { logout } from "@/lib/api"
 
 interface NavActionsProps {
   isLoggedIn: boolean
+  role?: string | null
 }
 
-export function NavActions({ isLoggedIn }: NavActionsProps) {
+export function NavActions({ isLoggedIn, role }: NavActionsProps) {
   const router = useRouter()
 
   const handleLogout = async () => {
@@ -18,11 +19,16 @@ export function NavActions({ isLoggedIn }: NavActionsProps) {
     router.push("/login")
   }
 
+  const dashboardHref =
+    role === "admin" ? "/admin/dashboard" :
+    role === "driver" ? "/driver/dashboard" :
+    "/dashboard"
+
   if (isLoggedIn) {
     return (
       <div className="flex items-center gap-2">
         <Link
-          href="/dashboard"
+          href={dashboardHref}
           className={buttonVariants({ variant: "ghost", size: "sm" })}
         >
           Mon espace

@@ -10,6 +10,7 @@ export default async function ClientLayout({
 }) {
   const cookieStore = await cookies()
   const isLoggedIn = !!cookieStore.get("access_token")?.value
+  const role = cookieStore.get("user_role")?.value ?? null
 
   return (
     <div className="flex min-h-screen flex-col">
@@ -43,7 +44,7 @@ export default async function ClientLayout({
             </Link>
           </nav>
 
-          <NavActions isLoggedIn={isLoggedIn} />
+          <NavActions isLoggedIn={isLoggedIn} role={role} />
         </div>
       </header>
 
