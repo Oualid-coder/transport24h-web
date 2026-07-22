@@ -274,7 +274,7 @@ function CheckoutForm({
                 {/* Expiration + CVC */}
                 <div className="grid grid-cols-2 gap-3">
                   <div className="space-y-1.5">
-                    <Label className="text-xs">Date d'expiration</Label>
+                    <Label className="text-xs">Date d&apos;expiration</Label>
                     <StripeFieldWrapper hasError={!!expiryError}>
                       <CardExpiryElement
                         options={{ style: STRIPE_ELEMENT_STYLE }}
