@@ -93,10 +93,58 @@ export default function CGVPage() {
 
         <section className="space-y-3">
           <h2 className="text-lg font-semibold">6. Annulation et remboursement</h2>
-          <Placeholder />
           <p className="text-muted-foreground leading-relaxed">
-            [À compléter — conditions et délais d&apos;annulation, politique de
-            remboursement selon le délai avant le transport]
+            Toute annulation de la prestation par le Client doit être notifiée
+            par écrit à{" "}
+            <a
+              href="mailto:contact@transport24h.fr"
+              className="text-primary underline underline-offset-4 hover:no-underline"
+            >
+              contact@transport24h.fr
+            </a>{" "}
+            ou via l&apos;espace client dédié sur transport24h.fr.
+          </p>
+          <p className="text-muted-foreground leading-relaxed">
+            En cas d&apos;annulation par le Client :
+          </p>
+          <ul className="space-y-2 text-muted-foreground leading-relaxed">
+            <li className="flex gap-2">
+              <span className="mt-1.5 size-1.5 shrink-0 rounded-full bg-muted-foreground/50" />
+              <span>
+                <span className="font-medium text-foreground">
+                  Plus de 24 heures
+                </span>{" "}
+                avant la date et l&apos;heure prévues de la prestation :
+                remboursement intégral (TTC) du montant versé.
+              </span>
+            </li>
+            <li className="flex gap-2">
+              <span className="mt-1.5 size-1.5 shrink-0 rounded-full bg-muted-foreground/50" />
+              <span>
+                <span className="font-medium text-foreground">
+                  Entre 2 et 24 heures
+                </span>{" "}
+                avant la date et l&apos;heure prévues : remboursement à hauteur
+                de 50&nbsp;% du montant versé (TTC), le solde restant acquis à
+                Transport24h.fr au titre de la réservation du créneau et de
+                l&apos;immobilisation des moyens matériels et humains.
+              </span>
+            </li>
+            <li className="flex gap-2">
+              <span className="mt-1.5 size-1.5 shrink-0 rounded-full bg-muted-foreground/50" />
+              <span>
+                <span className="font-medium text-foreground">
+                  Moins de 2 heures
+                </span>{" "}
+                avant la date et l&apos;heure prévues : aucun remboursement,
+                sauf cas de force majeure dûment justifié.
+              </span>
+            </li>
+          </ul>
+          <p className="text-muted-foreground leading-relaxed">
+            En cas d&apos;annulation par Transport24h.fr, le Client sera
+            intégralement remboursé et pourra prétendre, le cas échéant, à une
+            indemnisation conformément aux dispositions légales applicables.
           </p>
         </section>
 
