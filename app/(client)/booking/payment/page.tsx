@@ -11,7 +11,7 @@ import {
 } from "@stripe/react-stripe-js"
 import { useSearchParams, useRouter } from "next/navigation"
 import { Suspense, useEffect, useState } from "react"
-import { Calendar, CreditCard, Lock, Loader2, MapPin, Package } from "lucide-react"
+import { Calendar, CreditCard, Info, Lock, Loader2, MapPin, Package } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -346,6 +346,27 @@ function CheckoutForm({
               ou dangereux identifié par un pictogramme de danger.
             </span>
           </label>
+        </div>
+
+        {/* Rappel politique d'annulation */}
+        <div className="flex items-start gap-2.5 rounded-lg border border-green/20 bg-green-light px-4 py-3">
+          <Info className="mt-0.5 size-4 shrink-0 text-primary" />
+          <p className="text-sm text-muted-foreground">
+            <span className="font-medium text-foreground">
+              En cas d&apos;annulation :
+            </span>{" "}
+            remboursement intégral si plus de 24h avant la prestation, 50&nbsp;%
+            entre 2h et 24h, aucun remboursement en dessous de 2h.{" "}
+            <a
+              href="/cgv"
+              target="_blank"
+              rel="noreferrer"
+              className="underline underline-offset-4 hover:no-underline"
+            >
+              Voir les CGV
+            </a>{" "}
+            pour plus de détails.
+          </p>
         </div>
 
         {error && (
