@@ -70,10 +70,41 @@ export default function CGVPage() {
 
         <section className="space-y-3">
           <h2 className="text-lg font-semibold">4. Réservation et confirmation</h2>
-          <Placeholder />
           <p className="text-muted-foreground leading-relaxed">
-            [À compléter — processus de réservation en ligne, délai de confirmation par
-            notre équipe, modalités de prise en charge]
+            La réservation s&apos;effectue en ligne sur le site transport24h.fr, en
+            plusieurs étapes :
+          </p>
+          <ol className="list-decimal pl-5 space-y-2 text-muted-foreground leading-relaxed">
+            <li>
+              Le Client renseigne les adresses de départ et d&apos;arrivée, la date et
+              l&apos;heure souhaitées, le type de véhicule et les prestations
+              complémentaires (manutention). Un prix est calculé instantanément.
+            </li>
+            <li>
+              Le Client renseigne ses coordonnées et enregistre un moyen de paiement
+              pour valider sa demande.
+            </li>
+            <li>
+              Si la demande ne nécessite pas de traitement particulier, elle est
+              confirmée automatiquement et le Client reçoit une confirmation par
+              e-mail avec la référence de sa réservation.
+            </li>
+            <li>
+              Si la demande nécessite un ajustement (précisions complémentaires
+              fournies par le Client, cas particulier), elle est soumise à validation
+              par Transport24h.fr avant confirmation définitive. Le Client est informé
+              du délai de traitement, qui n&apos;excède pas{" "}
+              <span className="font-medium text-foreground">2 heures ouvrées</span>{" "}
+              dans la majorité des cas.
+            </li>
+          </ol>
+          <p className="text-muted-foreground leading-relaxed">
+            Aucun débit n&apos;est effectué avant confirmation de la réservation. Le
+            paiement est prélevé selon les modalités décrites à l&apos;Article 5.
+          </p>
+          <p className="text-muted-foreground leading-relaxed">
+            Un chauffeur est ensuite affecté à la prestation. Le Client est informé
+            de cette affectation.
           </p>
         </section>
 
