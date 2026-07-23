@@ -83,6 +83,9 @@ export default async function ClientLayout({
               <Link href="/politique-de-confidentialite" className="hover:text-foreground transition-colors">
                 Confidentialité
               </Link>
+              <Link href="/contact" className="hover:text-foreground transition-colors">
+                Contact
+              </Link>
               <Link href="/partners" className="hover:text-foreground transition-colors">
                 Devenir partenaire
               </Link>
