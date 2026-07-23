@@ -128,10 +128,51 @@ export default function PolitiqueConfidentialitePage() {
 
         <section className="space-y-3">
           <h2 className="text-lg font-semibold">6. Cookies</h2>
-          <Placeholder />
           <p className="text-muted-foreground leading-relaxed">
-            [À compléter — liste des cookies déposés, durée de conservation, modalités
-            de refus]
+            Le site transport24h.fr n&apos;utilise aucun cookie de mesure d&apos;audience,
+            publicitaire ou de traçage commercial. Aucun consentement préalable n&apos;est
+            requis pour les catégories de cookies suivantes, conformément aux
+            recommandations de la CNIL.
+          </p>
+          <p className="font-medium text-foreground">
+            Cookies strictement nécessaires au fonctionnement du service :
+          </p>
+          <ul className="list-disc pl-5 space-y-1.5 text-muted-foreground">
+            <li>
+              <span className="font-medium text-foreground">access_token</span>
+              {" "}— maintien de la session utilisateur connectée
+            </li>
+            <li>
+              <span className="font-medium text-foreground">user_role</span>
+              {" "}— identification du type de compte (client, chauffeur,
+              administrateur) pour l&apos;affichage de l&apos;interface adaptée
+            </li>
+            <li>
+              <span className="font-medium text-foreground">refresh_token</span>
+              {" "}— renouvellement automatique de la session
+            </li>
+          </ul>
+          <p className="text-muted-foreground leading-relaxed">
+            Ces cookies sont indispensables à l&apos;utilisation du site (connexion,
+            réservation, paiement) et ne peuvent être désactivés sans empêcher le
+            fonctionnement du service.
+          </p>
+          <p className="font-medium text-foreground">
+            Cookies tiers liés au paiement sécurisé :
+          </p>
+          <p className="text-muted-foreground leading-relaxed">
+            Lors du paiement, notre prestataire Stripe (certifié PCI DSS) dépose des
+            cookies techniques ({" "}
+            <span className="font-medium text-foreground">__stripe_mid</span>,{" "}
+            <span className="font-medium text-foreground">__stripe_sid</span>,{" "}
+            <span className="font-medium text-foreground">m</span>
+            {" "}) nécessaires à la sécurisation de la transaction et à la prévention de
+            la fraude. Ces cookies ne sont déposés que sur la page de paiement.
+          </p>
+          <p className="text-muted-foreground leading-relaxed">
+            Vous pouvez configurer votre navigateur pour refuser les cookies, mais cela
+            pourrait empêcher l&apos;utilisation de certaines fonctionnalités du site,
+            notamment la réservation et le paiement en ligne.
           </p>
         </section>
 
