@@ -9,6 +9,7 @@ import type {
   EstimateBody,
   EstimateResult,
   GeoPoint,
+  HelpersSurcharge,
   PartnerApplyBody,
   PartnerApplication,
   PaymentIntent,
@@ -383,5 +384,21 @@ export function updateTruckSurcharge(
   return apiFetch<TruckSurcharge>(`/admin/truck-surcharge/${truckType}`, {
     method: "PUT",
     body: JSON.stringify({ surcharge_ht: surchargeHt }),
+  })
+}
+
+// GET /admin/helpers-surcharge — liste des 2 configs (1 / 2 manutentionnaires)
+export function getHelpersSurcharges(): Promise<HelpersSurcharge[]> {
+  return apiFetch<HelpersSurcharge[]>("/admin/helpers-surcharge")
+}
+
+// PUT /admin/helpers-surcharge/{helpers_count} — met à jour le % de surcharge
+export function updateHelpersSurcharge(
+  helpersCount: number,
+  surchargePct: number,
+): Promise<HelpersSurcharge> {
+  return apiFetch<HelpersSurcharge>(`/admin/helpers-surcharge/${helpersCount}`, {
+    method: "PUT",
+    body: JSON.stringify({ surcharge_pct: surchargePct }),
   })
 }

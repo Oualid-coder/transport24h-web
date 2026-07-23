@@ -14,8 +14,8 @@ import {
   CardTitle,
 } from "@/components/ui/card"
 import { BackButton } from "@/components/BackButton"
-import { getPricingConfig, getTruckSurcharges, updatePricing, updateTruckSurcharge, ApiError } from "@/lib/api"
-import type { PricingConfig, TruckSurcharge } from "@/lib/types"
+import { getPricingConfig, getTruckSurcharges, updatePricing, updateTruckSurcharge, getHelpersSurcharges, updateHelpersSurcharge, ApiError } from "@/lib/api"
+import type { PricingConfig, TruckSurcharge, HelpersSurcharge } from "@/lib/types"
 
 // ── Ligne du tableau ──────────────────────────────────────────────────────────
 
@@ -275,6 +275,143 @@ function TruckSurchargesCard() {
   )
 }
 
+// ── Ligne surcharge manutentionnaire ─────────────────────────────────────────
+
+function HelpersSurchargeRow({ row }: { row: HelpersSurcharge }) {
+  const queryClient = useQueryClient()
+  const [draft, setDraft] = useState(String(row.surcharge_pct))
+  const [saved, setSaved] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  const mutation = useMutation({
+    mutationFn: (value: number) => updateHelpersSurcharge(row.helpers_count, value),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["admin-helpers-surcharges"] })
+      setSaved(true)
+      setError(null)
+      setTimeout(() => setSaved(false), 2000)
+    },
+    onError: (err) => {
+      setError(
+        err instanceof ApiError ? err.message : "Erreur lors de la sauvegarde.",
+      )
+    },
+  })
+
+  const handleSave = () => {
+    const value = parseFloat(draft)
+    if (isNaN(value) || value < 0 || value > 100) return
+    mutation.mutate(value)
+  }
+
+  const label =
+    row.helpers_count === 1 ? "1 manutentionnaire" : `${row.helpers_count} manutentionnaires`
+
+  return (
+    <>
+      <tr className="border-b border-border/50 last:border-0">
+        <td className="py-3 pr-4 text-sm font-medium">{label}</td>
+        <td className="py-3 pr-4">
+          <div className="flex items-center gap-2">
+            <Input
+              type="number"
+              step="1"
+              min="0"
+              max="100"
+              value={draft}
+              onChange={(e) => {
+                setDraft(e.target.value)
+                setSaved(false)
+              }}
+              className="h-8 w-24 text-sm"
+            />
+            <span className="text-xs font-medium text-muted-foreground whitespace-nowrap">
+              %
+            </span>
+          </div>
+        </td>
+        <td className="py-3">
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={handleSave}
+            disabled={mutation.isPending}
+          >
+            {mutation.isPending ? (
+              <Loader2 className="mr-1.5 size-3.5 animate-spin" />
+            ) : (
+              <Save className="mr-1.5 size-3.5" />
+            )}
+            {saved ? "Enregistré !" : "Sauvegarder"}
+          </Button>
+        </td>
+      </tr>
+
+      {error && (
+        <tr>
+          <td colSpan={3} className="pb-2">
+            <p className="text-xs text-destructive">{error}</p>
+          </td>
+        </tr>
+      )}
+    </>
+  )
+}
+
+// ── Section surcharges manutentionnaire ──────────────────────────────────────
+
+function HelpersSurchargesCard() {
+  const { data: surcharges, isLoading, error } = useQuery<HelpersSurcharge[]>({
+    queryKey: ["admin-helpers-surcharges"],
+    queryFn: getHelpersSurcharges,
+  })
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>Surcharge par manutentionnaire</CardTitle>
+        <CardDescription>
+          Pourcentage ajouté au prix de base selon le nombre de manutentionnaires
+        </CardDescription>
+      </CardHeader>
+      <CardContent>
+        {isLoading && (
+          <div className="flex justify-center py-6">
+            <Loader2 className="size-5 animate-spin text-muted-foreground" />
+          </div>
+        )}
+
+        {error && (
+          <p className="text-sm text-destructive">
+            {error instanceof ApiError
+              ? error.message
+              : "Impossible de charger les surcharges."}
+          </p>
+        )}
+
+        {surcharges && (
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead>
+                <tr className="border-b border-border text-xs text-muted-foreground">
+                  <th className="pb-2 pr-4 text-left font-medium">Manutentionnaires</th>
+                  <th className="pb-2 pr-4 text-left font-medium">Surcharge (%)</th>
+                  <th className="pb-2 text-left font-medium">Action</th>
+                </tr>
+              </thead>
+              <tbody>
+                {surcharges.map((row) => (
+                  <HelpersSurchargeRow key={row.helpers_count} row={row} />
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  )
+}
+
 // ── Page ──────────────────────────────────────────────────────────────────────
 
 export default function PricingPage() {
@@ -309,6 +446,8 @@ export default function PricingPage() {
       )}
 
       <TruckSurchargesCard />
+
+      <HelpersSurchargesCard />
 
       {intervals && (
         <Card>

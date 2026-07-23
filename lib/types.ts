@@ -230,6 +230,11 @@ export interface TruckSurcharge {
   surcharge_ht: number
 }
 
+export interface HelpersSurcharge {
+  helpers_count: number
+  surcharge_pct: number
+}
+
 export interface PricingConfig {
   id: string
   label: string
