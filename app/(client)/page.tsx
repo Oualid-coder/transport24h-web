@@ -122,8 +122,8 @@ export default function HomePage() {
               { value: "98%", label: "Clients satisfaits" },
               { value: "< 2h", label: "Délai de réponse" },
             ].map((s) => (
-              <div key={s.label} className="rounded-xl border border-border/50 bg-card p-4">
-                <div className="text-2xl font-bold text-primary">{s.value}</div>
+              <div key={s.label} className="rounded-xl border border-border/50 bg-card p-4 min-w-0">
+                <div className="break-words text-sm font-bold text-primary sm:text-2xl">{s.value}</div>
                 <div className="mt-1 text-xs text-muted-foreground">{s.label}</div>
               </div>
             ))}
@@ -403,7 +403,7 @@ export default function HomePage() {
               {
                 icon: <CheckCircle2 className="size-5 text-primary" />,
                 title: "Prix transparents",
-                desc: "Le prix affiché est le prix final. Pas de mauvaise surprise à l&apos;arrivée.",
+                desc: "Le prix affiché est le prix final. Pas de mauvaise surprise à l'arrivée.",
               },
               {
                 icon: <Truck className="size-5 text-primary" />,
@@ -413,7 +413,7 @@ export default function HomePage() {
               {
                 icon: <Users className="size-5 text-primary" />,
                 title: "Manutentionnaires disponibles",
-                desc: "Ajoutez jusqu&apos;à 2 manutentionnaires pour le chargement et déchargement.",
+                desc: "Ajoutez jusqu'à 2 manutentionnaires pour le chargement et déchargement.",
               },
             ].map((f) => (
               <div
