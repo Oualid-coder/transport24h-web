@@ -335,6 +335,20 @@ export function registerPartner(body: PartnerApplyBody): Promise<void> {
   })
 }
 
+// ── Contact ───────────────────────────────────────────────────────────────────
+
+// POST /contact — public
+export function sendContact(body: {
+  email: string
+  subject: string
+  message: string
+}): Promise<void> {
+  return apiFetch<void>("/contact", {
+    method: "POST",
+    body: JSON.stringify(body),
+  })
+}
+
 // ── Paiement ──────────────────────────────────────────────────────────────────
 
 export function createPaymentIntent(bookingId: string): Promise<PaymentIntent> {
