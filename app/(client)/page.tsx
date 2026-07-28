@@ -104,7 +104,7 @@ export default function HomePage() {
               <br />à portée de clic
             </h1>
             <p className="mt-6 text-lg text-muted-foreground">
-              Déménagement, livraison d&apos;encombrants, transport de matériel.
+              Déménagement, livraison de marchandise, courses à courses et transport de matériel.
               Obtenez un prix instantané et réservez en ligne.
             </p>
             <div className="mt-8 flex flex-wrap justify-center gap-3">
@@ -270,7 +270,7 @@ export default function HomePage() {
                     </Label>
                     <Textarea
                       id="comment"
-                      placeholder="Étages, monte-meuble, objets fragiles..."
+                      placeholder="Prestation standard : trottoir à trottoir. Si l'accès est compliqué (rue étroite, stationnement difficile, étage sans ascenseur pour des objets encombrants), décrivez-le ici pour un ajustement du prix avant confirmation du paiement."
                       value={comment}
                       onChange={(e) => setComment(e.target.value)}
                       rows={3}
