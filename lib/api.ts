@@ -327,12 +327,41 @@ export function register(body: RegisterBody): Promise<void> {
 
 // ── Partenaires ───────────────────────────────────────────────────────────────
 
-// POST /partners/apply — public
-export function registerPartner(body: PartnerApplyBody): Promise<void> {
-  return apiFetch<void>("/partners/apply", {
+// POST /partners/apply — public — retourne l'application créée (id nécessaire pour les uploads)
+export function registerPartner(body: PartnerApplyBody): Promise<PartnerApplication> {
+  return apiFetch<PartnerApplication>("/partners/apply", {
     method: "POST",
     body: JSON.stringify(body),
   })
+}
+
+// POST /admin/partners/{id}/documents/{doc_type}
+// Appel direct (pas via proxy) — l'applicant n'est pas authentifié.
+// Le backend accepte le corps brut ; Content-Length est posé automatiquement par le navigateur.
+export async function uploadPartnerDocument(
+  partnerId: string,
+  docType: "kbis" | "licence_mere" | "rcp" | "urssaf",
+  file: File,
+): Promise<void> {
+  const res = await fetch(
+    `${PUBLIC_API_URL}/admin/partners/${partnerId}/documents/${docType}`,
+    {
+      method: "POST",
+      headers: { "Content-Type": file.type },
+      body: file,
+    },
+  )
+  if (!res.ok) {
+    let message = res.statusText
+    try {
+      const body = (await res.json()) as { error?: string; message?: string }
+      if (body.error) message = body.error
+      else if (body.message) message = body.message
+    } catch {
+      // ignore parse error
+    }
+    throw new ApiError(res.status, message)
+  }
 }
 
 // ── Paiement ──────────────────────────────────────────────────────────────────
