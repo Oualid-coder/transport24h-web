@@ -457,7 +457,7 @@ export default function PartnersPage() {
                     ) : (
                       <ArrowRight className="mr-2 size-4" />
                     )}
-                    Envoyer ma candidature
+                    Continuer
                   </Button>
                 </form>
               </CardContent>
