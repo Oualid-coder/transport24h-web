@@ -327,9 +327,9 @@ export function register(body: RegisterBody): Promise<void> {
 
 // ── Partenaires ───────────────────────────────────────────────────────────────
 
-// POST /partners/apply — public — retourne l'application créée (id nécessaire pour les uploads)
+// POST /partners — public — retourne l'application créée (id nécessaire pour les uploads)
 export function registerPartner(body: PartnerApplyBody): Promise<PartnerApplication> {
-  return apiFetch<PartnerApplication>("/partners/apply", {
+  return apiFetch<PartnerApplication>("/partners", {
     method: "POST",
     body: JSON.stringify(body),
   })
