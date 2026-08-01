@@ -108,7 +108,20 @@ function PartnerCard({
               </p>
             </div>
           </div>
-          <Badge className={statusCfg.className}>{statusCfg.label}</Badge>
+          <div className="flex items-center gap-1.5">
+            <Badge
+              className={
+                partner.documents_count === 4
+                  ? "border-emerald-500/30 bg-emerald-500/15 text-emerald-600"
+                  : partner.documents_count === 0
+                    ? "border-border bg-accent/50 text-muted-foreground"
+                    : "border-amber-500/30 bg-amber-500/15 text-amber-500"
+              }
+            >
+              {partner.documents_count}/4 docs
+            </Badge>
+            <Badge className={statusCfg.className}>{statusCfg.label}</Badge>
+          </div>
         </div>
 
         {/* ── Contact ─────────────────────────────────────────────────── */}
