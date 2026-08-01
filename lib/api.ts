@@ -335,7 +335,7 @@ export function registerPartner(body: PartnerApplyBody): Promise<PartnerApplicat
   })
 }
 
-// POST /admin/partners/{id}/documents/{doc_type}
+// POST /partners/{id}/documents/{doc_type}
 // Appel direct (pas via proxy) — l'applicant n'est pas authentifié.
 // Le backend accepte le corps brut ; Content-Length est posé automatiquement par le navigateur.
 export async function uploadPartnerDocument(
@@ -344,7 +344,7 @@ export async function uploadPartnerDocument(
   file: File,
 ): Promise<void> {
   const res = await fetch(
-    `${PUBLIC_API_URL}/admin/partners/${partnerId}/documents/${docType}`,
+    `${PUBLIC_API_URL}/partners/${partnerId}/documents/${docType}`,
     {
       method: "POST",
       headers: { "Content-Type": file.type },

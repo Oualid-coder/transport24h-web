@@ -1,6 +1,6 @@
 "use client"
 
-import { useRef, useState } from "react"
+import { useRef, useState, useEffect } from "react"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import * as z from "zod"
@@ -161,6 +161,11 @@ export default function PartnersPage() {
   const [applicationId, setApplicationId] = useState<string | null>(null)
   const [docStates, setDocStates] = useState<Record<DocType, DocState>>(INITIAL_DOC_STATES)
   const [success, setSuccess] = useState(false)
+
+  useEffect(() => {
+    const id = new URLSearchParams(window.location.search).get("id")
+    if (id) setApplicationId(id)
+  }, [])
 
   const {
     register,
