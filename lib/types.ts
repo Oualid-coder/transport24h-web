@@ -19,12 +19,16 @@ export type UserRole = "client" | "admin" | "driver"
 
 // ── Chauffeur (retourné par /admin/drivers) ───────────────────────────────────
 
+export type DriverEmploymentType = "employee" | "partner"
+
 export interface Driver {
   id: string
   first_name: string
   last_name: string
   email: string
   phone: string
+  employment_type: DriverEmploymentType
+  application_id?: string
 }
 
 // ── Candidature partenaire ────────────────────────────────────────────────────

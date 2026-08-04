@@ -165,7 +165,7 @@ function AssignDriverModal({
                   key={driver.id}
                   className="flex items-center justify-between gap-3 px-5 py-3 hover:bg-accent/30"
                 >
-                  <div className="min-w-0">
+                  <div className="min-w-0 flex-1">
                     <p className="text-sm font-medium">
                       {driver.first_name} {driver.last_name}
                     </p>
@@ -174,6 +174,15 @@ function AssignDriverModal({
                       {driver.phone ? ` · ${driver.phone}` : ""}
                     </p>
                   </div>
+                  <Badge
+                    className={
+                      driver.employment_type === "employee"
+                        ? "shrink-0 border-sky-500/30 bg-sky-500/15 text-sky-500"
+                        : "shrink-0 border-violet-500/30 bg-violet-500/15 text-violet-500"
+                    }
+                  >
+                    {driver.employment_type === "employee" ? "Employé CDI" : "Partenaire"}
+                  </Badge>
                   <Button
                     size="sm"
                     disabled={mutation.isPending}
