@@ -22,6 +22,7 @@ import {
 } from "@/lib/api"
 import type { AvailableBooking, Booking, BookingStatus } from "@/lib/types"
 import { BackButton } from "@/components/BackButton"
+import { BookingPhotoSection } from "@/components/BookingPhotoSection"
 
 // ── Constantes ───────────────────────────────────────────────────────────────
 
@@ -242,6 +243,11 @@ function MyMissionCard({ booking }: { booking: Booking }) {
             {fmt(booking.price_ht)} € HT
           </span>
         </div>
+        <BookingPhotoSection
+          bookingId={booking.id}
+          variant="driver"
+          canUploadAfter={["confirmed", "in_progress", "completed"].includes(booking.status)}
+        />
       </CardContent>
     </Card>
   )

@@ -2,6 +2,7 @@ import type {
   AdminStats,
   AvailableBooking,
   Booking,
+  BookingPhotos,
   BookingWithClient,
   CreateBookingBody,
   CreateQuoteBody,
@@ -279,6 +280,46 @@ export function acceptBooking(id: string): Promise<Booking> {
 // GET /driver/bookings/mine — courses assignées au chauffeur connecté
 export function getDriverMyBookings(): Promise<Booking[]> {
   return apiFetch<Booking[]>("/driver/bookings/mine")
+}
+
+// POST /driver/bookings/{id}/photos/{phase} — multipart/form-data, champ "photo", max 8 Mo
+// Bypass apiFetch : Content-Type ne doit pas être forcé à application/json (boundary multipart)
+export async function uploadBookingPhoto(
+  bookingId: string,
+  phase: "before" | "after",
+  file: File,
+): Promise<void> {
+  const form = new FormData()
+  form.append("photo", file)
+  const res = await fetch(`${PROXY_BASE}/driver/bookings/${bookingId}/photos/${phase}`, {
+    method: "POST",
+    body: form,
+  })
+  if (res.status === 401) {
+    if (typeof window !== "undefined") {
+      window.location.href = `/login?redirect=${encodeURIComponent(window.location.pathname + window.location.search)}`
+    }
+    throw new ApiError(401, "Non autorisé")
+  }
+  if (!res.ok) {
+    let message = res.statusText
+    try {
+      const body = (await res.json()) as { error?: string; message?: string }
+      if (body.error) message = body.error
+      else if (body.message) message = body.message
+    } catch { /* ignore */ }
+    throw new ApiError(res.status, message)
+  }
+}
+
+// GET /driver/bookings/{id}/photos — URLs signées 1h
+export function getDriverBookingPhotos(bookingId: string): Promise<BookingPhotos> {
+  return apiFetch<BookingPhotos>(`/driver/bookings/${bookingId}/photos`)
+}
+
+// GET /admin/bookings/{id}/photos — URLs signées 15 min
+export function getAdminBookingPhotos(bookingId: string): Promise<BookingPhotos> {
+  return apiFetch<BookingPhotos>(`/admin/bookings/${bookingId}/photos`)
 }
 
 // Conservées pour compatibilité — préférer getAdminBookings dans les nouveaux composants
