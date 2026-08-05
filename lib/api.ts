@@ -7,6 +7,7 @@ import type {
   CreateBookingBody,
   CreateQuoteBody,
   Driver,
+  DriverCreated,
   EstimateBody,
   EstimateResult,
   GeoPoint,
@@ -235,6 +236,19 @@ export function sendInvoice(invoiceId: string): Promise<{ status: string }> {
 // GET /admin/drivers — liste des chauffeurs actifs
 export function getAdminDrivers(): Promise<Driver[]> {
   return apiFetch<Driver[]>("/admin/drivers")
+}
+
+// POST /admin/drivers — crée un compte chauffeur CDI, retourne 201 avec mot de passe temporaire
+export function createDriver(body: {
+  email: string
+  first_name: string
+  last_name: string
+  phone: string
+}): Promise<DriverCreated> {
+  return apiFetch<DriverCreated>("/admin/drivers", {
+    method: "POST",
+    body: JSON.stringify(body),
+  })
 }
 
 // PUT /admin/bookings/{id}/assign — assigne un chauffeur à une course

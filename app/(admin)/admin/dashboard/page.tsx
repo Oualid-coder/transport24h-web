@@ -3,8 +3,11 @@
 import { useState } from "react"
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 import {
+  AlertTriangle,
   Calendar,
+  Check,
   CheckCircle2,
+  Copy,
   CreditCard,
   Euro,
   Loader2,
@@ -25,6 +28,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import {
   assignDriver,
   confirmBooking,
+  createDriver,
   getAdminBookings,
   getAdminDrivers,
   getAdminStats,
@@ -37,6 +41,7 @@ import type {
   BookingStatus,
   BookingWithClient,
   Driver,
+  DriverCreated,
   PaymentStatus,
 } from "@/lib/types"
 import { BackButton } from "@/components/BackButton"
@@ -88,6 +93,207 @@ const PAYMENT_CONFIG: Record<
 const fmt = (n: number) =>
   n.toLocaleString("fr-FR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })
 
+// ── Modal création chauffeur CDI ──────────────────────────────────────────────
+
+function CreateDriverModal({
+  onClose,
+  onCreated,
+}: {
+  onClose: () => void
+  onCreated: () => void
+}) {
+  const [fields, setFields] = useState({
+    email: "",
+    first_name: "",
+    last_name: "",
+    phone: "",
+  })
+  const [fieldErrors, setFieldErrors] = useState<Partial<Record<keyof typeof fields, string>>>({})
+  const [result, setResult] = useState<DriverCreated | null>(null)
+  const [serverError, setServerError] = useState<string | null>(null)
+  const [copied, setCopied] = useState(false)
+
+  const mutation = useMutation({
+    mutationFn: () => createDriver(fields),
+    onSuccess: (data) => {
+      setResult(data)
+      onCreated()
+    },
+    onError: (err) => {
+      setServerError(err instanceof ApiError ? err.message : "Erreur lors de la création.")
+    },
+  })
+
+  const set =
+    (k: keyof typeof fields) => (e: React.ChangeEvent<HTMLInputElement>) =>
+      setFields((prev) => ({ ...prev, [k]: e.target.value }))
+
+  const validate = (): boolean => {
+    const e: Partial<Record<keyof typeof fields, string>> = {}
+    if (!fields.first_name.trim()) e.first_name = "Requis"
+    if (!fields.last_name.trim()) e.last_name = "Requis"
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(fields.email.trim())) e.email = "Email invalide"
+    if (!fields.phone.trim()) e.phone = "Requis"
+    setFieldErrors(e)
+    return Object.keys(e).length === 0
+  }
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!validate()) return
+    setServerError(null)
+    mutation.mutate()
+  }
+
+  const handleCopy = async () => {
+    if (!result) return
+    await navigator.clipboard.writeText(result.temp_password)
+    setCopied(true)
+    setTimeout(() => setCopied(false), 2000)
+  }
+
+  return (
+    <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
+      <div
+        className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+        onClick={() => !mutation.isPending && onClose()}
+      />
+      <div className="relative z-10 flex w-full max-w-md flex-col overflow-hidden rounded-lg border border-border bg-background shadow-2xl">
+        {/* En-tête */}
+        <div className="flex items-center justify-between border-b border-border px-5 py-4">
+          <h2 className="font-semibold">
+            {result ? "Compte créé" : "Ajouter un chauffeur CDI"}
+          </h2>
+          <button
+            onClick={onClose}
+            disabled={mutation.isPending}
+            className="rounded p-1 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground disabled:opacity-50"
+            aria-label="Fermer"
+          >
+            <X className="size-4" />
+          </button>
+        </div>
+
+        {result ? (
+          /* ── État succès : mot de passe temporaire ── */
+          <div className="space-y-4 p-5">
+            <div className="flex items-start gap-3 rounded-lg border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-500">
+              <AlertTriangle className="mt-0.5 size-4 shrink-0" />
+              <p>
+                Transmettez ce mot de passe au chauffeur{" "}
+                <span className="font-semibold">maintenant</span>. Il ne sera
+                plus jamais affiché après fermeture de cette fenêtre.
+              </p>
+            </div>
+            <div>
+              <p className="mb-2 text-sm text-muted-foreground">
+                {result.first_name} {result.last_name} ·{" "}
+                <span className="font-mono text-xs">{result.email}</span>
+              </p>
+              <div className="flex items-center gap-2 rounded-lg border border-border bg-accent/40 px-4 py-3">
+                <code className="flex-1 select-all font-mono text-sm font-bold tracking-widest">
+                  {result.temp_password}
+                </code>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  className="shrink-0"
+                  onClick={handleCopy}
+                >
+                  {copied ? (
+                    <Check className="mr-1.5 size-3.5 text-emerald-500" />
+                  ) : (
+                    <Copy className="mr-1.5 size-3.5" />
+                  )}
+                  {copied ? "Copié !" : "Copier"}
+                </Button>
+              </div>
+            </div>
+            <Button className="w-full" onClick={onClose}>
+              Fermer
+            </Button>
+          </div>
+        ) : (
+          /* ── Formulaire ── */
+          <form onSubmit={handleSubmit} className="space-y-4 p-5">
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1.5">
+                <label className="text-xs font-medium text-muted-foreground">
+                  Prénom
+                </label>
+                <Input
+                  placeholder="Jean"
+                  value={fields.first_name}
+                  onChange={set("first_name")}
+                  aria-invalid={!!fieldErrors.first_name}
+                />
+                {fieldErrors.first_name && (
+                  <p className="text-xs text-destructive">{fieldErrors.first_name}</p>
+                )}
+              </div>
+              <div className="space-y-1.5">
+                <label className="text-xs font-medium text-muted-foreground">
+                  Nom
+                </label>
+                <Input
+                  placeholder="Dupont"
+                  value={fields.last_name}
+                  onChange={set("last_name")}
+                  aria-invalid={!!fieldErrors.last_name}
+                />
+                {fieldErrors.last_name && (
+                  <p className="text-xs text-destructive">{fieldErrors.last_name}</p>
+                )}
+              </div>
+            </div>
+            <div className="space-y-1.5">
+              <label className="text-xs font-medium text-muted-foreground">
+                Adresse e-mail
+              </label>
+              <Input
+                type="email"
+                placeholder="jean.dupont@exemple.fr"
+                value={fields.email}
+                onChange={set("email")}
+                aria-invalid={!!fieldErrors.email}
+              />
+              {fieldErrors.email && (
+                <p className="text-xs text-destructive">{fieldErrors.email}</p>
+              )}
+            </div>
+            <div className="space-y-1.5">
+              <label className="text-xs font-medium text-muted-foreground">
+                Téléphone
+              </label>
+              <Input
+                type="tel"
+                placeholder="06 12 34 56 78"
+                value={fields.phone}
+                onChange={set("phone")}
+                aria-invalid={!!fieldErrors.phone}
+              />
+              {fieldErrors.phone && (
+                <p className="text-xs text-destructive">{fieldErrors.phone}</p>
+              )}
+            </div>
+            {serverError && (
+              <div className="rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">
+                {serverError}
+              </div>
+            )}
+            <Button type="submit" className="w-full" disabled={mutation.isPending}>
+              {mutation.isPending && (
+                <Loader2 className="mr-2 size-4 animate-spin" />
+              )}
+              Créer le compte
+            </Button>
+          </form>
+        )}
+      </div>
+    </div>
+  )
+}
+
 // ── Modal assignation chauffeur ───────────────────────────────────────────────
 
 function AssignDriverModal({
@@ -101,6 +307,7 @@ function AssignDriverModal({
 }) {
   const queryClient = useQueryClient()
   const [msg, setMsg] = useState<{ type: "success" | "error"; text: string } | null>(null)
+  const [showCreate, setShowCreate] = useState(false)
 
   const { data: drivers = [], isLoading } = useQuery({
     queryKey: ["admin-drivers"],
@@ -127,6 +334,7 @@ function AssignDriverModal({
   })
 
   return (
+    <>
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       {/* Backdrop */}
       <div
@@ -139,14 +347,24 @@ function AssignDriverModal({
         {/* En-tête */}
         <div className="flex items-center justify-between border-b border-border px-5 py-4">
           <h2 className="font-semibold">Assigner un chauffeur</h2>
-          <button
-            onClick={onClose}
-            disabled={mutation.isPending}
-            className="rounded p-1 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground disabled:opacity-50"
-            aria-label="Fermer"
-          >
-            <X className="size-4" />
-          </button>
+          <div className="flex items-center gap-2">
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => setShowCreate(true)}
+            >
+              <UserPlus className="mr-1.5 size-3.5" />
+              Ajouter CDI
+            </Button>
+            <button
+              onClick={onClose}
+              disabled={mutation.isPending}
+              className="rounded p-1 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground disabled:opacity-50"
+              aria-label="Fermer"
+            >
+              <X className="size-4" />
+            </button>
+          </div>
         </div>
 
         {/* Liste chauffeurs */}
@@ -216,6 +434,16 @@ function AssignDriverModal({
         )}
       </div>
     </div>
+
+    {showCreate && (
+      <CreateDriverModal
+        onClose={() => setShowCreate(false)}
+        onCreated={() =>
+          queryClient.invalidateQueries({ queryKey: ["admin-drivers"] })
+        }
+      />
+    )}
+    </>
   )
 }
 
