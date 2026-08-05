@@ -148,6 +148,11 @@ export interface Booking {
   updated_at: string
 }
 
+export interface BookingPhotos {
+  before: string[]
+  after: string[]
+}
+
 // ── Admin ─────────────────────────────────────────────────────────────────────
 
 export type PaymentStatus = "paid" | "pending" | "none"

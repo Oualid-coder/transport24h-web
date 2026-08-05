@@ -40,6 +40,7 @@ import type {
   PaymentStatus,
 } from "@/lib/types"
 import { BackButton } from "@/components/BackButton"
+import { BookingPhotoSection } from "@/components/BookingPhotoSection"
 
 // ── Constantes d'affichage ───────────────────────────────────────────────────
 
@@ -534,6 +535,9 @@ function BookingCard({
               {invoiceMsg.text}
             </p>
           )}
+
+          {/* ── Photos ──────────────────────────────────────────────────── */}
+          <BookingPhotoSection bookingId={booking.id} variant="admin" />
         </CardContent>
       </Card>
 
