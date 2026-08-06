@@ -27,6 +27,12 @@ import { Badge } from "@/components/ui/badge"
 import { Card, CardContent, CardHeader } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import {
+  Dialog,
+  DialogClose,
+  DialogContent,
+  DialogTitle,
+} from "@/components/ui/dialog"
+import {
   assignDriver,
   confirmBooking,
   createDriver,
@@ -97,9 +103,11 @@ const fmt = (n: number) =>
 // ── Modal création chauffeur CDI ──────────────────────────────────────────────
 
 function CreateDriverModal({
+  open,
   onClose,
   onCreated,
 }: {
+  open: boolean
   onClose: () => void
   onCreated: () => void
 }) {
@@ -155,25 +163,33 @@ function CreateDriverModal({
   }
 
   return (
-    <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
-      <div
-        className="absolute inset-0 bg-black/60 backdrop-blur-sm"
-        onClick={() => !mutation.isPending && onClose()}
-      />
-      <div className="relative z-10 flex w-full max-w-md flex-col overflow-hidden rounded-lg border border-border bg-background shadow-2xl">
+    <Dialog
+      open={open}
+      onOpenChange={(isOpen) => {
+        if (!isOpen && mutation.isPending) return
+        if (!isOpen) onClose()
+      }}
+    >
+      <DialogContent
+        showCloseButton={false}
+        className="max-w-md gap-0 overflow-hidden p-0 bg-background"
+      >
         {/* En-tête */}
         <div className="flex items-center justify-between border-b border-border px-5 py-4">
-          <h2 className="font-semibold">
+          <DialogTitle className="font-semibold">
             {result ? "Compte créé" : "Ajouter un chauffeur CDI"}
-          </h2>
-          <button
-            onClick={onClose}
-            disabled={mutation.isPending}
-            className="rounded p-1 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground disabled:opacity-50"
-            aria-label="Fermer"
+          </DialogTitle>
+          <DialogClose
+            render={
+              <button
+                disabled={mutation.isPending}
+                className="rounded p-1 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground disabled:opacity-50"
+                aria-label="Fermer"
+              />
+            }
           >
             <X className="size-4" />
-          </button>
+          </DialogClose>
         </div>
 
         {result ? (
@@ -295,18 +311,20 @@ function CreateDriverModal({
             </Button>
           </form>
         )}
-      </div>
-    </div>
+      </DialogContent>
+    </Dialog>
   )
 }
 
 // ── Modal assignation chauffeur ───────────────────────────────────────────────
 
 function AssignDriverModal({
+  open,
   bookingId,
   queryKey,
   onClose,
 }: {
+  open: boolean
   bookingId: string
   queryKey: unknown[]
   onClose: () => void
@@ -319,6 +337,7 @@ function AssignDriverModal({
     queryKey: ["admin-drivers"],
     queryFn: getAdminDrivers,
     staleTime: 30_000,
+    enabled: open,
   })
 
   const mutation = useMutation({
@@ -340,19 +359,20 @@ function AssignDriverModal({
   })
 
   return (
-    <>
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-      {/* Backdrop */}
-      <div
-        className="absolute inset-0 bg-black/60 backdrop-blur-sm"
-        onClick={() => !mutation.isPending && onClose()}
-      />
-
-      {/* Panneau */}
-      <div className="relative z-10 flex w-full max-w-md flex-col overflow-hidden rounded-lg border border-border bg-background shadow-2xl">
+    <Dialog
+      open={open}
+      onOpenChange={(isOpen) => {
+        if (!isOpen && mutation.isPending) return
+        if (!isOpen) onClose()
+      }}
+    >
+      <DialogContent
+        showCloseButton={false}
+        className="max-w-md gap-0 overflow-hidden p-0 bg-background"
+      >
         {/* En-tête */}
         <div className="flex items-center justify-between border-b border-border px-5 py-4">
-          <h2 className="font-semibold">Assigner un chauffeur</h2>
+          <DialogTitle className="font-semibold">Assigner un chauffeur</DialogTitle>
           <div className="flex items-center gap-2">
             <Button
               size="sm"
@@ -362,14 +382,17 @@ function AssignDriverModal({
               <UserPlus className="mr-1.5 size-3.5" />
               Ajouter CDI
             </Button>
-            <button
-              onClick={onClose}
-              disabled={mutation.isPending}
-              className="rounded p-1 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground disabled:opacity-50"
-              aria-label="Fermer"
+            <DialogClose
+              render={
+                <button
+                  disabled={mutation.isPending}
+                  className="rounded p-1 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground disabled:opacity-50"
+                  aria-label="Fermer"
+                />
+              }
             >
               <X className="size-4" />
-            </button>
+            </DialogClose>
           </div>
         </div>
 
@@ -438,18 +461,18 @@ function AssignDriverModal({
             {msg.text}
           </div>
         )}
-      </div>
-    </div>
+      </DialogContent>
 
-    {showCreate && (
-      <CreateDriverModal
-        onClose={() => setShowCreate(false)}
-        onCreated={() =>
-          queryClient.invalidateQueries({ queryKey: ["admin-drivers"] })
-        }
-      />
-    )}
-    </>
+      {showCreate && (
+        <CreateDriverModal
+          open
+          onClose={() => setShowCreate(false)}
+          onCreated={() =>
+            queryClient.invalidateQueries({ queryKey: ["admin-drivers"] })
+          }
+        />
+      )}
+    </Dialog>
   )
 }
 
@@ -777,14 +800,12 @@ function BookingCard({
         </CardContent>
       </Card>
 
-      {/* Modal rendu en dehors de la Card pour éviter les problèmes de z-index */}
-      {assignOpen && (
-        <AssignDriverModal
-          bookingId={booking.id}
-          queryKey={queryKey}
-          onClose={() => setAssignOpen(false)}
-        />
-      )}
+      <AssignDriverModal
+        open={assignOpen}
+        bookingId={booking.id}
+        queryKey={queryKey}
+        onClose={() => setAssignOpen(false)}
+      />
     </>
   )
 }

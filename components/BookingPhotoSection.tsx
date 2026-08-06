@@ -149,6 +149,7 @@ export function BookingPhotoSection({
     <div className="border-t border-border/50 pt-3">
       <button
         type="button"
+        aria-expanded={open}
         className="flex w-full items-center justify-between text-sm text-muted-foreground transition-colors hover:text-foreground"
         onClick={() => setOpen((v) => !v)}
       >
