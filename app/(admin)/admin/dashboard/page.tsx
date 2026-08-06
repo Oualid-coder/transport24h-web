@@ -7,6 +7,7 @@ import {
   Calendar,
   Check,
   CheckCircle2,
+  Clock,
   Copy,
   CreditCard,
   Euro,
@@ -133,7 +134,8 @@ function CreateDriverModal({
     if (!fields.first_name.trim()) e.first_name = "Requis"
     if (!fields.last_name.trim()) e.last_name = "Requis"
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(fields.email.trim())) e.email = "Email invalide"
-    if (!fields.phone.trim()) e.phone = "Requis"
+    if (!/^(0|\+33)[1-9][0-9]{8}$/.test(fields.phone.trim()))
+      e.phone = "Numéro invalide — ex : 0612345678 ou +33612345678"
     setFieldErrors(e)
     return Object.keys(e).length === 0
   }
@@ -218,10 +220,11 @@ function CreateDriverModal({
           <form onSubmit={handleSubmit} className="space-y-4 p-5">
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1.5">
-                <label className="text-xs font-medium text-muted-foreground">
+                <label htmlFor="cdi-first-name" className="text-xs font-medium text-muted-foreground">
                   Prénom
                 </label>
                 <Input
+                  id="cdi-first-name"
                   placeholder="Jean"
                   value={fields.first_name}
                   onChange={set("first_name")}
@@ -232,10 +235,11 @@ function CreateDriverModal({
                 )}
               </div>
               <div className="space-y-1.5">
-                <label className="text-xs font-medium text-muted-foreground">
+                <label htmlFor="cdi-last-name" className="text-xs font-medium text-muted-foreground">
                   Nom
                 </label>
                 <Input
+                  id="cdi-last-name"
                   placeholder="Dupont"
                   value={fields.last_name}
                   onChange={set("last_name")}
@@ -247,10 +251,11 @@ function CreateDriverModal({
               </div>
             </div>
             <div className="space-y-1.5">
-              <label className="text-xs font-medium text-muted-foreground">
+              <label htmlFor="cdi-email" className="text-xs font-medium text-muted-foreground">
                 Adresse e-mail
               </label>
               <Input
+                id="cdi-email"
                 type="email"
                 placeholder="jean.dupont@exemple.fr"
                 value={fields.email}
@@ -262,10 +267,11 @@ function CreateDriverModal({
               )}
             </div>
             <div className="space-y-1.5">
-              <label className="text-xs font-medium text-muted-foreground">
+              <label htmlFor="cdi-phone" className="text-xs font-medium text-muted-foreground">
                 Téléphone
               </label>
               <Input
+                id="cdi-phone"
                 type="tel"
                 placeholder="06 12 34 56 78"
                 value={fields.phone}
@@ -737,8 +743,10 @@ function BookingCard({
                 className="flex-1"
                 disabled={sendMutation.isPending}
                 onClick={() => {
+                  const id = booking.invoice_id
+                  if (!id) return
                   setInvoiceMsg(null)
-                  sendMutation.mutate(booking.invoice_id!)
+                  sendMutation.mutate(id)
                 }}
               >
                 {sendMutation.isPending ? (
@@ -863,7 +871,7 @@ export default function AdminDashboardPage() {
           loading={statsLoading}
         />
         <StatCard
-          icon={<Loader2 className="size-5 text-amber-400" />}
+          icon={<Clock className="size-5 text-amber-400" />}
           label="En attente de validation"
           value={stats ? String(stats.pending_count) : "—"}
           loading={statsLoading}

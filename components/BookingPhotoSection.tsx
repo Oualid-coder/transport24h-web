@@ -13,7 +13,7 @@ import {
 
 const MAX_PHOTO_SIZE = 8 * 1024 * 1024
 
-function PhotoGrid({ urls }: { urls: string[] }) {
+function PhotoGrid({ urls, phaseLabel }: { urls: string[]; phaseLabel: string }) {
   if (urls.length === 0) {
     return <p className="text-xs italic text-muted-foreground">Aucune photo.</p>
   }
@@ -23,7 +23,7 @@ function PhotoGrid({ urls }: { urls: string[] }) {
         <a key={i} href={url} target="_blank" rel="noopener noreferrer" className="block">
           <img
             src={url}
-            alt=""
+            alt={`Photo ${phaseLabel} n°${i + 1} — cliquer pour agrandir`}
             className="h-16 w-16 rounded-md border border-border/50 object-cover transition-opacity hover:opacity-80"
           />
         </a>
@@ -91,7 +91,6 @@ function PhaseRow({
               accept="image/*"
               className="sr-only"
               onChange={handleChange}
-              disabled={mutation.isPending || uploadDisabled}
             />
             <Button
               type="button"
@@ -111,7 +110,7 @@ function PhaseRow({
           </>
         )}
       </div>
-      <PhotoGrid urls={photos} />
+      <PhotoGrid urls={photos} phaseLabel={label} />
       {error && <p className="text-xs text-destructive">{error}</p>}
     </div>
   )

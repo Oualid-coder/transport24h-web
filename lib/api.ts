@@ -336,15 +336,6 @@ export function getAdminBookingPhotos(bookingId: string): Promise<BookingPhotos>
   return apiFetch<BookingPhotos>(`/admin/bookings/${bookingId}/photos`)
 }
 
-// Conservées pour compatibilité — préférer getAdminBookings dans les nouveaux composants
-export function getBookingsToday(): Promise<Booking[]> {
-  return apiFetch<Booking[]>("/admin/bookings/today")
-}
-
-export function getPendingReviewBookings(): Promise<Booking[]> {
-  return apiFetch<Booking[]>("/admin/bookings/pending-review")
-}
-
 // ── Auth (via Route Handler Next.js) ─────────────────────────────────────────
 
 // Passe par /api/auth/login (Route Handler).
