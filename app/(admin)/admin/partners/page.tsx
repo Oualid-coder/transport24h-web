@@ -1,8 +1,11 @@
 "use client"
 
+import { useState } from "react"
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 import {
+  Check,
   CheckCircle2,
+  Copy,
   Loader2,
   Mail,
   Phone,
@@ -71,6 +74,14 @@ function PartnerCard({
     onSuccess: updateCache,
   })
 
+  const [copied, setCopied] = useState(false)
+
+  const handleCopy = async () => {
+    await navigator.clipboard.writeText(`${window.location.origin}/partners?id=${partner.id}`)
+    setCopied(true)
+    setTimeout(() => setCopied(false), 2000)
+  }
+
   const date = new Date(partner.created_at)
   const statusCfg = STATUS_CONFIG[partner.status]
   const busy = approveMutation.isPending || rejectMutation.isPending
@@ -97,7 +108,20 @@ function PartnerCard({
               </p>
             </div>
           </div>
-          <Badge className={statusCfg.className}>{statusCfg.label}</Badge>
+          <div className="flex items-center gap-1.5">
+            <Badge
+              className={
+                partner.documents_count === 4
+                  ? "border-emerald-500/30 bg-emerald-500/15 text-emerald-600"
+                  : partner.documents_count === 0
+                    ? "border-border bg-accent/50 text-muted-foreground"
+                    : "border-amber-500/30 bg-amber-500/15 text-amber-500"
+              }
+            >
+              {partner.documents_count}/4 docs
+            </Badge>
+            <Badge className={statusCfg.className}>{statusCfg.label}</Badge>
+          </div>
         </div>
 
         {/* ── Contact ─────────────────────────────────────────────────── */}
@@ -123,6 +147,21 @@ function PartnerCard({
             {partner.truck_type}
           </span>
         </div>
+
+        {/* ── Lien de reprise ─────────────────────────────────────────── */}
+        <Button
+          size="sm"
+          variant="ghost"
+          className="w-full text-muted-foreground"
+          onClick={handleCopy}
+        >
+          {copied ? (
+            <Check className="mr-1.5 size-3.5 text-emerald-500" />
+          ) : (
+            <Copy className="mr-1.5 size-3.5" />
+          )}
+          {copied ? "Copié !" : "Copier le lien de reprise"}
+        </Button>
 
         {/* ── Actions (seulement si en attente) ───────────────────────── */}
         {partner.status === "pending" && (

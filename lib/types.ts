@@ -54,6 +54,7 @@ export interface PartnerApplication {
   truck_type: TruckType
   status: PartnerStatus
   created_at: string
+  documents_count: number
 }
 
 // ── Localisation ──────────────────────────────────────────────────────────────
