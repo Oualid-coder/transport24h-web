@@ -15,6 +15,7 @@ import type {
   PartnerApplyBody,
   PartnerApplication,
   PaymentIntent,
+  PaginatedBookings,
   PricingConfig,
   RegisterBody,
   SavedQuote,
@@ -199,12 +200,18 @@ export function getBookingById(id: string): Promise<Booking> {
 
 // ── Admin ─────────────────────────────────────────────────────────────────────
 
-// GET /admin/bookings?status=xxx — status optionnel : "pending_review" | "today" | omis = tous
-export function getAdminBookings(status?: string): Promise<BookingWithClient[]> {
-  const path = status
-    ? `/admin/bookings?status=${encodeURIComponent(status)}`
-    : "/admin/bookings"
-  return apiFetch<BookingWithClient[]>(path)
+// GET /admin/bookings — retourne un format paginé
+// Paramètres : status optionnel ("pending_review" | "today"), page (défaut 1), limit (défaut 20)
+export function getAdminBookings(
+  status?: string,
+  page = 1,
+  limit = 20,
+): Promise<PaginatedBookings> {
+  const params = new URLSearchParams()
+  if (status) params.set("status", status)
+  params.set("page", String(page))
+  params.set("limit", String(limit))
+  return apiFetch<PaginatedBookings>(`/admin/bookings?${params.toString()}`)
 }
 
 export function getAdminStats(): Promise<AdminStats> {

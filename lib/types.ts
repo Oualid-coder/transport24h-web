@@ -180,6 +180,13 @@ export interface BookingWithClient extends Omit<Booking, "client_phone"> {
   invoice_id?: string  // présent si une facture (FACT ou AVOIR) a été générée
 }
 
+export interface PaginatedBookings {
+  bookings: BookingWithClient[]
+  total: number
+  page: number
+  limit: number
+}
+
 export interface AdminStats {
   revenue_today: number   // CA du jour en € HT
   bookings_today: number  // nombre total de courses du jour

@@ -7,6 +7,8 @@ import {
   Calendar,
   Check,
   CheckCircle2,
+  ChevronLeft,
+  ChevronRight,
   Copy,
   CreditCard,
   Euro,
@@ -42,6 +44,7 @@ import type {
   BookingWithClient,
   Driver,
   DriverCreated,
+  PaginatedBookings,
   PaymentStatus,
 } from "@/lib/types"
 import { BackButton } from "@/components/BackButton"
@@ -318,8 +321,8 @@ function AssignDriverModal({
   const mutation = useMutation({
     mutationFn: (driverId: string) => assignDriver(bookingId, driverId),
     onSuccess: (updated) => {
-      queryClient.setQueryData<BookingWithClient[]>(queryKey, (old) =>
-        old?.map((b) => (b.id === updated.id ? updated : b)),
+      queryClient.setQueryData<PaginatedBookings>(queryKey, (old) =>
+        old ? { ...old, bookings: old.bookings.map((b) => (b.id === updated.id ? updated : b)) } : old,
       )
       setMsg({ type: "success", text: "Chauffeur assigné avec succès." })
       setTimeout(onClose, 1500)
@@ -500,8 +503,8 @@ function BookingCard({
     mutationFn: (ht: number) => updateBookingPrice(booking.id, ht),
     onSuccess: (updated) => {
       setEditingPrice(false)
-      queryClient.setQueryData<BookingWithClient[]>(queryKey, (old) =>
-        old?.map((b) => (b.id === updated.id ? updated : b)),
+      queryClient.setQueryData<PaginatedBookings>(queryKey, (old) =>
+        old ? { ...old, bookings: old.bookings.map((b) => (b.id === updated.id ? updated : b)) } : old,
       )
     },
   })
@@ -509,8 +512,8 @@ function BookingCard({
   const confirmMutation = useMutation({
     mutationFn: () => confirmBooking(booking.id),
     onSuccess: (updated) => {
-      queryClient.setQueryData<BookingWithClient[]>(queryKey, (old) =>
-        old?.map((b) => (b.id === updated.id ? updated : b)),
+      queryClient.setQueryData<PaginatedBookings>(queryKey, (old) =>
+        old ? { ...old, bookings: old.bookings.map((b) => (b.id === updated.id ? updated : b)) } : old,
       )
     },
   })
@@ -783,14 +786,20 @@ function BookingCard({
 
 // ── Liste bookings ────────────────────────────────────────────────────────────
 
-function BookingList({ status }: { status?: string }) {
-  const queryKey = ["admin-bookings", status ?? "all"]
+const LIMIT = 20
 
-  const { data: bookings = [], isLoading } = useQuery({
+function BookingList({ status }: { status?: string }) {
+  const [page, setPage] = useState(1)
+  const queryKey = ["admin-bookings", status ?? "all", page]
+
+  const { data, isLoading } = useQuery({
     queryKey,
-    queryFn: () => getAdminBookings(status),
+    queryFn: () => getAdminBookings(status, page, LIMIT),
     refetchInterval: 30_000,
   })
+
+  const bookings = data?.bookings ?? []
+  const totalPages = data ? Math.ceil(data.total / LIMIT) : 0
 
   const sorted = [...bookings].sort(
     (a, b) =>
@@ -815,10 +824,41 @@ function BookingList({ status }: { status?: string }) {
   }
 
   return (
-    <div className="grid gap-4 lg:grid-cols-2 xl:grid-cols-3">
-      {sorted.map((b) => (
-        <BookingCard key={b.id} booking={b} queryKey={queryKey} />
-      ))}
+    <div className="space-y-6">
+      <div className="grid gap-4 lg:grid-cols-2 xl:grid-cols-3">
+        {sorted.map((b) => (
+          <BookingCard key={b.id} booking={b} queryKey={queryKey} />
+        ))}
+      </div>
+
+      {totalPages > 1 && (
+        <div className="flex items-center justify-center gap-3">
+          <button
+            type="button"
+            onClick={() => setPage((p) => Math.max(1, p - 1))}
+            disabled={page === 1}
+            className="rounded-md p-1.5 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground disabled:pointer-events-none disabled:opacity-40"
+          >
+            <ChevronLeft className="size-4" />
+          </button>
+          <span className="text-sm text-muted-foreground">
+            Page {page} / {totalPages}
+            {data && (
+              <span className="ml-2 text-xs">
+                ({data.total} réservation{data.total > 1 ? "s" : ""})
+              </span>
+            )}
+          </span>
+          <button
+            type="button"
+            onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+            disabled={page === totalPages}
+            className="rounded-md p-1.5 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground disabled:pointer-events-none disabled:opacity-40"
+          >
+            <ChevronRight className="size-4" />
+          </button>
+        </div>
+      )}
     </div>
   )
 }
