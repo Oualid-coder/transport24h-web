@@ -1,6 +1,7 @@
 "use client"
 
 import { useRef, useState } from "react"
+import Image from "next/image"
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 import { Camera, ChevronDown, ChevronUp, Loader2, Plus } from "lucide-react"
 import { Button } from "@/components/ui/button"
@@ -21,10 +22,13 @@ function PhotoGrid({ urls, phaseLabel }: { urls: string[]; phaseLabel: string })
     <div className="flex flex-wrap gap-2">
       {urls.map((url, i) => (
         <a key={i} href={url} target="_blank" rel="noopener noreferrer" className="block">
-          <img
+          <Image
             src={url}
             alt={`Photo ${phaseLabel} n°${i + 1} — cliquer pour agrandir`}
+            width={64}
+            height={64}
             className="h-16 w-16 rounded-md border border-border/50 object-cover transition-opacity hover:opacity-80"
+            unoptimized
           />
         </a>
       ))}
