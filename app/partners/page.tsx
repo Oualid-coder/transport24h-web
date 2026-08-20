@@ -1,6 +1,6 @@
 "use client"
 
-import { useRef, useState, useEffect } from "react"
+import { useRef, useState } from "react"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import * as z from "zod"
@@ -158,14 +158,14 @@ function DocUploadRow({ config, state, onUpload }: DocUploadRowProps) {
 export default function PartnersPage() {
   const [truckType, setTruckType] = useState<TruckType | "">("")
   const [serverError, setServerError] = useState<string | null>(null)
-  const [applicationId, setApplicationId] = useState<string | null>(null)
+  const [applicationId, setApplicationId] = useState<string | null>(
+    () => {
+      if (typeof window === "undefined") return null
+      return new URLSearchParams(window.location.search).get("id")
+    }
+  )
   const [docStates, setDocStates] = useState<Record<DocType, DocState>>(INITIAL_DOC_STATES)
   const [success, setSuccess] = useState(false)
-
-  useEffect(() => {
-    const id = new URLSearchParams(window.location.search).get("id")
-    if (id) setApplicationId(id)
-  }, [])
 
   const {
     register,
