@@ -345,10 +345,11 @@ export default function PartnersPage() {
                         id="firstName"
                         placeholder="Jean"
                         aria-invalid={!!errors.firstName}
+                        aria-describedby={errors.firstName ? "firstName-error" : undefined}
                         {...register("firstName")}
                       />
                       {errors.firstName && (
-                        <p className="text-xs text-destructive">
+                        <p id="firstName-error" className="text-xs text-destructive">
                           {errors.firstName.message}
                         </p>
                       )}
@@ -359,10 +360,11 @@ export default function PartnersPage() {
                         id="lastName"
                         placeholder="Dupont"
                         aria-invalid={!!errors.lastName}
+                        aria-describedby={errors.lastName ? "lastName-error" : undefined}
                         {...register("lastName")}
                       />
                       {errors.lastName && (
-                        <p className="text-xs text-destructive">
+                        <p id="lastName-error" className="text-xs text-destructive">
                           {errors.lastName.message}
                         </p>
                       )}
@@ -376,10 +378,11 @@ export default function PartnersPage() {
                       type="email"
                       placeholder="jean@exemple.fr"
                       aria-invalid={!!errors.email}
+                      aria-describedby={errors.email ? "email-error" : undefined}
                       {...register("email")}
                     />
                     {errors.email && (
-                      <p className="text-xs text-destructive">
+                      <p id="email-error" className="text-xs text-destructive">
                         {errors.email.message}
                       </p>
                     )}
@@ -392,10 +395,11 @@ export default function PartnersPage() {
                       type="tel"
                       placeholder="06 12 34 56 78"
                       aria-invalid={!!errors.phone}
+                      aria-describedby={errors.phone ? "phone-error" : undefined}
                       {...register("phone")}
                     />
                     {errors.phone && (
-                      <p className="text-xs text-destructive">
+                      <p id="phone-error" className="text-xs text-destructive">
                         {errors.phone.message}
                       </p>
                     )}
@@ -408,17 +412,18 @@ export default function PartnersPage() {
                       placeholder="12345678901234"
                       maxLength={14}
                       aria-invalid={!!errors.siret}
+                      aria-describedby={errors.siret ? "siret-error" : undefined}
                       {...register("siret")}
                     />
                     {errors.siret && (
-                      <p className="text-xs text-destructive">
+                      <p id="siret-error" className="text-xs text-destructive">
                         {errors.siret.message}
                       </p>
                     )}
                   </div>
 
                   <div className="space-y-1.5">
-                    <Label>Type de camion</Label>
+                    <Label htmlFor="truckType">Type de camion</Label>
                     <Select
                       value={truckType}
                       onValueChange={(v) => {
@@ -428,8 +433,10 @@ export default function PartnersPage() {
                       }}
                     >
                       <SelectTrigger
+                        id="truckType"
                         className="w-full"
                         aria-invalid={!!errors.truckType}
+                        aria-describedby={errors.truckType ? "truckType-error" : undefined}
                       >
                         <SelectValue placeholder="Sélectionnez un volume" />
                       </SelectTrigger>
@@ -440,7 +447,7 @@ export default function PartnersPage() {
                       </SelectContent>
                     </Select>
                     {errors.truckType && (
-                      <p className="text-xs text-destructive">
+                      <p id="truckType-error" className="text-xs text-destructive">
                         {errors.truckType.message}
                       </p>
                     )}
