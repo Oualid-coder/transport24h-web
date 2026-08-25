@@ -187,6 +187,12 @@ export interface PaginatedBookings {
   limit: number
 }
 
+export interface RefundResult {
+  status: string        // "refunded"
+  amount_cents: number
+  reason: string
+}
+
 export interface AdminStats {
   revenue_today: number   // CA du jour en € HT
   bookings_today: number  // nombre total de courses du jour

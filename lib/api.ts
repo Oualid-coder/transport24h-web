@@ -17,6 +17,7 @@ import type {
   PaymentIntent,
   PaginatedBookings,
   PricingConfig,
+  RefundResult,
   RegisterBody,
   SavedQuote,
   SetupIntentResponse,
@@ -228,6 +229,18 @@ export function updateBookingPrice(id: string, priceHT: number): Promise<Booking
 export function confirmBooking(id: string): Promise<BookingWithClient> {
   return apiFetch<BookingWithClient>(`/admin/bookings/${id}/confirm`, {
     method: "POST",
+  })
+}
+
+// POST /admin/bookings/{id}/refund — déclenche un remboursement Stripe
+export function adminRefund(
+  bookingId: string,
+  amountCents: number,
+  reason: string,
+): Promise<RefundResult> {
+  return apiFetch<RefundResult>(`/admin/bookings/${bookingId}/refund`, {
+    method: "POST",
+    body: JSON.stringify({ amount_cents: amountCents, reason }),
   })
 }
 

@@ -11,6 +11,7 @@ import {
   MapPin,
   MessageSquare,
   PencilLine,
+  RotateCcw,
   Truck,
   UserPlus,
   Users,
@@ -23,6 +24,7 @@ import { confirmBooking, sendInvoice, updateBookingPrice, ApiError } from "@/lib
 import type { BookingStatus, BookingWithClient, PaginatedBookings, PaymentStatus } from "@/lib/types"
 import { BookingPhotoSection } from "@/components/BookingPhotoSection"
 import { AssignDriverModal } from "./AssignDriverModal"
+import { RefundModal } from "./RefundModal"
 
 // ── Constantes d'affichage ────────────────────────────────────────────────────
 
@@ -80,6 +82,7 @@ export function BookingCard({
   const [editingPrice, setEditingPrice] = useState(false)
   const [priceInput, setPriceInput] = useState(fmt(booking.price_ht))
   const [assignOpen, setAssignOpen] = useState(false)
+  const [refundOpen, setRefundOpen] = useState(false)
   const [invoiceMsg, setInvoiceMsg] = useState<{ type: "success" | "error"; text: string } | null>(null)
 
   const priceTVA = booking.price_ttc - booking.price_ht
@@ -337,6 +340,17 @@ export function BookingCard({
                 Envoyer la facture
               </Button>
             )}
+            {booking.payment_status === "paid" && (
+              <Button
+                size="sm"
+                variant="outline"
+                className="flex-1 text-destructive hover:border-destructive/50 hover:bg-destructive/10 hover:text-destructive"
+                onClick={() => setRefundOpen(true)}
+              >
+                <RotateCcw className="mr-1.5 size-3.5" />
+                Rembourser
+              </Button>
+            )}
           </div>
 
           {/* ── Feedback envoi facture ───────────────────────────────────── */}
@@ -360,6 +374,13 @@ export function BookingCard({
         bookingId={booking.id}
         queryKey={queryKey}
         onClose={() => setAssignOpen(false)}
+      />
+      <RefundModal
+        open={refundOpen}
+        bookingId={booking.id}
+        amountTTC={booking.price_ttc}
+        queryKey={queryKey}
+        onClose={() => setRefundOpen(false)}
       />
     </>
   )
