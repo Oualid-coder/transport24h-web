@@ -391,6 +391,26 @@ export function register(body: RegisterBody): Promise<void> {
   })
 }
 
+// GET /auth/verify-email?token=... — public, appel direct (pas de JWT)
+export async function verifyEmail(token: string): Promise<{ message: string }> {
+  const res = await fetch(
+    `${PUBLIC_API_URL}/auth/verify-email?token=${encodeURIComponent(token)}`,
+    { cache: "no-store" },
+  )
+  if (!res.ok) {
+    const body = (await res.json().catch(() => ({}))) as { error?: string; message?: string }
+    throw new ApiError(res.status, body.error ?? body.message ?? res.statusText)
+  }
+  return res.json() as Promise<{ message: string }>
+}
+
+// POST /auth/resend-verification — protégé JWT
+export function resendVerification(): Promise<{ message: string }> {
+  return apiFetch<{ message: string }>("/auth/resend-verification", {
+    method: "POST",
+  })
+}
+
 // ── Partenaires ───────────────────────────────────────────────────────────────
 
 // POST /partners — public — retourne l'application créée (id nécessaire pour les uploads)

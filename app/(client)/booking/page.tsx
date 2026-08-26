@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { createSavedQuote, createBooking, ApiError } from "@/lib/api"
+import { EmailUnverifiedBanner } from "@/components/EmailUnverifiedBanner"
 import { BackButton } from "@/components/BackButton"
 import { TRUCK_VOLUME } from "@/lib/types"
 import type { TruckType } from "@/lib/types"
@@ -55,6 +56,7 @@ function BookingContent() {
   const [scheduledTime, setScheduledTime] = useState("09:00")
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [emailUnverified, setEmailUnverified] = useState(false)
 
   useEffect(() => {
     // user_role est non-httpOnly — lisible depuis document.cookie
@@ -129,6 +131,11 @@ function BookingContent() {
       if (err instanceof ApiError) {
         if (err.status === 401) {
           router.push("/login?redirect=/booking")
+          return
+        }
+        if (err.status === 403) {
+          sessionStorage.setItem("email_unverified", "1")
+          setEmailUnverified(true)
           return
         }
         setError(err.message)
@@ -253,13 +260,15 @@ function BookingContent() {
             </CardContent>
           </Card>
 
+          <EmailUnverifiedBanner visible={emailUnverified} />
+
           {error && (
             <p className="rounded-lg border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive">
               {error}
             </p>
           )}
 
-          <Button type="submit" size="lg" className="w-full" disabled={loading}>
+          <Button type="submit" size="lg" className="w-full" disabled={loading || emailUnverified}>
             {loading && <Loader2 className="mr-2 size-4 animate-spin" />}
             Confirmer la réservation
           </Button>

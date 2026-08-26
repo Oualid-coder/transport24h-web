@@ -13,6 +13,7 @@ import {
 import { Badge } from "@/components/ui/badge"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import type { Booking, BookingStatus } from "@/lib/types"
+import { EmailUnverifiedBanner } from "@/components/EmailUnverifiedBanner"
 
 async function getMyBookings(): Promise<Booking[]> {
   const cookieStore = await cookies()
@@ -150,6 +151,7 @@ export default async function DashboardPage() {
 
   return (
     <div className="mx-auto max-w-3xl px-4 py-10">
+      <EmailUnverifiedBanner />
       <h1 className="mb-2 text-3xl font-bold">Mon espace</h1>
       <p className="mb-8 text-muted-foreground">
         Retrouvez vos courses à venir et votre historique.

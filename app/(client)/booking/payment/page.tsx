@@ -17,6 +17,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { createSetupIntent, confirmSetupIntent, getBookingById, ApiError } from "@/lib/api"
+import { EmailUnverifiedBanner } from "@/components/EmailUnverifiedBanner"
 import type { Booking } from "@/lib/types"
 
 const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY ?? "")
@@ -409,6 +410,7 @@ function PaymentContent() {
   const [booking, setBooking] = useState<Booking | null>(null)
   const [clientSecret, setClientSecret] = useState<string | null>(null)
   const [fetchError, setFetchError] = useState<string | null>(null)
+  const [emailUnverified, setEmailUnverified] = useState(false)
 
   useEffect(() => {
     if (!bookingId) return
@@ -419,15 +421,28 @@ function PaymentContent() {
         setClientSecret(si.client_secret)
       })
       .catch((err) => {
-        setFetchError(
-          err instanceof ApiError
-            ? err.message
-            : "Impossible de charger la page de paiement.",
-        )
+        if (err instanceof ApiError && err.status === 403) {
+          sessionStorage.setItem("email_unverified", "1")
+          setEmailUnverified(true)
+        } else {
+          setFetchError(
+            err instanceof ApiError
+              ? err.message
+              : "Impossible de charger la page de paiement.",
+          )
+        }
       })
   }, [bookingId])
 
   const displayError = !bookingId ? "Identifiant de réservation manquant." : fetchError
+
+  if (emailUnverified) {
+    return (
+      <div className="mx-auto max-w-lg px-4 py-12">
+        <EmailUnverifiedBanner visible />
+      </div>
+    )
+  }
 
   if (displayError) {
     return (
