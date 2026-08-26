@@ -68,12 +68,15 @@ export default async function VerifyEmailPage({
     return <ErrorView message="Lien de vérification invalide ou incomplet." />
   }
 
+  let errorMessage: string | null = null
   try {
     await verifyToken(token)
-    return <SuccessView />
   } catch (err) {
-    const message =
-      err instanceof Error ? err.message : "Lien invalide ou expiré."
-    return <ErrorView message={message} />
+    errorMessage = err instanceof Error ? err.message : "Lien invalide ou expiré."
   }
+
+  if (errorMessage) {
+    return <ErrorView message={errorMessage} />
+  }
+  return <SuccessView />
 }
