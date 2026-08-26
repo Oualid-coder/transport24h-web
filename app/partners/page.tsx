@@ -299,7 +299,7 @@ export default function PartnersPage() {
               {
                 icon: <Shield className="size-5 text-primary" />,
                 title: "Paiement garanti",
-                desc: "Rémunération versée sous 48h après chaque mission.",
+                desc: "Rémunération versée sous 5 semaines après chaque mission.",
               },
               {
                 icon: <Users className="size-5 text-primary" />,
