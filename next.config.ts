@@ -8,8 +8,8 @@ const csp = [
   "script-src 'self' 'unsafe-inline' https://js.stripe.com",
   // Tailwind génère des styles inline au runtime (CSS-in-JS via shadcn)
   "style-src 'self' 'unsafe-inline'",
-  // next/image (data:), Leaflet map tiles (CARTO)
-  "img-src 'self' data: blob: https://*.basemaps.cartocdn.com",
+  // next/image (data:), Leaflet map tiles (OpenStreetMap)
+  "img-src 'self' data: blob: https://*.tile.openstreetmap.org",
   // Fonts servies localement par next/font — pas besoin de fonts.googleapis.com
   "font-src 'self'",
   // API backend + Stripe (paiement + fraud detection)
