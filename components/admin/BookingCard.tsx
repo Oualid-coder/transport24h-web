@@ -3,6 +3,7 @@
 import { useState } from "react"
 import { useMutation, useQueryClient } from "@tanstack/react-query"
 import {
+  Ban,
   Calendar,
   CheckCircle2,
   CreditCard,
@@ -15,12 +16,19 @@ import {
   Truck,
   UserPlus,
   Users,
+  X,
 } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader } from "@/components/ui/card"
+import {
+  Dialog,
+  DialogContent,
+  DialogTitle,
+  DialogClose,
+} from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
-import { confirmBooking, sendInvoice, updateBookingPrice, ApiError } from "@/lib/api"
+import { cancelUnpaidBooking, confirmBooking, sendInvoice, updateBookingPrice, ApiError } from "@/lib/api"
 import type { BookingStatus, BookingWithClient, PaginatedBookings, PaymentStatus } from "@/lib/types"
 import { BookingPhotoSection } from "@/components/BookingPhotoSection"
 import { AssignDriverModal } from "./AssignDriverModal"
@@ -83,7 +91,9 @@ export function BookingCard({
   const [priceInput, setPriceInput] = useState(fmt(booking.price_ht))
   const [assignOpen, setAssignOpen] = useState(false)
   const [refundOpen, setRefundOpen] = useState(false)
+  const [cancelOpen, setCancelOpen] = useState(false)
   const [invoiceMsg, setInvoiceMsg] = useState<{ type: "success" | "error"; text: string } | null>(null)
+  const [cancelError, setCancelError] = useState<string | null>(null)
 
   const priceTVA = booking.price_ttc - booking.price_ht
 
@@ -102,6 +112,19 @@ export function BookingCard({
     onSuccess: (updated) => {
       queryClient.setQueryData<PaginatedBookings>(queryKey, (old) =>
         old ? { ...old, bookings: old.bookings.map((b) => (b.id === updated.id ? updated : b)) } : old,
+      )
+    },
+  })
+
+  const cancelMutation = useMutation({
+    mutationFn: () => cancelUnpaidBooking(booking.id),
+    onSuccess: () => {
+      setCancelOpen(false)
+      queryClient.invalidateQueries({ queryKey })
+    },
+    onError: (err) => {
+      setCancelError(
+        err instanceof ApiError ? err.message : "Erreur lors de l'annulation.",
       )
     },
   })
@@ -351,6 +374,20 @@ export function BookingCard({
                 Rembourser
               </Button>
             )}
+            {booking.status === "awaiting_payment" && (
+              <Button
+                size="sm"
+                variant="outline"
+                className="flex-1 text-destructive hover:border-destructive/50 hover:bg-destructive/10 hover:text-destructive"
+                onClick={() => {
+                  setCancelError(null)
+                  setCancelOpen(true)
+                }}
+              >
+                <Ban className="mr-1.5 size-3.5" />
+                Annuler la réservation
+              </Button>
+            )}
           </div>
 
           {/* ── Feedback envoi facture ───────────────────────────────────── */}
@@ -364,10 +401,82 @@ export function BookingCard({
             </p>
           )}
 
+          {/* ── Feedback annulation ─────────────────────────────────────────── */}
+          {cancelError && (
+            <p className="text-xs text-destructive">{cancelError}</p>
+          )}
+
           {/* ── Photos ──────────────────────────────────────────────────── */}
           <BookingPhotoSection bookingId={booking.id} variant="admin" />
         </CardContent>
       </Card>
+
+      <Dialog
+        open={cancelOpen}
+        onOpenChange={(isOpen) => {
+          if (!isOpen && !cancelMutation.isPending) setCancelOpen(false)
+        }}
+      >
+        <DialogContent
+          showCloseButton={false}
+          className="max-w-md gap-0 overflow-hidden p-0 bg-background"
+        >
+          <div className="flex items-center justify-between border-b border-border px-5 py-4">
+            <DialogTitle className="font-semibold">
+              Annuler la réservation ?
+            </DialogTitle>
+            <DialogClose
+              render={
+                <button
+                  disabled={cancelMutation.isPending}
+                  className="rounded p-1 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground disabled:opacity-50"
+                  aria-label="Fermer"
+                />
+              }
+            >
+              <X className="size-4" />
+            </DialogClose>
+          </div>
+          <div className="space-y-4 p-5">
+            <div className="flex items-start gap-3 rounded-lg border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive">
+              <Ban className="mt-0.5 size-4 shrink-0" />
+              <p>
+                Cette réservation n&apos;a jamais été payée, elle sera{" "}
+                <strong>annulée définitivement</strong>. Aucun remboursement ne
+                sera effectué.
+              </p>
+            </div>
+            {cancelError && (
+              <p role="alert" className="text-xs text-destructive">
+                {cancelError}
+              </p>
+            )}
+            <div className="flex gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                className="flex-1"
+                disabled={cancelMutation.isPending}
+                onClick={() => setCancelOpen(false)}
+              >
+                Retour
+              </Button>
+              <Button
+                type="button"
+                variant="destructive"
+                className="flex-1"
+                disabled={cancelMutation.isPending}
+                onClick={() => cancelMutation.mutate()}
+              >
+                {cancelMutation.isPending && (
+                  <Loader2 className="mr-1.5 size-3.5 animate-spin" />
+                )}
+                Confirmer l&apos;annulation
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       <AssignDriverModal
         open={assignOpen}

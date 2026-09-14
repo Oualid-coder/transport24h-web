@@ -244,6 +244,11 @@ export function adminRefund(
   })
 }
 
+// POST /admin/bookings/{id}/cancel — annule un booking bloqué en awaiting_payment (aucun paiement capturé)
+export function cancelUnpaidBooking(id: string): Promise<void> {
+  return apiFetch<void>(`/admin/bookings/${id}/cancel`, { method: "POST" })
+}
+
 // POST /admin/invoices/{id}/send — envoie la facture par email au client
 export function sendInvoice(invoiceId: string): Promise<{ status: string }> {
   return apiFetch<{ status: string }>(`/admin/invoices/${invoiceId}/send`, {
