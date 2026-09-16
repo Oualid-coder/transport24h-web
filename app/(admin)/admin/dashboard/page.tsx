@@ -117,9 +117,11 @@ export default function AdminDashboardPage() {
             </span>
           </TabsTrigger>
           <TabsTrigger value="today">Aujourd&apos;hui</TabsTrigger>
+          <TabsTrigger value="cancelled">Annulées</TabsTrigger>
         </TabsList>
 
         <TabsContent value="all" className="mt-6">
+          {/* cancelled et payment_failed exclus par défaut (active_only côté API) */}
           <BookingList />
         </TabsContent>
 
@@ -128,7 +130,12 @@ export default function AdminDashboardPage() {
         </TabsContent>
 
         <TabsContent value="today" className="mt-6">
-          <BookingList status="today" />
+          {/* date=today filtre sur scheduled_at::date = CURRENT_DATE */}
+          <BookingList date="today" />
+        </TabsContent>
+
+        <TabsContent value="cancelled" className="mt-6">
+          <BookingList status="cancelled" />
         </TabsContent>
       </Tabs>
     </div>

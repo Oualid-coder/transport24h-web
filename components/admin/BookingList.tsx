@@ -8,13 +8,13 @@ import { BookingCard } from "./BookingCard"
 
 const LIMIT = 20
 
-export function BookingList({ status }: { status?: string }) {
+export function BookingList({ status, date }: { status?: string; date?: string }) {
   const [page, setPage] = useState(1)
-  const queryKey = ["admin-bookings", status ?? "all", page]
+  const queryKey = ["admin-bookings", status ?? "all", date ?? "all", page]
 
   const { data, isLoading } = useQuery({
     queryKey,
-    queryFn: () => getAdminBookings(status, page, LIMIT),
+    queryFn: () => getAdminBookings(status, date, page, LIMIT),
     refetchInterval: 30_000,
   })
 

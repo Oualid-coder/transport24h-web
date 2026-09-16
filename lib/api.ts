@@ -202,14 +202,20 @@ export function getBookingById(id: string): Promise<Booking> {
 // ── Admin ─────────────────────────────────────────────────────────────────────
 
 // GET /admin/bookings — retourne un format paginé
-// Paramètres : status optionnel ("pending_review" | "today"), page (défaut 1), limit (défaut 20)
+// Paramètres :
+//   status : filtre par statut ("pending_review" | "confirmed" | "cancelled" | …)
+//   date   : filtre par date de course ("today" ou "YYYY-MM-DD")
+//   page, limit : pagination (défaut 1, 20)
+// Sans status, les réservations cancelled et payment_failed sont exclues (active_only).
 export function getAdminBookings(
   status?: string,
+  date?: string,
   page = 1,
   limit = 20,
 ): Promise<PaginatedBookings> {
   const params = new URLSearchParams()
   if (status) params.set("status", status)
+  if (date) params.set("date", date)
   params.set("page", String(page))
   params.set("limit", String(limit))
   return apiFetch<PaginatedBookings>(`/admin/bookings?${params.toString()}`)
