@@ -310,16 +310,15 @@ function CheckoutForm({
           </CardContent>
         </Card>
 
-        {/* Info débit différé */}
+        {/* Info paiement */}
         <div className="flex items-start gap-2.5 rounded-lg border border-green/20 bg-green-light px-4 py-3">
           <Lock className="mt-0.5 size-4 shrink-0 text-primary" />
           <p className="text-sm text-muted-foreground">
-            <span className="font-medium text-foreground">Aucun débit immédiat.</span>{" "}
             Votre carte sera débitée de{" "}
             <span className="font-medium text-foreground">
               {priceTTC.toFixed(2)} €
             </span>{" "}
-            uniquement 24h avant votre transport.
+            immédiatement lors de la confirmation de votre réservation.
           </p>
         </div>
 
