@@ -10,6 +10,7 @@ import {
   LayoutDashboard,
   LogOut,
   Settings,
+  Truck,
   Users,
 } from "lucide-react"
 import { logout } from "@/lib/api"
@@ -18,6 +19,7 @@ const NAV_ITEMS = [
   { href: "/admin/dashboard", icon: LayoutDashboard, label: "Dashboard" },
   { href: "/admin/pricing",   icon: Settings,        label: "Tarification" },
   { href: "/admin/partners",  icon: Users,           label: "Partenaires" },
+  { href: "/admin/drivers",   icon: Truck,           label: "Chauffeurs" },
 ]
 
 export function AdminSidebar({ children }: { children: React.ReactNode }) {
