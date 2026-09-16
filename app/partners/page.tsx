@@ -289,17 +289,12 @@ export default function PartnersPage() {
           </div>
 
           {/* Avantages */}
-          <div className="mt-12 grid gap-6 sm:grid-cols-3">
+          <div className="mt-12 grid gap-6 sm:grid-cols-2 sm:max-w-lg sm:mx-auto">
             {[
               {
                 icon: <Truck className="size-5 text-primary" />,
                 title: "Missions flexibles",
                 desc: "Choisissez vos créneaux et votre zone d'intervention.",
-              },
-              {
-                icon: <Shield className="size-5 text-primary" />,
-                title: "Paiement garanti",
-                desc: "Rémunération versée sous 48h après chaque mission.",
               },
               {
                 icon: <Users className="size-5 text-primary" />,
