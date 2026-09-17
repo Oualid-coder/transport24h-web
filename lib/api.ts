@@ -227,7 +227,7 @@ export function getAdminStats(): Promise<AdminStats> {
 
 export function updateBookingPrice(id: string, priceHT: number): Promise<BookingWithClient> {
   return apiFetch<BookingWithClient>(`/admin/bookings/${id}/price`, {
-    method: "PATCH",
+    method: "PUT",
     body: JSON.stringify({ price_ht: priceHT }),
   })
 }
