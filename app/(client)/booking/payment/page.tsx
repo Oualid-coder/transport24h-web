@@ -80,7 +80,7 @@ function CheckoutForm({
     cvcComplete &&
     cardholderName.trim().length > 0
 
-  const priceTTC = Math.round(booking.price_ht * 1.2 * 100) / 100
+  const priceTTC = booking.price_ttc
 
   const scheduledDate = new Date(booking.scheduled_at).toLocaleDateString("fr-FR", {
     weekday: "long",

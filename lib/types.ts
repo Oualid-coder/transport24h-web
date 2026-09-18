@@ -150,6 +150,8 @@ export interface Booking {
   helpers_count: number
   truck_type: TruckType
   price_ht: number
+  vat_rate: number   // taux TVA en %, ex. 20.00
+  price_ttc: number  // price_ht × (1 + vat_rate/100)
   // Booking proprement dit
   scheduled_at: string
   client_comment?: string
@@ -176,7 +178,6 @@ export interface BookingWithClient extends Omit<Booking, "client_phone"> {
   client_email: string
   payment_status: PaymentStatus
   last4?: string       // 4 derniers chiffres CB — présent si payment_status === "paid"
-  price_ttc: number    // price_ht × 1.20 calculé côté backend
   invoice_id?: string  // présent si une facture (FACT ou AVOIR) a été générée
 }
 
