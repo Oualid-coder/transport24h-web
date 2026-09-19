@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 import { Loader2, UserPlus, X } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
@@ -54,6 +54,14 @@ export function AssignDriverModal({
       }
     },
   })
+
+  useEffect(() => {
+    if (open) {
+      setMsg(null)
+      mutation.reset()
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open])
 
   return (
     <Dialog
