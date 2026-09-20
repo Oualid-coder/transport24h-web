@@ -194,7 +194,18 @@ export function BookingCard({
               </p>
               <p className="mt-0.5 truncate text-xs text-muted-foreground">
                 {booking.client_email}
-                {booking.client_phone ? ` · ${booking.client_phone}` : ""}
+                {booking.client_phone && (
+                  <>
+                    {" · "}
+                    <a
+                      href={`tel:${booking.client_phone}`}
+                      className="hover:underline"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      {booking.client_phone}
+                    </a>
+                  </>
+                )}
               </p>
             </div>
           </div>
