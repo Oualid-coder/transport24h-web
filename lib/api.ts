@@ -282,6 +282,22 @@ export function createDriver(body: {
   })
 }
 
+// PUT /admin/drivers/{id} — met à jour les informations d'un chauffeur
+export function updateDriver(
+  id: string,
+  body: { first_name: string; last_name: string; email: string; phone: string },
+): Promise<Driver> {
+  return apiFetch<Driver>(`/admin/drivers/${id}`, {
+    method: "PUT",
+    body: JSON.stringify(body),
+  })
+}
+
+// DELETE /admin/drivers/{id} — désactive un chauffeur (soft-delete)
+export function deactivateDriver(id: string): Promise<void> {
+  return apiFetch<void>(`/admin/drivers/${id}`, { method: "DELETE" })
+}
+
 // PUT /admin/bookings/{id}/assign — assigne un chauffeur à une course
 // Retourne 409 si un chauffeur est déjà assigné
 export function assignDriver(bookingId: string, driverId: string): Promise<BookingWithClient> {

@@ -8,6 +8,7 @@ import {
   Loader2,
   MapPin,
   Package,
+  Phone,
   Truck,
   Users,
 } from "lucide-react"
@@ -228,6 +229,15 @@ function MyMissionCard({ booking }: { booking: Booking }) {
             </span>
           </div>
         </div>
+        {booking.client_phone && (
+          <a
+            href={`tel:${booking.client_phone}`}
+            className="flex items-center gap-1.5 text-sm font-medium text-primary hover:underline"
+          >
+            <Phone className="size-3.5 shrink-0" />
+            {booking.client_phone}
+          </a>
+        )}
         <div className="flex flex-wrap gap-3 text-xs text-muted-foreground">
           <span className="flex items-center gap-1">
             <Truck className="size-3.5" />

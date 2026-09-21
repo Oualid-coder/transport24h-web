@@ -1,14 +1,15 @@
 "use client"
 
 import { useState } from "react"
-import { useQuery, useQueryClient } from "@tanstack/react-query"
-import { Loader2, Mail, Phone, UserPlus, Users } from "lucide-react"
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
+import { Loader2, Mail, Pencil, Phone, UserPlus, Users, UserX } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { getAdminDrivers } from "@/lib/api"
+import { deactivateDriver, getAdminDrivers } from "@/lib/api"
 import type { Driver, DriverEmploymentType } from "@/lib/types"
 import { BackButton } from "@/components/BackButton"
 import { CreateDriverModal } from "@/components/admin/CreateDriverModal"
+import { EditDriverModal } from "@/components/admin/EditDriverModal"
 
 const EMPLOYMENT_CONFIG: Record<
   DriverEmploymentType,
@@ -24,7 +25,23 @@ const EMPLOYMENT_CONFIG: Record<
   },
 }
 
-function DriverRow({ driver }: { driver: Driver }) {
+function DriverRow({
+  driver,
+  confirming,
+  deactivating,
+  onEdit,
+  onDeactivateRequest,
+  onDeactivateConfirm,
+  onDeactivateCancel,
+}: {
+  driver: Driver
+  confirming: boolean
+  deactivating: boolean
+  onEdit: () => void
+  onDeactivateRequest: () => void
+  onDeactivateConfirm: () => void
+  onDeactivateCancel: () => void
+}) {
   const badge = EMPLOYMENT_CONFIG[driver.employment_type]
   return (
     <tr className="border-b border-border/50 transition-colors hover:bg-accent/30">
@@ -45,8 +62,58 @@ function DriverRow({ driver }: { driver: Driver }) {
           {driver.phone}
         </span>
       </td>
-      <td className="py-3">
+      <td className="py-3 pr-4">
         <Badge className={badge.className}>{badge.label}</Badge>
+      </td>
+      <td className="py-3">
+        {confirming ? (
+          <div className="flex items-center gap-2">
+            <span className="text-xs text-muted-foreground">Désactiver ?</span>
+            <Button
+              size="sm"
+              variant="destructive"
+              className="h-7 px-2 text-xs"
+              disabled={deactivating}
+              onClick={onDeactivateConfirm}
+            >
+              {deactivating ? (
+                <Loader2 className="size-3 animate-spin" />
+              ) : (
+                "Confirmer"
+              )}
+            </Button>
+            <Button
+              size="sm"
+              variant="outline"
+              className="h-7 px-2 text-xs"
+              disabled={deactivating}
+              onClick={onDeactivateCancel}
+            >
+              Annuler
+            </Button>
+          </div>
+        ) : (
+          <div className="flex items-center gap-1">
+            <Button
+              size="icon"
+              variant="ghost"
+              className="size-7 text-muted-foreground hover:text-foreground"
+              onClick={onEdit}
+              title="Modifier"
+            >
+              <Pencil className="size-3.5" />
+            </Button>
+            <Button
+              size="icon"
+              variant="ghost"
+              className="size-7 text-muted-foreground hover:text-destructive"
+              onClick={onDeactivateRequest}
+              title="Désactiver"
+            >
+              <UserX className="size-3.5" />
+            </Button>
+          </div>
+        )}
       </td>
     </tr>
   )
@@ -55,11 +122,22 @@ function DriverRow({ driver }: { driver: Driver }) {
 export default function DriversPage() {
   const queryClient = useQueryClient()
   const [createOpen, setCreateOpen] = useState(false)
+  const [editDriver, setEditDriver] = useState<Driver | null>(null)
+  const [confirmingId, setConfirmingId] = useState<string | null>(null)
 
   const { data: drivers = [], isLoading } = useQuery({
     queryKey: ["admin-drivers"],
     queryFn: getAdminDrivers,
     staleTime: 30_000,
+  })
+
+  const deactivateMutation = useMutation({
+    mutationFn: (id: string) => deactivateDriver(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["admin-drivers"] })
+      setConfirmingId(null)
+    },
+    onError: () => setConfirmingId(null),
   })
 
   return (
@@ -104,14 +182,26 @@ export default function DriversPage() {
                 <th className="py-2.5 pr-4 text-left text-xs font-medium uppercase tracking-wide text-muted-foreground">
                   Téléphone
                 </th>
-                <th className="py-2.5 text-left text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                <th className="py-2.5 pr-4 text-left text-xs font-medium uppercase tracking-wide text-muted-foreground">
                   Type
+                </th>
+                <th className="py-2.5 text-left text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                  Actions
                 </th>
               </tr>
             </thead>
             <tbody>
               {drivers.map((d) => (
-                <DriverRow key={d.id} driver={d} />
+                <DriverRow
+                  key={d.id}
+                  driver={d}
+                  confirming={confirmingId === d.id}
+                  deactivating={deactivateMutation.isPending && confirmingId === d.id}
+                  onEdit={() => setEditDriver(d)}
+                  onDeactivateRequest={() => setConfirmingId(d.id)}
+                  onDeactivateConfirm={() => deactivateMutation.mutate(d.id)}
+                  onDeactivateCancel={() => setConfirmingId(null)}
+                />
               ))}
             </tbody>
           </table>
@@ -124,6 +214,17 @@ export default function DriversPage() {
         onCreated={() => {
           queryClient.invalidateQueries({ queryKey: ["admin-drivers"] })
           setCreateOpen(false)
+        }}
+      />
+
+      <EditDriverModal
+        key={editDriver?.id}
+        open={editDriver !== null}
+        driver={editDriver}
+        onClose={() => setEditDriver(null)}
+        onUpdated={() => {
+          queryClient.invalidateQueries({ queryKey: ["admin-drivers"] })
+          setEditDriver(null)
         }}
       />
     </div>
