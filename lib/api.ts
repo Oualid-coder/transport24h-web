@@ -234,7 +234,7 @@ export function updateBookingPrice(id: string, priceHT: number): Promise<Booking
 
 export function confirmBooking(id: string): Promise<BookingWithClient> {
   return apiFetch<BookingWithClient>(`/admin/bookings/${id}/confirm`, {
-    method: "POST",
+    method: "PUT",
   })
 }
 
