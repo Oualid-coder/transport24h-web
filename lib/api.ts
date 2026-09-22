@@ -195,6 +195,25 @@ export function getMyBookings(): Promise<Booking[]> {
   return apiFetch<Booking[]>("/bookings/me")
 }
 
+// PUT /bookings/{id}/address — modifie les adresses et recalcule le prix
+// Bloque côté serveur si la date est passée ou le statut non modifiable.
+export function updateBookingAddress(
+  id: string,
+  body: {
+    pickup_address?: string
+    pickup_lat?: number
+    pickup_lng?: number
+    delivery_address?: string
+    delivery_lat?: number
+    delivery_lng?: number
+  },
+): Promise<Booking> {
+  return apiFetch<Booking>(`/bookings/${id}/address`, {
+    method: "PUT",
+    body: JSON.stringify(body),
+  })
+}
+
 export function getBookingById(id: string): Promise<Booking> {
   return apiFetch<Booking>(`/bookings/${id}`)
 }
