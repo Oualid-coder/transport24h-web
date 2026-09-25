@@ -48,7 +48,7 @@ export function AssignDriverModal({
     },
     onError: (err) => {
       if (err instanceof ApiError && err.status === 409) {
-        setMsg({ type: "error", text: "Ce chauffeur est déjà assigné à cette course." })
+        setMsg({ type: "error", text: "Cette réservation ne peut pas être assignée dans son état actuel." })
       } else {
         setMsg({ type: "error", text: "Une erreur est survenue. Veuillez réessayer." })
       }
