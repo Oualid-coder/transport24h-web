@@ -7,6 +7,7 @@ import {
   Calendar,
   CheckCircle2,
   CreditCard,
+  FileText,
   Loader2,
   Mail,
   MapPin,
@@ -354,25 +355,41 @@ export function BookingCard({
               Assigner un chauffeur
             </Button>
             {booking.invoice_id && (
-              <Button
-                size="sm"
-                variant="outline"
-                className="flex-1"
-                disabled={sendMutation.isPending}
-                onClick={() => {
-                  const id = booking.invoice_id
-                  if (!id) return
-                  setInvoiceMsg(null)
-                  sendMutation.mutate(id)
-                }}
-              >
-                {sendMutation.isPending ? (
-                  <Loader2 className="mr-1.5 size-3.5 animate-spin" />
-                ) : (
-                  <Mail className="mr-1.5 size-3.5" />
-                )}
-                Envoyer la facture
-              </Button>
+              <>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="flex-1"
+                  onClick={() =>
+                    window.open(
+                      `/api/proxy/admin/invoices/${booking.invoice_id}/pdf`,
+                      "_blank",
+                    )
+                  }
+                >
+                  <FileText className="mr-1.5 size-3.5" />
+                  Voir la facture
+                </Button>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="flex-1"
+                  disabled={sendMutation.isPending}
+                  onClick={() => {
+                    const id = booking.invoice_id
+                    if (!id) return
+                    setInvoiceMsg(null)
+                    sendMutation.mutate(id)
+                  }}
+                >
+                  {sendMutation.isPending ? (
+                    <Loader2 className="mr-1.5 size-3.5 animate-spin" />
+                  ) : (
+                    <Mail className="mr-1.5 size-3.5" />
+                  )}
+                  Envoyer la facture
+                </Button>
+              </>
             )}
             {booking.payment_status === "paid" && (
               <Button

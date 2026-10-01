@@ -112,9 +112,15 @@ export default function CGVPage() {
           <h2 className="text-lg font-semibold">5. Paiement</h2>
           <p className="text-muted-foreground leading-relaxed">
             Le paiement s&apos;effectue exclusivement par carte bancaire via la plateforme
-            sécurisée Stripe. La carte du Client est enregistrée lors de la réservation et
-            débitée 24 heures avant la date de transport prévue. Aucun prélèvement
-            n&apos;est effectué au moment de la réservation.
+            sécurisée Stripe. Le montant TTC de la prestation est prélevé immédiatement
+            lors de la confirmation de la réservation.
+          </p>
+          <p className="text-muted-foreground leading-relaxed">
+            Lorsque la réservation comporte des précisions complémentaires nécessitant
+            un examen préalable par Transport24h.fr (cas visé à l&apos;Article 4,
+            alinéa&nbsp;4), le prélèvement n&apos;est effectué qu&apos;à l&apos;issue
+            de la validation par Transport24h.fr et de la confirmation définitive de la
+            réservation.
           </p>
           <p className="text-muted-foreground leading-relaxed">
             TRANSPORT24H.FR ne stocke aucune donnée bancaire — celles-ci sont gérées
