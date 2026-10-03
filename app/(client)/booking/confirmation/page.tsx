@@ -2,6 +2,12 @@
 
 import { useSearchParams } from "next/navigation"
 import { Suspense, useEffect, useState } from "react"
+
+declare global {
+  interface Window {
+    gtag?: (...args: unknown[]) => void
+  }
+}
 import { CheckCircle2, Home, LayoutDashboard, Loader2 } from "lucide-react"
 import { buttonVariants } from "@/components/ui/button"
 import Link from "next/link"
@@ -15,6 +21,14 @@ function ConfirmationContent() {
 
   const [booking, setBooking] = useState<Booking | null>(null)
   const [error, setError] = useState(false)
+
+  useEffect(() => {
+    window.gtag?.("event", "conversion", {
+      send_to: "AW-18483112134/DcpjCMyZz48dEMbRt-1E",
+      value: 1.0,
+      currency: "EUR",
+    })
+  }, [])
 
   useEffect(() => {
     if (!id) return
