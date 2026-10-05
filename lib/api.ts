@@ -4,6 +4,7 @@ import type {
   Booking,
   BookingPhotos,
   BookingWithClient,
+  CancellationResult,
   CreateBookingBody,
   CreateQuoteBody,
   Driver,
@@ -216,6 +217,11 @@ export function updateBookingAddress(
 
 export function getBookingById(id: string): Promise<Booking> {
   return apiFetch<Booking>(`/bookings/${id}`)
+}
+
+// POST /bookings/{id}/cancel — annulation par le client (JWT requis, propriétaire uniquement)
+export function cancelBooking(id: string): Promise<CancellationResult> {
+  return apiFetch<CancellationResult>(`/bookings/${id}/cancel`, { method: "POST" })
 }
 
 // ── Admin ─────────────────────────────────────────────────────────────────────

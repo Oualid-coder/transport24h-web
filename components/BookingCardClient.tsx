@@ -3,7 +3,7 @@
 import { useState } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
-import { Calendar, Clock, CreditCard, MapPin, Package, Pencil } from "lucide-react"
+import { Calendar, Clock, CreditCard, MapPin, Package, Pencil, XCircle } from "lucide-react"
 import { Button, buttonVariants } from "@/components/ui/button"
 import {
   Card,
@@ -15,6 +15,7 @@ import {
 import { Badge } from "@/components/ui/badge"
 import type { Booking, BookingStatus } from "@/lib/types"
 import { EditAddressModal } from "@/components/EditAddressModal"
+import { CancelBookingModal } from "@/components/CancelBookingModal"
 
 export const STATUS_LABEL: Record<BookingStatus, string> = {
   awaiting_payment: "En attente de paiement",
@@ -45,6 +46,13 @@ const MODIFIABLE_STATUSES = new Set<BookingStatus>([
   "confirmed",
 ])
 
+const CANCELLABLE_STATUSES = new Set<BookingStatus>([
+  "awaiting_payment",
+  "pending_review",
+  "confirmed",
+  "assigned",
+])
+
 function canEditAddress(booking: Booking): boolean {
   return (
     MODIFIABLE_STATUSES.has(booking.status) &&
@@ -55,6 +63,7 @@ function canEditAddress(booking: Booking): boolean {
 export function BookingCardClient({ booking }: { booking: Booking }) {
   const router = useRouter()
   const [editOpen, setEditOpen] = useState(false)
+  const [cancelOpen, setCancelOpen] = useState(false)
   const date = new Date(booking.scheduled_at)
 
   return (
@@ -151,6 +160,18 @@ export function BookingCardClient({ booking }: { booking: Booking }) {
             Modifier l&apos;adresse
           </Button>
         )}
+
+        {CANCELLABLE_STATUSES.has(booking.status) && (
+          <Button
+            size="sm"
+            variant="outline"
+            className="w-full text-destructive hover:border-destructive/50 hover:bg-destructive/10 hover:text-destructive"
+            onClick={() => setCancelOpen(true)}
+          >
+            <XCircle className="mr-2 size-3.5" />
+            Annuler la réservation
+          </Button>
+        )}
       </CardContent>
 
       <EditAddressModal
@@ -160,6 +181,16 @@ export function BookingCardClient({ booking }: { booking: Booking }) {
         onClose={() => setEditOpen(false)}
         onUpdated={() => {
           setEditOpen(false)
+          router.refresh()
+        }}
+      />
+
+      <CancelBookingModal
+        open={cancelOpen}
+        booking={booking}
+        onClose={() => setCancelOpen(false)}
+        onCancelled={() => {
+          setCancelOpen(false)
           router.refresh()
         }}
       />

@@ -194,6 +194,13 @@ export interface RefundResult {
   reason: string
 }
 
+// Réponse de POST /bookings/{id}/cancel — retournée par le handler Cancel
+export interface CancellationResult {
+  refund_percent: number        // 0 | 50 | 100
+  refund_amount_cents: number   // 0 si refund_failed ou palier 0 % ou jamais payé
+  refund_failed: boolean        // true si Stripe a rejeté — action admin requise
+}
+
 export interface AdminStats {
   revenue_today: number   // CA du jour en € HT
   bookings_today: number  // nombre total de courses du jour
