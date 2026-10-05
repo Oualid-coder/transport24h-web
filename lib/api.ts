@@ -269,6 +269,18 @@ export function adminRefund(
   })
 }
 
+// PUT /admin/bookings/{id}/schedule — modifie la date de la course
+// 422 si la date est passée, 409 si la course est terminée ou annulée
+export function updateBookingSchedule(
+  id: string,
+  scheduledAt: string,
+): Promise<BookingWithClient> {
+  return apiFetch<BookingWithClient>(`/admin/bookings/${id}/schedule`, {
+    method: "PUT",
+    body: JSON.stringify({ scheduled_at: scheduledAt }),
+  })
+}
+
 // POST /admin/bookings/{id}/cancel — annule un booking bloqué en awaiting_payment (aucun paiement capturé)
 export function cancelUnpaidBooking(id: string): Promise<void> {
   return apiFetch<void>(`/admin/bookings/${id}/cancel`, { method: "POST" })

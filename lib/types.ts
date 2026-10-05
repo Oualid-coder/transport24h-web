@@ -11,8 +11,8 @@ export type BookingStatus =
   | "payment_failed"
   | "pending_review"
   | "confirmed"
-  | "in_progress"
-  | "completed"
+  | "assigned"
+  | "done"
   | "cancelled"
 
 export type UserRole = "client" | "admin" | "driver"

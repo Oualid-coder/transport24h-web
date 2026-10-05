@@ -21,8 +21,8 @@ export const STATUS_LABEL: Record<BookingStatus, string> = {
   payment_failed: "Paiement échoué",
   pending_review: "En attente",
   confirmed: "Confirmé",
-  in_progress: "En cours",
-  completed: "Terminé",
+  assigned: "Chauffeur assigné",
+  done: "Terminé",
   cancelled: "Annulé",
 }
 
@@ -34,8 +34,8 @@ export const STATUS_VARIANT: Record<
   payment_failed: "destructive",
   pending_review: "secondary",
   confirmed: "default",
-  in_progress: "default",
-  completed: "outline",
+  assigned: "default",
+  done: "outline",
   cancelled: "destructive",
 }
 
@@ -43,7 +43,6 @@ const MODIFIABLE_STATUSES = new Set<BookingStatus>([
   "awaiting_payment",
   "pending_review",
   "confirmed",
-  "in_progress",
 ])
 
 function canEditAddress(booking: Booking): boolean {

@@ -32,8 +32,8 @@ const STATUS_LABEL: Record<BookingStatus, string> = {
   payment_failed: "Paiement échoué",
   pending_review: "En attente",
   confirmed: "Confirmé",
-  in_progress: "En cours",
-  completed: "Terminé",
+  assigned: "Chauffeur assigné",
+  done: "Terminé",
   cancelled: "Annulé",
 }
 
@@ -45,8 +45,8 @@ const STATUS_VARIANT: Record<
   payment_failed: "destructive",
   pending_review: "secondary",
   confirmed: "default",
-  in_progress: "default",
-  completed: "outline",
+  assigned: "default",
+  done: "outline",
   cancelled: "destructive",
 }
 
@@ -256,7 +256,7 @@ function MyMissionCard({ booking }: { booking: Booking }) {
         <BookingPhotoSection
           bookingId={booking.id}
           variant="driver"
-          canUploadAfter={["confirmed", "in_progress", "completed"].includes(booking.status)}
+          canUploadAfter={["assigned", "done"].includes(booking.status)}
         />
       </CardContent>
     </Card>
@@ -279,14 +279,14 @@ export default function DriverDashboardPage() {
   })
 
   const upcoming = myBookings
-    .filter((b) => ["confirmed", "in_progress"].includes(b.status))
+    .filter((b) => b.status === "assigned")
     .sort(
       (a, b) =>
         new Date(a.scheduled_at).getTime() - new Date(b.scheduled_at).getTime(),
     )
 
   const past = myBookings
-    .filter((b) => ["completed", "cancelled"].includes(b.status))
+    .filter((b) => ["done", "cancelled"].includes(b.status))
     .sort(
       (a, b) =>
         new Date(b.scheduled_at).getTime() - new Date(a.scheduled_at).getTime(),

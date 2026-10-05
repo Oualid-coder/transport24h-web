@@ -33,6 +33,7 @@ import { cancelUnpaidBooking, confirmBooking, sendInvoice, updateBookingPrice, A
 import type { BookingStatus, BookingWithClient, PaginatedBookings, PaymentStatus } from "@/lib/types"
 import { BookingPhotoSection } from "@/components/BookingPhotoSection"
 import { AssignDriverModal } from "./AssignDriverModal"
+import { EditDateModal } from "./EditDateModal"
 import { RefundModal } from "./RefundModal"
 
 // ── Constantes d'affichage ────────────────────────────────────────────────────
@@ -42,8 +43,8 @@ const STATUS_LABEL: Record<BookingStatus, string> = {
   payment_failed: "Paiement échoué",
   pending_review: "À valider",
   confirmed: "Confirmé",
-  in_progress: "En cours",
-  completed: "Terminé",
+  assigned: "Chauffeur assigné",
+  done: "Terminé",
   cancelled: "Annulé",
 }
 
@@ -55,8 +56,8 @@ const STATUS_VARIANT: Record<
   payment_failed: "destructive",
   pending_review: "secondary",
   confirmed: "default",
-  in_progress: "default",
-  completed: "outline",
+  assigned: "default",
+  done: "outline",
   cancelled: "destructive",
 }
 
@@ -91,6 +92,7 @@ export function BookingCard({
   const [editingPrice, setEditingPrice] = useState(false)
   const [priceInput, setPriceInput] = useState(fmt(booking.price_ht))
   const [assignOpen, setAssignOpen] = useState(false)
+  const [editDateOpen, setEditDateOpen] = useState(false)
   const [refundOpen, setRefundOpen] = useState(false)
   const [cancelOpen, setCancelOpen] = useState(false)
   const [invoiceMsg, setInvoiceMsg] = useState<{ type: "success" | "error"; text: string } | null>(null)
@@ -354,6 +356,17 @@ export function BookingCard({
               <UserPlus className="mr-1.5 size-3.5" />
               Assigner un chauffeur
             </Button>
+            {booking.status !== "done" && booking.status !== "cancelled" && (
+              <Button
+                size="sm"
+                variant="outline"
+                className="flex-1"
+                onClick={() => setEditDateOpen(true)}
+              >
+                <Calendar className="mr-1.5 size-3.5" />
+                Modifier la date
+              </Button>
+            )}
             {booking.invoice_id && (
               <>
                 <Button
@@ -511,6 +524,13 @@ export function BookingCard({
         bookingId={booking.id}
         queryKey={queryKey}
         onClose={() => setAssignOpen(false)}
+      />
+      <EditDateModal
+        open={editDateOpen}
+        bookingId={booking.id}
+        currentScheduledAt={booking.scheduled_at}
+        queryKey={queryKey}
+        onClose={() => setEditDateOpen(false)}
       />
       <RefundModal
         open={refundOpen}
