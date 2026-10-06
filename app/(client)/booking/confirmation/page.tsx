@@ -23,12 +23,14 @@ function ConfirmationContent() {
   const [error, setError] = useState(false)
 
   useEffect(() => {
+    if (!id) return
     window.gtag?.("event", "conversion", {
       send_to: "AW-18483112134/DcpjCMyZz48dEMbRt-1E",
       value: 1.0,
       currency: "EUR",
+      transaction_id: id,
     })
-  }, [])
+  }, [id])
 
   useEffect(() => {
     if (!id) return
