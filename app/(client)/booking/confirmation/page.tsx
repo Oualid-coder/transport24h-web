@@ -13,7 +13,14 @@ import { buttonVariants } from "@/components/ui/button"
 import Link from "next/link"
 import { getBookingById } from "@/lib/api"
 import { BackButton } from "@/components/BackButton"
-import type { Booking } from "@/lib/types"
+import type { Booking, BookingStatus } from "@/lib/types"
+
+const PAID_STATUSES = new Set<BookingStatus>([
+  "pending_review",
+  "confirmed",
+  "assigned",
+  "done",
+])
 
 function ConfirmationContent() {
   const sp = useSearchParams()
@@ -24,19 +31,28 @@ function ConfirmationContent() {
 
   useEffect(() => {
     if (!id) return
-    window.gtag?.("event", "conversion", {
-      send_to: "AW-18483112134/DcpjCMyZz48dEMbRt-1E",
-      value: 1.0,
-      currency: "EUR",
-      transaction_id: id,
-    })
-  }, [id])
+    let cancelled = false
 
-  useEffect(() => {
-    if (!id) return
     getBookingById(id)
-      .then(setBooking)
-      .catch(() => setError(true))
+      .then((b) => {
+        if (cancelled) return
+        setBooking(b)
+        if (PAID_STATUSES.has(b.status)) {
+          window.gtag?.("event", "conversion", {
+            send_to: "AW-18483112134/DcpjCMyZz48dEMbRt-1E",
+            value: 1.0,
+            currency: "EUR",
+            transaction_id: id,
+          })
+        }
+      })
+      .catch(() => {
+        if (!cancelled) setError(true)
+      })
+
+    return () => {
+      cancelled = true
+    }
   }, [id])
 
   if (id && !error && !booking) {
