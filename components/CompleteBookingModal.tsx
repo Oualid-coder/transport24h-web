@@ -23,6 +23,11 @@ export function CompleteBookingModal({ open, bookingId, onClose, onCompleted }: 
     mutationFn: () => completeBooking(bookingId),
   })
 
+  const is403 =
+    mutation.isError &&
+    mutation.error instanceof ApiError &&
+    mutation.error.status === 403
+
   const is409 =
     mutation.isError &&
     mutation.error instanceof ApiError &&
@@ -77,6 +82,12 @@ export function CompleteBookingModal({ open, bookingId, onClose, onCompleted }: 
                 Cette action est définitive. Confirmer que la course est terminée ?
               </p>
 
+              {is403 && (
+                <div className="flex items-start gap-2 rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-2 text-xs text-destructive">
+                  <AlertCircle className="mt-0.5 size-3.5 shrink-0" />
+                  Cette course ne vous est plus assignée. Actualisez la page.
+                </div>
+              )}
               {is409 && (
                 <div className="flex items-start gap-2 rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-2 text-xs text-destructive">
                   <AlertCircle className="mt-0.5 size-3.5 shrink-0" />
@@ -89,7 +100,7 @@ export function CompleteBookingModal({ open, bookingId, onClose, onCompleted }: 
                   Cette course n&apos;a pas encore commencé.
                 </div>
               )}
-              {mutation.isError && !is409 && !is422 && (
+              {mutation.isError && !is403 && !is409 && !is422 && (
                 <div className="flex items-start gap-2 rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-2 text-xs text-destructive">
                   <AlertCircle className="mt-0.5 size-3.5 shrink-0" />
                   Une erreur est survenue. Veuillez réessayer.
