@@ -415,6 +415,11 @@ export function getDriverBookingPhotos(bookingId: string): Promise<BookingPhotos
   return apiFetch<BookingPhotos>(`/driver/bookings/${bookingId}/photos`)
 }
 
+// POST /driver/bookings/{id}/complete — le chauffeur marque la course comme terminée (204)
+export function completeBooking(id: string): Promise<void> {
+  return apiFetch<void>(`/driver/bookings/${id}/complete`, { method: "POST" })
+}
+
 // GET /admin/bookings/{id}/photos — URLs signées 15 min
 export function getAdminBookingPhotos(bookingId: string): Promise<BookingPhotos> {
   return apiFetch<BookingPhotos>(`/admin/bookings/${bookingId}/photos`)
