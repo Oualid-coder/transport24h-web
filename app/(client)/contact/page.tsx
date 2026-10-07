@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Card, CardContent } from "@/components/ui/card"
+import Link from "next/link"
 import { BackButton } from "@/components/BackButton"
 import { sendContact, ApiError } from "@/lib/api"
 
@@ -66,7 +67,7 @@ export default function ContactPage() {
         } else if (err.status === 429) {
           setServerError("Trop de messages envoyés. Veuillez réessayer dans une heure.")
         } else {
-          setServerError(err.message)
+          setServerError("Votre message n'a pas pu être envoyé. Merci de réessayer.")
         }
       } else {
         setServerError("Une erreur est survenue. Veuillez réessayer.")
@@ -192,6 +193,13 @@ export default function ContactPage() {
               )}
               Envoyer le message
             </Button>
+
+            <p className="text-center text-xs text-muted-foreground">
+              Les informations saisies servent uniquement à répondre à votre demande.{" "}
+              <Link href="/politique-de-confidentialite" className="underline underline-offset-2">
+                Politique de confidentialité
+              </Link>
+            </p>
           </form>
         </CardContent>
       </Card>
