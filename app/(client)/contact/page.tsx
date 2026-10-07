@@ -60,11 +60,17 @@ export default function ContactPage() {
       await sendContact({ email: data.email, subject: data.subject, message: data.message })
       setSuccess(true)
     } catch (err) {
-      setServerError(
-        err instanceof ApiError
-          ? err.message
-          : "Une erreur est survenue. Veuillez réessayer.",
-      )
+      if (err instanceof ApiError) {
+        if (err.status === 422) {
+          setServerError("Veuillez vérifier les champs du formulaire.")
+        } else if (err.status === 429) {
+          setServerError("Trop de messages envoyés. Veuillez réessayer dans une heure.")
+        } else {
+          setServerError(err.message)
+        }
+      } else {
+        setServerError("Une erreur est survenue. Veuillez réessayer.")
+      }
     }
   }
 
