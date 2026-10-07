@@ -83,7 +83,7 @@ export default function ContactPage() {
         </div>
         <h1 className="mt-5 text-2xl font-bold">Message envoyé</h1>
         <p className="mt-2 text-muted-foreground">
-          Votre message a été envoyé, nous vous répondrons sous 2h.
+          Votre message a été envoyé, nous vous répondrons dès que possible.
         </p>
         <Button className="mt-8" onClick={() => router.push("/")}>
           Retour à l&apos;accueil
@@ -102,7 +102,7 @@ export default function ContactPage() {
         <h1 className="text-3xl font-bold">Nous contacter</h1>
         <p className="mt-2 text-muted-foreground">
           Une question, une demande professionnelle ou une réclamation ? Nous vous
-          répondons sous 2h.
+          répondons dès que possible.
         </p>
       </div>
 
