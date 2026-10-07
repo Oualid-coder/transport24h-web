@@ -1,7 +1,7 @@
 "use client"
 
 import { useState } from "react"
-import { useForm } from "react-hook-form"
+import { useForm, useWatch } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { useRouter } from "next/navigation"
 import * as z from "zod"
@@ -46,14 +46,15 @@ export default function ContactPage() {
   const {
     register,
     handleSubmit,
-    watch,
+    control,
     formState: { errors, isSubmitting },
   } = useForm<ContactForm>({
     resolver: zodResolver(contactSchema),
     defaultValues: { email: "", subject: "", message: "" },
   })
 
-  const messageLength = (watch("message") ?? "").length
+  const messageValue = useWatch({ control, name: "message" })
+  const messageLength = (messageValue ?? "").length
 
   const onSubmit = async (data: ContactForm) => {
     setServerError(null)
