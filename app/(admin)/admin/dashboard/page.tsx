@@ -78,7 +78,7 @@ export default function AdminDashboardPage() {
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <StatCard
           icon={<Euro className="size-5 text-primary" />}
-          label="CA aujourd'hui (HT)"
+          label="Réservations du jour (HT)"
           value={stats ? `${fmt(stats.revenue_today)} €` : "—"}
           loading={statsLoading}
         />
@@ -96,7 +96,7 @@ export default function AdminDashboardPage() {
         />
         <StatCard
           icon={<CreditCard className="size-5 text-primary" />}
-          label="Paiements reçus"
+          label="Réservations payées (total)"
           value={stats ? String(stats.paid_count) : "—"}
           loading={statsLoading}
         />
