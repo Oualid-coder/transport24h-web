@@ -99,8 +99,12 @@ export default function CGVPage() {
             </li>
           </ol>
           <p className="text-muted-foreground leading-relaxed">
-            Aucun débit n&apos;est effectué avant confirmation de la réservation. Le
-            paiement est prélevé selon les modalités décrites à l&apos;Article 5.
+            Si, à l&apos;issue de cet examen, Transport24h.fr ne peut pas réaliser
+            la prestation, la réservation est annulée et le Client est intégralement
+            remboursé.
+          </p>
+          <p className="text-muted-foreground leading-relaxed">
+            Le paiement est effectué dans les conditions décrites à l&apos;Article&nbsp;5.
           </p>
           <p className="text-muted-foreground leading-relaxed">
             Un chauffeur est ensuite affecté à la prestation. Le Client est informé
@@ -113,14 +117,9 @@ export default function CGVPage() {
           <p className="text-muted-foreground leading-relaxed">
             Le paiement s&apos;effectue exclusivement par carte bancaire via la plateforme
             sécurisée Stripe. Le montant TTC de la prestation est prélevé immédiatement
-            lors de la confirmation de la réservation.
-          </p>
-          <p className="text-muted-foreground leading-relaxed">
-            Lorsque la réservation comporte des précisions complémentaires nécessitant
-            un examen préalable par Transport24h.fr (cas visé à l&apos;Article 4,
-            alinéa&nbsp;4), le prélèvement n&apos;est effectué qu&apos;à l&apos;issue
-            de la validation par Transport24h.fr et de la confirmation définitive de la
-            réservation.
+            lors de la validation du paiement par le Client, y compris lorsque la
+            réservation comporte des précisions complémentaires nécessitant un examen
+            préalable par Transport24h.fr (Article&nbsp;4, alinéa&nbsp;4).
           </p>
           <p className="text-muted-foreground leading-relaxed">
             TRANSPORT24H.FR ne stocke aucune donnée bancaire — celles-ci sont gérées
