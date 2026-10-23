@@ -362,6 +362,19 @@ export function rejectPartner(id: string): Promise<PartnerApplication> {
   return apiFetch<PartnerApplication>(`/admin/partners/${id}/reject`, { method: "PUT" })
 }
 
+// GET /admin/partners/{id}/documents/{doc_type}
+// Retourne une URL signée valide 15 min pour consulter un document légal.
+// Ne jamais stocker l'URL retournée — elle expire.
+export async function getPartnerDocumentUrl(
+  applicationId: string,
+  docType: "kbis" | "licence_mere" | "rcp" | "urssaf",
+): Promise<string> {
+  const data = await apiFetch<{ url: string; expires_in: number }>(
+    `/admin/partners/${applicationId}/documents/${docType}`,
+  )
+  return data.url
+}
+
 // ── Chauffeur ─────────────────────────────────────────────────────────────────
 
 // GET /driver/bookings/available — courses non assignées visibles par tous les chauffeurs

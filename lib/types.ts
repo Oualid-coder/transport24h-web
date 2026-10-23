@@ -55,6 +55,10 @@ export interface PartnerApplication {
   status: PartnerStatus
   created_at: string
   documents_count: number
+  kbis_uploaded: boolean
+  licence_mere_uploaded: boolean
+  rcp_uploaded: boolean
+  urssaf_uploaded: boolean
 }
 
 // ── Localisation ──────────────────────────────────────────────────────────────

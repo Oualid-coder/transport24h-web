@@ -6,6 +6,8 @@ import {
   Check,
   CheckCircle2,
   Copy,
+  ExternalLink,
+  FileX,
   Loader2,
   Mail,
   Phone,
@@ -17,7 +19,7 @@ import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { approvePartner, getAdminPartners, rejectPartner } from "@/lib/api"
+import { approvePartner, getAdminPartners, getPartnerDocumentUrl, rejectPartner } from "@/lib/api"
 import type { PartnerApplication, PartnerStatus } from "@/lib/types"
 import { BackButton } from "@/components/BackButton"
 
@@ -41,6 +43,76 @@ const STATUS_CONFIG: Record<
   },
 }
 
+type DocType = "kbis" | "licence_mere" | "rcp" | "urssaf"
+
+const DOC_CONFIG: { type: DocType; label: string; uploadedKey: keyof PartnerApplication }[] = [
+  { type: "kbis",         label: "KBIS",            uploadedKey: "kbis_uploaded" },
+  { type: "licence_mere", label: "Licence mère",     uploadedKey: "licence_mere_uploaded" },
+  { type: "rcp",          label: "RCP",              uploadedKey: "rcp_uploaded" },
+  { type: "urssaf",       label: "URSSAF",           uploadedKey: "urssaf_uploaded" },
+]
+
+// ── Bouton document ───────────────────────────────────────────────────────────
+
+function DocViewButton({
+  applicationId,
+  docType,
+  label,
+  uploaded,
+}: {
+  applicationId: string
+  docType: DocType
+  label: string
+  uploaded: boolean
+}) {
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  const handleView = async () => {
+    setError(null)
+    setLoading(true)
+    try {
+      const url = await getPartnerDocumentUrl(applicationId, docType)
+      // URL signée valide 15 min — ouverte directement, jamais stockée dans l'état.
+      window.open(url, "_blank", "noopener,noreferrer")
+    } catch (err: unknown) {
+      const msg =
+        err instanceof Error && err.message.includes("404")
+          ? "Document non encore envoyé par le candidat"
+          : "Impossible d'ouvrir le document"
+      setError(msg)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  return (
+    <div className="space-y-1">
+      <Button
+        size="sm"
+        variant="outline"
+        className="w-full justify-start gap-2 text-xs"
+        disabled={!uploaded || loading}
+        onClick={handleView}
+        title={uploaded ? `Voir ${label}` : `${label} — non envoyé`}
+      >
+        {loading ? (
+          <Loader2 className="size-3 animate-spin" />
+        ) : uploaded ? (
+          <ExternalLink className="size-3 shrink-0" />
+        ) : (
+          <FileX className="size-3 shrink-0 text-muted-foreground/50" />
+        )}
+        <span className={uploaded ? "" : "text-muted-foreground/50"}>{label}</span>
+        {!uploaded && (
+          <span className="ml-auto text-[10px] text-muted-foreground/50">manquant</span>
+        )}
+      </Button>
+      {error && <p className="px-1 text-[11px] text-destructive">{error}</p>}
+    </div>
+  )
+}
+
 // ── Carte candidature ─────────────────────────────────────────────────────────
 
 function PartnerCard({
@@ -53,11 +125,9 @@ function PartnerCard({
   const queryClient = useQueryClient()
 
   const updateCache = (updated: PartnerApplication) => {
-    // Met à jour la liste courante immédiatement
     queryClient.setQueryData<PartnerApplication[]>(queryKey, (old) =>
       old?.map((p) => (p.id === updated.id ? updated : p)),
     )
-    // Invalide toutes les listes partenaires pour que les autres onglets soient cohérents
     queryClient.invalidateQueries({
       queryKey: ["admin-partners"],
       exact: false,
@@ -146,6 +216,19 @@ function PartnerCard({
             <Truck className="size-3.5" />
             {partner.truck_type}
           </span>
+        </div>
+
+        {/* ── Documents légaux ─────────────────────────────────────────── */}
+        <div className="space-y-1.5">
+          {DOC_CONFIG.map(({ type, label, uploadedKey }) => (
+            <DocViewButton
+              key={type}
+              applicationId={partner.id}
+              docType={type}
+              label={label}
+              uploaded={partner[uploadedKey] as boolean}
+            />
+          ))}
         </div>
 
         {/* ── Lien de reprise ─────────────────────────────────────────── */}
