@@ -173,6 +173,17 @@ export interface BookingPhotos {
 
 export type PaymentStatus = "paid" | "pending" | "none"
 
+export type InvitationStatus = "not_invited" | "sent" | "expired" | "active"
+
+export interface Company {
+  id: string
+  name: string
+  contact_email: string
+  invitation_status: InvitationStatus
+  created_at: string
+  invited_at?: string
+}
+
 // Booking enrichi retourné par les endpoints admin — inclut les infos client
 // et le statut de paiement. Étend Booking en rendant client_phone requis.
 export interface BookingWithClient extends Omit<Booking, "client_phone"> {
