@@ -124,7 +124,11 @@ function BookingContent() {
 
       // Nettoie le draft après confirmation réussie
       sessionStorage.removeItem(DRAFT_KEY)
-      window.location.href = `/booking/payment?id=${booking.id}`
+      if (booking.status === "confirmed") {
+        window.location.href = `/booking/confirmation?id=${booking.id}`
+      } else {
+        window.location.href = `/booking/payment?id=${booking.id}`
+      }
     } catch (err) {
       if (err instanceof ApiError) {
         if (err.status === 401) {

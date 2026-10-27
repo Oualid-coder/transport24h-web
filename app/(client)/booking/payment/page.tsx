@@ -403,11 +403,18 @@ function CheckoutForm({
 
 function PaymentContent() {
   const sp = useSearchParams()
+  const router = useRouter()
   const bookingId = sp.get("id") ?? ""
 
   const [booking, setBooking] = useState<Booking | null>(null)
   const [clientSecret, setClientSecret] = useState<string | null>(null)
   const [fetchError, setFetchError] = useState<string | null>(null)
+
+  useEffect(() => {
+    if (document.cookie.includes("user_role=b2b")) {
+      router.replace("/dashboard")
+    }
+  }, [router])
 
   useEffect(() => {
     if (!bookingId) return
