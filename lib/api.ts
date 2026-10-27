@@ -5,6 +5,7 @@ import type {
   BookingPhotos,
   BookingWithClient,
   CancellationResult,
+  Company,
   CreateBookingBody,
   CreateQuoteBody,
   Driver,
@@ -297,6 +298,27 @@ export function sendInvoice(invoiceId: string): Promise<{ status: string }> {
   return apiFetch<{ status: string }>(`/admin/invoices/${invoiceId}/send`, {
     method: "POST",
   })
+}
+
+// ── Admin — entreprises B2B ───────────────────────────────────────────────────
+
+// GET /admin/companies
+export function getAdminCompanies(): Promise<Company[]> {
+  return apiFetch<Company[]>("/admin/companies")
+}
+
+// POST /admin/companies — crée une entreprise (name, contact_email)
+export function createCompany(body: { name: string; contact_email: string }): Promise<Company> {
+  return apiFetch<Company>("/admin/companies", {
+    method: "POST",
+    body: JSON.stringify(body),
+  })
+}
+
+// POST /admin/companies/{id}/invite — envoie ou renvoie l'invitation B2B
+// 409 si le compte est déjà actif
+export function inviteCompany(id: string): Promise<void> {
+  return apiFetch<void>(`/admin/companies/${id}/invite`, { method: "POST" })
 }
 
 // ── Admin — chauffeurs & partenaires ─────────────────────────────────────────
