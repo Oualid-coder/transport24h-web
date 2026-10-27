@@ -14,6 +14,7 @@ import Link from "next/link"
 import { getBookingById } from "@/lib/api"
 import { BackButton } from "@/components/BackButton"
 import type { Booking, BookingStatus } from "@/lib/types"
+import { useRole } from "@/components/RoleProvider"
 
 const PAID_STATUSES = new Set<BookingStatus>([
   "pending_review",
@@ -25,6 +26,7 @@ const PAID_STATUSES = new Set<BookingStatus>([
 function ConfirmationContent() {
   const sp = useSearchParams()
   const id = sp.get("id") ?? ""
+  const isB2b = useRole() === "b2b"
 
   const [booking, setBooking] = useState<Booking | null>(null)
   const [error, setError] = useState(false)
@@ -37,7 +39,7 @@ function ConfirmationContent() {
       .then((b) => {
         if (cancelled) return
         setBooking(b)
-        if (PAID_STATUSES.has(b.status)) {
+        if (!isB2b && PAID_STATUSES.has(b.status)) {
           window.gtag?.("event", "conversion", {
             send_to: "AW-18483112134/DcpjCMyZz48dEMbRt-1E",
             value: 1.0,
@@ -53,7 +55,7 @@ function ConfirmationContent() {
     return () => {
       cancelled = true
     }
-  }, [id])
+  }, [id, isB2b])
 
   if (id && !error && !booking) {
     return (

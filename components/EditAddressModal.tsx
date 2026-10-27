@@ -13,6 +13,7 @@ import {
 import { AddressInput } from "@/components/AddressInput"
 import { updateBookingAddress, ApiError } from "@/lib/api"
 import type { Booking, GeoPoint } from "@/lib/types"
+import { useRole } from "@/components/RoleProvider"
 
 export function EditAddressModal({
   open,
@@ -25,6 +26,7 @@ export function EditAddressModal({
   onClose: () => void
   onUpdated: () => void
 }) {
+  const isB2b = useRole() === "b2b"
   const [newPickup, setNewPickup] = useState<GeoPoint | null>(null)
   const [newDelivery, setNewDelivery] = useState<GeoPoint | null>(null)
   const [error, setError] = useState<string | null>(null)
@@ -100,15 +102,17 @@ export function EditAddressModal({
           <div className="space-y-4 p-5">
             <div className="rounded-lg border border-primary/30 bg-primary/10 px-4 py-3 text-sm text-primary">
               <p className="font-medium">Adresse modifiée avec succès.</p>
-              <p className="mt-1 text-primary/80">
-                Nouveau prix :{" "}
-                <span className="font-semibold">
-                  {updatedBooking.price_ttc.toFixed(2)} € TTC
-                </span>{" "}
-                <span className="text-xs">
-                  (était {booking.price_ttc.toFixed(2)} € TTC)
-                </span>
-              </p>
+              {!isB2b && (
+                <p className="mt-1 text-primary/80">
+                  Nouveau prix :{" "}
+                  <span className="font-semibold">
+                    {updatedBooking.price_ttc.toFixed(2)} € TTC
+                  </span>{" "}
+                  <span className="text-xs">
+                    (était {booking.price_ttc.toFixed(2)} € TTC)
+                  </span>
+                </p>
+              )}
             </div>
             <Button className="w-full" onClick={onUpdated}>
               Fermer

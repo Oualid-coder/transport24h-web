@@ -16,6 +16,7 @@ import { Badge } from "@/components/ui/badge"
 import type { Booking, BookingStatus } from "@/lib/types"
 import { EditAddressModal } from "@/components/EditAddressModal"
 import { CancelBookingModal } from "@/components/CancelBookingModal"
+import { useRole } from "@/components/RoleProvider"
 
 export const STATUS_LABEL: Record<BookingStatus, string> = {
   awaiting_payment: "En attente de paiement",
@@ -62,6 +63,7 @@ function canEditAddress(booking: Booking): boolean {
 
 export function BookingCardClient({ booking }: { booking: Booking }) {
   const router = useRouter()
+  const isB2b = useRole() === "b2b"
   const [editOpen, setEditOpen] = useState(false)
   const [cancelOpen, setCancelOpen] = useState(false)
   const date = new Date(booking.scheduled_at)
@@ -121,12 +123,14 @@ export function BookingCardClient({ booking }: { booking: Booking }) {
               {booking.helpers_count > 1 ? "s" : ""}
             </span>
           )}
-          <span className="ml-auto font-medium text-foreground">
-            {booking.price_ht.toFixed(2)} € HT
-          </span>
+          {!isB2b && (
+            <span className="ml-auto font-medium text-foreground">
+              {booking.price_ht.toFixed(2)} € HT
+            </span>
+          )}
         </div>
 
-        {booking.status === "awaiting_payment" && (
+        {!isB2b && booking.status === "awaiting_payment" && (
           <Link
             href={`/booking/payment?id=${booking.id}`}
             className={buttonVariants({ size: "sm", className: "w-full" })}
@@ -135,7 +139,7 @@ export function BookingCardClient({ booking }: { booking: Booking }) {
             Reprendre le paiement
           </Link>
         )}
-        {booking.status === "payment_failed" && (
+        {!isB2b && booking.status === "payment_failed" && (
           <Link
             href={`/booking/payment?id=${booking.id}`}
             className={buttonVariants({
