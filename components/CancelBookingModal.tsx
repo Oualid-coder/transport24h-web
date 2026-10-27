@@ -11,6 +11,7 @@ import {
 } from "@/components/ui/dialog"
 import type { Booking, BookingStatus, CancellationResult } from "@/lib/types"
 import { cancelBooking, ApiError } from "@/lib/api"
+import { useRole } from "@/components/RoleProvider"
 
 // ── helpers ───────────────────────────────────────────────────────────────────
 
@@ -36,9 +37,10 @@ interface Props {
 }
 
 export function CancelBookingModal({ open, booking, onClose, onCancelled }: Props) {
-  const isPaid = PAID_STATUSES.has(booking.status)
+  const isB2b = useRole() === "b2b"
+  const isPaid = !isB2b && PAID_STATUSES.has(booking.status)
   const pct: 0 | 50 | 100 = isPaid ? refundTier(booking.scheduled_at) : 0
-  const estimatedEuros = (booking.price_ttc * pct) / 100
+  const estimatedEuros = (booking.price_ttc ?? 0) * pct / 100
 
   const mutation = useMutation<CancellationResult, Error>({
     mutationFn: () => cancelBooking(booking.id),
@@ -78,10 +80,14 @@ export function CancelBookingModal({ open, booking, onClose, onCancelled }: Prop
         </div>
 
         <div className="space-y-4 p-5">
-          {mutation.isSuccess && mutation.data != null ? (
+          {mutation.isSuccess ? (
             /* ── État succès ── */
             <>
-              {mutation.data.refund_failed ? (
+              {isB2b || !mutation.data ? (
+                <p className="text-sm text-muted-foreground">
+                  Annulation confirmée.
+                </p>
+              ) : mutation.data.refund_failed ? (
                 <div className="flex items-start gap-2 rounded-lg border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-400">
                   <TriangleAlert className="mt-0.5 size-4 shrink-0" />
                   <span>
@@ -110,7 +116,9 @@ export function CancelBookingModal({ open, booking, onClose, onCancelled }: Prop
             /* ── Confirmation ── */
             <>
               <div className="space-y-2 text-sm text-muted-foreground">
-                {isPaid ? (
+                {isB2b ? (
+                  <p>Cette annulation est définitive.</p>
+                ) : isPaid ? (
                   <>
                     {pct === 100 && (
                       <p>
@@ -162,6 +170,7 @@ export function CancelBookingModal({ open, booking, onClose, onCancelled }: Prop
                   </p>
                 )}
               </div>
+
 
               {is409 && (
                 <div className="flex items-start gap-2 rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-2 text-xs text-destructive">
