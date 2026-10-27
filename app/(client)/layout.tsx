@@ -37,6 +37,12 @@ export default async function ClientLayout({
               Devis
             </Link>
             <Link
+              href="/entreprises"
+              className="hover:text-foreground transition-colors"
+            >
+              Entreprises
+            </Link>
+            <Link
               href="/partners"
               className="hover:text-foreground transition-colors"
             >
@@ -85,6 +91,9 @@ export default async function ClientLayout({
               </Link>
               <Link href="/contact" className="hover:text-foreground transition-colors">
                 Contact
+              </Link>
+              <Link href="/entreprises" className="hover:text-foreground transition-colors">
+                Entreprises
               </Link>
               <Link href="/partners" className="hover:text-foreground transition-colors">
                 Devenir partenaire
