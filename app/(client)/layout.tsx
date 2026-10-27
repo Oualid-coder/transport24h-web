@@ -2,6 +2,8 @@ import { cookies } from "next/headers"
 import Image from "next/image"
 import Link from "next/link"
 import { NavActions } from "@/components/nav-actions"
+import { RoleProvider } from "@/components/RoleProvider"
+import type { UserRole } from "@/lib/types"
 
 export default async function ClientLayout({
   children,
@@ -10,9 +12,10 @@ export default async function ClientLayout({
 }) {
   const cookieStore = await cookies()
   const isLoggedIn = !!cookieStore.get("access_token")?.value
-  const role = cookieStore.get("user_role")?.value ?? null
+  const role = (cookieStore.get("user_role")?.value ?? null) as UserRole | null
 
   return (
+    <RoleProvider role={role}>
     <div className="flex min-h-screen flex-col">
       <header className="sticky top-0 z-50 border-b border-border/50 bg-background/80 backdrop-blur-md">
         <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6">
@@ -94,5 +97,6 @@ export default async function ClientLayout({
         </div>
       </footer>
     </div>
+    </RoleProvider>
   )
 }

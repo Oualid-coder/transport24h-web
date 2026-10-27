@@ -15,7 +15,7 @@ export type BookingStatus =
   | "done"
   | "cancelled"
 
-export type UserRole = "client" | "admin" | "driver"
+export type UserRole = "client" | "admin" | "driver" | "b2b"
 
 // ── Chauffeur (retourné par /admin/drivers) ───────────────────────────────────
 
