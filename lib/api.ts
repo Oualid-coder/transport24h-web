@@ -473,6 +473,14 @@ export function register(body: RegisterBody): Promise<void> {
   })
 }
 
+// POST /auth/accept-invitation — public, active un compte B2B depuis un token d'invitation
+export function acceptInvitation(token: string, password: string): Promise<void> {
+  return apiFetch<void>("/auth/accept-invitation", {
+    method: "POST",
+    body: JSON.stringify({ token, password }),
+  })
+}
+
 // ── Partenaires ───────────────────────────────────────────────────────────────
 
 // POST /partners — public — retourne l'application créée (id nécessaire pour les uploads)
