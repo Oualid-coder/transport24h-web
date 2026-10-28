@@ -293,6 +293,11 @@ export function cancelUnpaidBooking(id: string): Promise<void> {
   return apiFetch<void>(`/admin/bookings/${id}/cancel`, { method: "POST" })
 }
 
+// POST /admin/bookings/{id}/reject — refuse un booking payé en pending_review (remboursement Stripe intégral)
+export function rejectBooking(id: string): Promise<void> {
+  return apiFetch<void>(`/admin/bookings/${id}/reject`, { method: "POST" })
+}
+
 // POST /admin/invoices/{id}/send — envoie la facture par email au client
 export function sendInvoice(invoiceId: string): Promise<{ status: string }> {
   return apiFetch<{ status: string }>(`/admin/invoices/${invoiceId}/send`, {
