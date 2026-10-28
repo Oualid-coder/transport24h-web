@@ -29,7 +29,7 @@ import {
   DialogClose,
 } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
-import { cancelUnpaidBooking, confirmBooking, sendInvoice, updateBookingPrice, ApiError } from "@/lib/api"
+import { cancelUnpaidBooking, confirmBooking, rejectBooking, sendInvoice, updateBookingPrice, ApiError } from "@/lib/api"
 import type { BookingStatus, BookingWithClient, PaginatedBookings, PaymentStatus } from "@/lib/types"
 import { BookingPhotoSection } from "@/components/BookingPhotoSection"
 import { AssignDriverModal } from "./AssignDriverModal"
@@ -95,8 +95,10 @@ export function BookingCard({
   const [editDateOpen, setEditDateOpen] = useState(false)
   const [refundOpen, setRefundOpen] = useState(false)
   const [cancelOpen, setCancelOpen] = useState(false)
+  const [rejectOpen, setRejectOpen] = useState(false)
   const [invoiceMsg, setInvoiceMsg] = useState<{ type: "success" | "error"; text: string } | null>(null)
   const [cancelError, setCancelError] = useState<string | null>(null)
+  const [rejectError, setRejectError] = useState<string | null>(null)
 
   const priceTVA = booking.price_ttc - booking.price_ht
 
@@ -128,6 +130,19 @@ export function BookingCard({
     onError: (err) => {
       setCancelError(
         err instanceof ApiError ? err.message : "Erreur lors de l'annulation.",
+      )
+    },
+  })
+
+  const rejectMutation = useMutation({
+    mutationFn: () => rejectBooking(booking.id),
+    onSuccess: () => {
+      setRejectOpen(false)
+      queryClient.invalidateQueries({ queryKey })
+    },
+    onError: (err) => {
+      setRejectError(
+        err instanceof ApiError ? err.message : "Erreur lors du refus de la réservation.",
       )
     },
   })
@@ -333,19 +348,33 @@ export function BookingCard({
           {/* ── Actions ─────────────────────────────────────────────────── */}
           <div className="flex flex-wrap gap-2">
             {booking.status === "pending_review" && (
-              <Button
-                size="sm"
-                className="flex-1"
-                disabled={confirmMutation.isPending}
-                onClick={() => confirmMutation.mutate()}
-              >
-                {confirmMutation.isPending ? (
-                  <Loader2 className="mr-1.5 size-3.5 animate-spin" />
-                ) : (
-                  <CheckCircle2 className="mr-1.5 size-3.5" />
-                )}
-                Confirmer
-              </Button>
+              <>
+                <Button
+                  size="sm"
+                  className="flex-1"
+                  disabled={confirmMutation.isPending}
+                  onClick={() => confirmMutation.mutate()}
+                >
+                  {confirmMutation.isPending ? (
+                    <Loader2 className="mr-1.5 size-3.5 animate-spin" />
+                  ) : (
+                    <CheckCircle2 className="mr-1.5 size-3.5" />
+                  )}
+                  Confirmer
+                </Button>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="flex-1 text-destructive hover:border-destructive/50 hover:bg-destructive/10 hover:text-destructive"
+                  onClick={() => {
+                    setRejectError(null)
+                    setRejectOpen(true)
+                  }}
+                >
+                  <Ban className="mr-1.5 size-3.5" />
+                  Refuser
+                </Button>
+              </>
             )}
             <Button
               size="sm"
@@ -404,7 +433,7 @@ export function BookingCard({
                 </Button>
               </>
             )}
-            {booking.payment_status === "paid" && (
+            {booking.payment_status === "paid" && booking.status !== "pending_review" && (
               <Button
                 size="sm"
                 variant="outline"
@@ -445,6 +474,11 @@ export function BookingCard({
           {/* ── Feedback annulation ─────────────────────────────────────────── */}
           {cancelError && (
             <p className="text-xs text-destructive">{cancelError}</p>
+          )}
+
+          {/* ── Feedback refus ────────────────────────────────────────────────── */}
+          {rejectError && (
+            <p className="text-xs text-destructive">{rejectError}</p>
           )}
 
           {/* ── Photos ──────────────────────────────────────────────────── */}
@@ -513,6 +547,73 @@ export function BookingCard({
                   <Loader2 className="mr-1.5 size-3.5 animate-spin" />
                 )}
                 Confirmer l&apos;annulation
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog
+        open={rejectOpen}
+        onOpenChange={(isOpen) => {
+          if (!isOpen && !rejectMutation.isPending) setRejectOpen(false)
+        }}
+      >
+        <DialogContent
+          showCloseButton={false}
+          className="max-w-md gap-0 overflow-hidden p-0 bg-background"
+        >
+          <div className="flex items-center justify-between border-b border-border px-5 py-4">
+            <DialogTitle className="font-semibold">
+              Refuser la réservation ?
+            </DialogTitle>
+            <DialogClose
+              render={
+                <button
+                  disabled={rejectMutation.isPending}
+                  className="rounded p-1 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground disabled:opacity-50"
+                  aria-label="Fermer"
+                />
+              }
+            >
+              <X className="size-4" />
+            </DialogClose>
+          </div>
+          <div className="space-y-4 p-5">
+            <div className="flex items-start gap-3 rounded-lg border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive">
+              <Ban className="mt-0.5 size-4 shrink-0" />
+              <p>
+                La réservation sera <strong>refusée</strong> et le client{" "}
+                <strong>remboursé intégralement</strong>. Cette action est
+                irréversible.
+              </p>
+            </div>
+            {rejectError && (
+              <p role="alert" className="text-xs text-destructive">
+                {rejectError}
+              </p>
+            )}
+            <div className="flex gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                className="flex-1"
+                disabled={rejectMutation.isPending}
+                onClick={() => setRejectOpen(false)}
+              >
+                Retour
+              </Button>
+              <Button
+                type="button"
+                variant="destructive"
+                className="flex-1"
+                disabled={rejectMutation.isPending}
+                onClick={() => rejectMutation.mutate()}
+              >
+                {rejectMutation.isPending && (
+                  <Loader2 className="mr-1.5 size-3.5 animate-spin" />
+                )}
+                Confirmer le refus
               </Button>
             </div>
           </div>
