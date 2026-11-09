@@ -32,6 +32,7 @@ import { CompleteBookingModal } from "@/components/CompleteBookingModal"
 
 const STATUS_LABEL: Record<BookingStatus, string> = {
   awaiting_payment: "En attente de paiement",
+  payment_processing: "Débit en cours",
   payment_failed: "Paiement échoué",
   pending_review: "En attente",
   confirmed: "Confirmé",
@@ -45,6 +46,7 @@ const STATUS_VARIANT: Record<
   "default" | "secondary" | "destructive" | "outline"
 > = {
   awaiting_payment: "outline",
+  payment_processing: "outline",
   payment_failed: "destructive",
   pending_review: "secondary",
   confirmed: "default",

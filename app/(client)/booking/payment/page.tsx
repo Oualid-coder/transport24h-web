@@ -10,7 +10,7 @@ import {
   useElements,
 } from "@stripe/react-stripe-js"
 import { useSearchParams, useRouter } from "next/navigation"
-import { Suspense, useEffect, useState } from "react"
+import { Suspense, useEffect, useRef, useState } from "react"
 import { Calendar, CreditCard, Info, Lock, Loader2, MapPin, Package } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -18,6 +18,7 @@ import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { createSetupIntent, confirmSetupIntent, getBookingById, ApiError } from "@/lib/api"
 import type { Booking } from "@/lib/types"
+import { isChargeInProgress } from "@/lib/booking-status"
 
 const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY ?? "")
 
@@ -48,6 +49,25 @@ function StripeFieldWrapper({
   )
 }
 
+// ── Réponses de POST /payments/confirm-setup ─────────────────────────────────
+
+// Messages clients : jamais de détail technique (le message brut de l'API n'est pas affiché).
+function confirmSetupErrorMessage(err: unknown): string {
+  if (err instanceof ApiError) {
+    if (err.status === 404) {
+      return "Réservation introuvable, ou elle n'est pas rattachée à votre compte."
+    }
+    if (err.status === 409) {
+      return "Cette réservation ne peut plus être payée. Consultez son statut dans votre espace client."
+    }
+  }
+  return "Votre carte n'a pas pu être enregistrée. Veuillez réessayer dans quelques instants."
+}
+
+// Suivi du statut après un 202 (débit déjà en cours) : interrogation espacée, bornée.
+const STATUS_POLL_INTERVAL_MS = 3_000
+const STATUS_POLL_MAX_ATTEMPTS = 40 // ≈ 2 minutes
+
 // ── Formulaire Stripe (doit être enfant de <Elements>) ────────────────────────
 
 function CheckoutForm({
@@ -72,6 +92,51 @@ function CheckoutForm({
   const [expiryError, setExpiryError] = useState<string | null>(null)
   const [cvcError, setCvcError] = useState<string | null>(null)
   const [hazmatAcknowledged, setHazmatAcknowledged] = useState(false)
+  // Débit déjà en cours (202, ou page ouverte pendant un débit) : formulaire verrouillé.
+  const alreadyProcessing = isChargeInProgress(booking.status)
+  const [processing, setProcessing] = useState(alreadyProcessing)
+  // true = plus de suivi automatique (délai dépassé, ou débit déjà en cours à l'ouverture).
+  const [processingTimedOut, setProcessingTimedOut] = useState(alreadyProcessing)
+  const unmounted = useRef(false)
+
+  useEffect(() => {
+    unmounted.current = false
+    return () => {
+      unmounted.current = true
+    }
+  }, [])
+
+  // Rafraîchit le statut jusqu'à la sortie de payment_processing. Lancé depuis
+  // l'action utilisateur (pas un fetch de rendu) ; s'arrête au démontage.
+  const followChargeStatus = async () => {
+    for (let attempt = 0; attempt < STATUS_POLL_MAX_ATTEMPTS; attempt++) {
+      await new Promise((resolve) => setTimeout(resolve, STATUS_POLL_INTERVAL_MS))
+      if (unmounted.current) return
+      let current: Booking
+      try {
+        current = await getBookingById(booking.id)
+      } catch {
+        continue // erreur réseau passagère : on réessaie au prochain tour
+      }
+      if (unmounted.current) return
+      if (isChargeInProgress(current.status)) continue
+      if (current.status === "payment_failed") {
+        setProcessing(false)
+        setLoading(false)
+        setError("Le paiement a été refusé. Vous pouvez réessayer avec une autre carte.")
+        return
+      }
+      if (current.status === "awaiting_payment") {
+        setProcessing(false)
+        setLoading(false)
+        setError("Le paiement n'a pas abouti. Vous pouvez réessayer.")
+        return
+      }
+      router.push(`/booking/confirmation?id=${booking.id}`)
+      return
+    }
+    if (!unmounted.current) setProcessingTimedOut(true)
+  }
 
   const stripeReady = !!stripe && !!elements
   const allComplete =
@@ -95,7 +160,7 @@ function CheckoutForm({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (loading) return
+    if (loading || processing) return
 
     if (!stripe || !elements) {
       setError("Le formulaire de paiement n'est pas encore prêt. Veuillez patienter.")
@@ -140,14 +205,17 @@ function CheckoutForm({
     }
 
     try {
-      await confirmSetupIntent(booking.id, pmId)
+      const result = await confirmSetupIntent(booking.id, pmId)
+      if (result.processing) {
+        // 202 : un débit est déjà en cours — ne pas relancer, suivre le statut.
+        setProcessing(true)
+        setLoading(false)
+        void followChargeStatus()
+        return
+      }
       router.push(`/booking/confirmation?id=${booking.id}`)
     } catch (err) {
-      setError(
-        err instanceof ApiError
-          ? err.message
-          : "Une erreur est survenue. Veuillez réessayer.",
-      )
+      setError(confirmSetupErrorMessage(err))
       setLoading(false)
     }
   }
@@ -368,8 +436,42 @@ function CheckoutForm({
           </p>
         </div>
 
+        {processing && (
+          <div
+            role="status"
+            className="flex items-start gap-2.5 rounded-lg border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-600"
+          >
+            {processingTimedOut ? (
+              <Info className="mt-0.5 size-4 shrink-0" />
+            ) : (
+              <Loader2 className="mt-0.5 size-4 shrink-0 animate-spin" />
+            )}
+            <div className="space-y-1">
+              <p className="font-medium">Paiement en cours de traitement</p>
+              <p className="text-xs">
+                {processingTimedOut ? (
+                  <>
+                    {!alreadyProcessing && "Le traitement prend plus de temps que prévu. "}
+                    Ne relancez pas le paiement :
+                    suivez son statut dans{" "}
+                    <a href="/dashboard" className="underline underline-offset-4">
+                      votre espace client
+                    </a>
+                    .
+                  </>
+                ) : (
+                  "Ne fermez pas cette page et ne relancez pas le paiement : le statut se met à jour automatiquement."
+                )}
+              </p>
+            </div>
+          </div>
+        )}
+
         {error && (
-          <p className="rounded-lg border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive">
+          <p
+            role="alert"
+            className="rounded-lg border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive"
+          >
             {error}
           </p>
         )}
@@ -378,7 +480,9 @@ function CheckoutForm({
           type="submit"
           size="lg"
           className="w-full"
-          disabled={loading || !stripeReady || !allComplete || !hazmatAcknowledged}
+          disabled={
+            loading || processing || !stripeReady || !allComplete || !hazmatAcknowledged
+          }
         >
           {loading ? (
             <Loader2 className="mr-2 size-4 animate-spin" />

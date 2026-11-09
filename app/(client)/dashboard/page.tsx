@@ -27,7 +27,7 @@ export default async function DashboardPage() {
   const bookings = await getMyBookings()
 
   const upcoming = bookings.filter((b) =>
-    ["awaiting_payment", "payment_failed", "pending_review", "confirmed", "assigned"].includes(b.status),
+    ["awaiting_payment", "payment_processing", "payment_failed", "pending_review", "confirmed", "assigned"].includes(b.status),
   )
   const history = bookings.filter((b) =>
     ["done", "cancelled"].includes(b.status),

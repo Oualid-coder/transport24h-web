@@ -31,6 +31,7 @@ import {
 import { Input } from "@/components/ui/input"
 import { cancelUnpaidBooking, confirmBooking, rejectBooking, sendInvoice, updateBookingPrice, ApiError } from "@/lib/api"
 import type { BookingStatus, BookingWithClient, PaginatedBookings, PaymentStatus } from "@/lib/types"
+import { isChargeInProgress } from "@/lib/booking-status"
 import { BookingPhotoSection } from "@/components/BookingPhotoSection"
 import { AssignDriverModal } from "./AssignDriverModal"
 import { EditDateModal } from "./EditDateModal"
@@ -40,6 +41,7 @@ import { RefundModal } from "./RefundModal"
 
 const STATUS_LABEL: Record<BookingStatus, string> = {
   awaiting_payment: "En attente de paiement",
+  payment_processing: "Débit en cours",
   payment_failed: "Paiement échoué",
   pending_review: "À valider",
   confirmed: "Confirmé",
@@ -53,6 +55,7 @@ const STATUS_VARIANT: Record<
   "default" | "secondary" | "destructive" | "outline"
 > = {
   awaiting_payment: "outline",
+  payment_processing: "outline", // même badge que l'attente de paiement
   payment_failed: "destructive",
   pending_review: "secondary",
   confirmed: "default",
@@ -99,11 +102,21 @@ export function BookingCard({
   const [invoiceMsg, setInvoiceMsg] = useState<{ type: "success" | "error"; text: string } | null>(null)
   const [cancelError, setCancelError] = useState<string | null>(null)
   const [rejectError, setRejectError] = useState<string | null>(null)
+  const [priceError, setPriceError] = useState<string | null>(null)
 
   const priceTVA = booking.price_ttc - booking.price_ht
+  const chargeInProgress = isChargeInProgress(booking.status)
+  // price_locked est la règle de l'API (domain.IsPriceLocked) ; le débit en cours bloque aussi.
+  const priceEditable = !booking.price_locked && !chargeInProgress
 
   const priceMutation = useMutation({
     mutationFn: (ht: number) => updateBookingPrice(booking.id, ht),
+    onMutate: () => setPriceError(null),
+    onError: (err) => {
+      setPriceError(
+        err instanceof ApiError ? err.message : "Erreur lors de la modification du prix.",
+      )
+    },
     onSuccess: (updated) => {
       setEditingPrice(false)
       queryClient.setQueryData<PaginatedBookings>(queryKey, (old) =>
@@ -273,7 +286,7 @@ export function BookingCard({
 
           {/* ── Prix ────────────────────────────────────────────────────── */}
           <div className="rounded-lg bg-accent/40 px-3 py-2.5">
-            {editingPrice ? (
+            {editingPrice && priceEditable ? (
               <div className="flex items-center gap-2">
                 <div className="flex flex-1 items-center gap-2">
                   <Input
@@ -304,6 +317,7 @@ export function BookingCard({
                   className="h-7"
                   onClick={() => {
                     setEditingPrice(false)
+                    setPriceError(null)
                     setPriceInput(fmt(booking.price_ht))
                   }}
                 >
@@ -332,22 +346,40 @@ export function BookingCard({
                     </span>
                   </span>
                 </div>
-                <Button
-                  size="icon"
-                  variant="ghost"
-                  className="size-7 shrink-0"
-                  onClick={() => setEditingPrice(true)}
-                  title="Modifier le prix"
-                >
-                  <PencilLine className="size-3.5" />
-                </Button>
+                {chargeInProgress ? (
+                  <span className="shrink-0 text-xs text-muted-foreground">
+                    Prix bloqué (débit en cours)
+                  </span>
+                ) : booking.price_locked ? (
+                  <span className="shrink-0 text-xs text-muted-foreground">
+                    Prix verrouillé (course payée)
+                  </span>
+                ) : (
+                  <Button
+                    size="icon"
+                    variant="ghost"
+                    className="size-7 shrink-0"
+                    onClick={() => {
+                      setPriceError(null)
+                      setEditingPrice(true)
+                    }}
+                    title="Modifier le prix"
+                  >
+                    <PencilLine className="size-3.5" />
+                  </Button>
+                )}
               </div>
+            )}
+            {priceError && (
+              <p role="alert" className="mt-2 text-xs text-destructive">
+                {priceError}
+              </p>
             )}
           </div>
 
           {/* ── Actions ─────────────────────────────────────────────────── */}
           <div className="flex flex-wrap gap-2">
-            {booking.status === "pending_review" && (
+            {booking.status === "pending_review" && !chargeInProgress && (
               <>
                 <Button
                   size="sm"
@@ -433,7 +465,9 @@ export function BookingCard({
                 </Button>
               </>
             )}
-            {booking.payment_status === "paid" && booking.status !== "pending_review" && (
+            {booking.payment_status === "paid" &&
+              booking.status !== "pending_review" &&
+              !chargeInProgress && (
               <Button
                 size="sm"
                 variant="outline"
@@ -444,7 +478,7 @@ export function BookingCard({
                 Rembourser
               </Button>
             )}
-            {booking.status === "awaiting_payment" && (
+            {booking.status === "awaiting_payment" && !chargeInProgress && (
               <Button
                 size="sm"
                 variant="outline"
@@ -459,6 +493,13 @@ export function BookingCard({
               </Button>
             )}
           </div>
+
+          {chargeInProgress && (
+            <p className="rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-xs text-amber-400">
+              Débit en cours : annulation, remboursement et modification du prix sont
+              bloqués jusqu&apos;à la fin du paiement.
+            </p>
+          )}
 
           {/* ── Feedback envoi facture ───────────────────────────────────── */}
           {invoiceMsg && (

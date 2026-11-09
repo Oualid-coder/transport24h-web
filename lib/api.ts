@@ -6,7 +6,10 @@ import type {
   BookingWithClient,
   CancellationResult,
   Company,
+  ConfirmSetupResult,
   CreateBookingBody,
+  CreditNoteRetry,
+  CreditNoteRetryResult,
   CreateQuoteBody,
   Driver,
   DriverCreated,
@@ -45,10 +48,12 @@ export class ApiError extends Error {
   }
 }
 
-async function apiFetch<T>(
+// apiResponse exécute la requête via le proxy et lève ApiError sur tout statut non 2xx.
+// Retourne la Response brute pour les appels dont le code 2xx a un sens métier (202 vs 204).
+async function apiResponse(
   path: string,
   init?: RequestInit,
-): Promise<T> {
+): Promise<Response> {
   const url = `${PROXY_BASE}${path}`
 
   const res = await fetch(url, {
@@ -78,6 +83,14 @@ async function apiFetch<T>(
     throw new ApiError(res.status, message)
   }
 
+  return res
+}
+
+async function apiFetch<T>(
+  path: string,
+  init?: RequestInit,
+): Promise<T> {
+  const res = await apiResponse(path, init)
   if (res.status === 204) return undefined as T
   return res.json() as Promise<T>
 }
@@ -303,6 +316,29 @@ export function sendInvoice(invoiceId: string): Promise<{ status: string }> {
   return apiFetch<{ status: string }>(`/admin/invoices/${invoiceId}/send`, {
     method: "POST",
   })
+}
+
+// ── Admin — avoirs à émettre ──────────────────────────────────────────────────
+
+// GET /admin/credit-note-retries — remboursements dont l'avoir reste à émettre
+export function getCreditNoteRetries(): Promise<CreditNoteRetry[]> {
+  return apiFetch<CreditNoteRetry[]>("/admin/credit-note-retries")
+}
+
+// POST /admin/credit-note-retries/{refund_key}/retry
+// 201 → avoir émis et envoyé (created: true), 200 → déjà émis (created: false).
+// Erreurs : 404 plus rien à émettre, 409 vérification Stripe requise, 422 aucune facture d'origine.
+export function retryCreditNote(
+  refundKey: string,
+  confirmedInStripe: boolean,
+): Promise<CreditNoteRetryResult> {
+  return apiFetch<CreditNoteRetryResult>(
+    `/admin/credit-note-retries/${encodeURIComponent(refundKey)}/retry`,
+    {
+      method: "POST",
+      body: JSON.stringify({ confirmed_in_stripe: confirmedInStripe }),
+    },
+  )
 }
 
 // ── Admin — entreprises B2B ───────────────────────────────────────────────────
@@ -577,11 +613,18 @@ export function createSetupIntent(bookingId: string): Promise<SetupIntentRespons
   })
 }
 
-export function confirmSetupIntent(bookingId: string, paymentMethodId: string): Promise<void> {
-  return apiFetch<void>("/payments/confirm-setup", {
+// POST /payments/confirm-setup
+// 204 → carte enregistrée, débit lancé ; 202 → un débit est déjà en cours (ne pas relancer).
+// Erreurs : 404 réservation introuvable ou d'un autre client, 409 réservation non payable.
+export async function confirmSetupIntent(
+  bookingId: string,
+  paymentMethodId: string,
+): Promise<ConfirmSetupResult> {
+  const res = await apiResponse("/payments/confirm-setup", {
     method: "POST",
     body: JSON.stringify({ booking_id: bookingId, payment_method_id: paymentMethodId }),
   })
+  return { processing: res.status === 202 }
 }
 
 // ── Tarification (admin) ──────────────────────────────────────────────────────
