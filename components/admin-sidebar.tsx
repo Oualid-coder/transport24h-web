@@ -10,6 +10,7 @@ import {
   ChevronRight,
   LayoutDashboard,
   LogOut,
+  Receipt,
   Settings,
   Truck,
   Users,
@@ -22,6 +23,7 @@ const NAV_ITEMS = [
   { href: "/admin/partners",   icon: Users,           label: "Partenaires" },
   { href: "/admin/drivers",    icon: Truck,           label: "Chauffeurs" },
   { href: "/admin/companies",  icon: Building2,       label: "Entreprises" },
+  { href: "/admin/credit-notes", icon: Receipt,       label: "Avoirs à émettre" },
 ]
 
 export function AdminSidebar({ children }: { children: React.ReactNode }) {

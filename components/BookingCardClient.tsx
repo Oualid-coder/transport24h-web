@@ -17,9 +17,11 @@ import type { Booking, BookingStatus } from "@/lib/types"
 import { EditAddressModal } from "@/components/EditAddressModal"
 import { CancelBookingModal } from "@/components/CancelBookingModal"
 import { useRole } from "@/components/RoleProvider"
+import { isChargeInProgress } from "@/lib/booking-status"
 
 export const STATUS_LABEL: Record<BookingStatus, string> = {
   awaiting_payment: "En attente de paiement",
+  payment_processing: "Débit en cours",
   payment_failed: "Paiement échoué",
   pending_review: "En attente",
   confirmed: "Confirmé",
@@ -33,6 +35,7 @@ export const STATUS_VARIANT: Record<
   "default" | "secondary" | "destructive" | "outline"
 > = {
   awaiting_payment: "outline",
+  payment_processing: "outline", // même badge que l'attente de paiement
   payment_failed: "destructive",
   pending_review: "secondary",
   confirmed: "default",
@@ -151,6 +154,14 @@ export function BookingCardClient({ booking }: { booking: Booking }) {
             <CreditCard className="mr-2 size-3.5" />
             Mettre à jour mon paiement
           </Link>
+        )}
+
+        {/* payment_processing n'est ni modifiable ni annulable : on explique pourquoi */}
+        {isChargeInProgress(booking.status) && (
+          <p className="rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-xs text-amber-500">
+            Paiement en cours de traitement : l&apos;annulation et la modification
+            d&apos;adresse seront de nouveau possibles une fois le débit terminé.
+          </p>
         )}
 
         {canEditAddress(booking) && (

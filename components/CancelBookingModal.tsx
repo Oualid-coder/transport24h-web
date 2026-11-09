@@ -20,6 +20,13 @@ const fmt = (cents: number) =>
 
 const PAID_STATUSES = new Set<BookingStatus>(["pending_review", "confirmed", "assigned"])
 
+// Le message de remboursement de l'API commence en minuscule (phrase de log) :
+// on met seulement la première lettre en majuscule pour l'affichage.
+function sentence(msg: string): string {
+  const t = msg.trim()
+  return t ? t.charAt(0).toUpperCase() + t.slice(1) : t
+}
+
 function refundTier(scheduledAt: string): 0 | 50 | 100 {
   const hoursUntil = (new Date(scheduledAt).getTime() - Date.now()) / 3_600_000
   if (hoursUntil > 24) return 100
@@ -46,10 +53,17 @@ export function CancelBookingModal({ open, booking, onClose, onCancelled }: Prop
     mutationFn: () => cancelBooking(booking.id),
   })
 
-  const is409 =
+  // 409 : message métier de l'API affiché tel quel (ex. débit en cours, état non annulable).
+  const conflictMessage =
     mutation.isError &&
     mutation.error instanceof ApiError &&
     mutation.error.status === 409
+      ? mutation.error.message ||
+        "Cette réservation ne peut pas être annulée dans son état actuel."
+      : null
+  const refundMessage = mutation.data?.refund_message
+    ? sentence(mutation.data.refund_message)
+    : null
 
   const handleDismiss = (isOpen: boolean) => {
     if (isOpen || mutation.isPending) return
@@ -91,8 +105,14 @@ export function CancelBookingModal({ open, booking, onClose, onCancelled }: Prop
                 <div className="flex items-start gap-2 rounded-lg border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-400">
                   <TriangleAlert className="mt-0.5 size-4 shrink-0" />
                   <span>
-                    Annulation enregistrée. Le remboursement attendu ({mutation.data.refund_percent}&nbsp;%)
-                    n&apos;a pas pu être déclenché automatiquement. Notre équipe prendra en charge votre dossier.
+                    Annulation enregistrée.{" "}
+                    {refundMessage ?? (
+                      <>
+                        Le remboursement attendu ({mutation.data.refund_percent}&nbsp;%)
+                        n&apos;a pas pu être déclenché automatiquement. Notre équipe prendra
+                        en charge votre dossier.
+                      </>
+                    )}
                   </span>
                 </div>
               ) : mutation.data.refund_amount_cents > 0 ? (
@@ -106,6 +126,12 @@ export function CancelBookingModal({ open, booking, onClose, onCancelled }: Prop
               ) : (
                 <p className="text-sm text-muted-foreground">
                   Annulation confirmée. Aucun remboursement applicable.
+                </p>
+              )}
+              {/* refund_message hors échec : affiché sous le récapitulatif */}
+              {refundMessage && mutation.data && !mutation.data.refund_failed && (
+                <p role="status" className="text-sm text-muted-foreground">
+                  {refundMessage}
                 </p>
               )}
               <Button className="w-full" onClick={onCancelled}>
@@ -172,13 +198,16 @@ export function CancelBookingModal({ open, booking, onClose, onCancelled }: Prop
               </div>
 
 
-              {is409 && (
-                <div className="flex items-start gap-2 rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-2 text-xs text-destructive">
+              {conflictMessage && (
+                <div
+                  role="alert"
+                  className="flex items-start gap-2 rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-2 text-xs text-destructive"
+                >
                   <AlertCircle className="mt-0.5 size-3.5 shrink-0" />
-                  Cette réservation ne peut pas être annulée dans son état actuel.
+                  {conflictMessage}
                 </div>
               )}
-              {mutation.isError && !is409 && (
+              {mutation.isError && !conflictMessage && (
                 <div className="flex items-start gap-2 rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-2 text-xs text-destructive">
                   <AlertCircle className="mt-0.5 size-3.5 shrink-0" />
                   Une erreur est survenue. Veuillez réessayer.
