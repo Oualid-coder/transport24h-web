@@ -1,7 +1,7 @@
 import type { Metadata } from "next"
 import { Geist, Geist_Mono } from "next/font/google"
-import Script from "next/script"
 import { QueryProvider } from "@/components/providers/QueryProvider"
+import { CookieConsent } from "@/components/CookieConsent"
 import "./globals.css"
 
 const geistSans = Geist({
@@ -34,16 +34,8 @@ export default function RootLayout({
     >
       <body className="min-h-screen bg-background text-foreground antialiased">
         <QueryProvider>{children}</QueryProvider>
-        <Script
-          src="https://www.googletagmanager.com/gtag/js?id=AW-18483112134"
-          strategy="afterInteractive"
-        />
-        <Script id="google-ads-init" strategy="afterInteractive">
-          {`window.dataLayer = window.dataLayer || [];
-function gtag(){dataLayer.push(arguments);}
-gtag('js', new Date());
-gtag('config', 'AW-18483112134');`}
-        </Script>
+        {/* gtag.js n'est injecté qu'après consentement (voir lib/consent.ts) */}
+        <CookieConsent />
       </body>
     </html>
   )

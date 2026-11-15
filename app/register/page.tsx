@@ -35,6 +35,9 @@ const registerSchema = z
       .min(8, { error: "8 caractères minimum" })
       .regex(/[0-9]/, { message: "Le mot de passe doit contenir au moins un chiffre" }),
     confirmPassword: z.string(),
+    acceptTerms: z.literal(true, {
+      error: "Vous devez certifier avoir 18 ans ou plus et accepter les CGV et la politique de confidentialité",
+    }),
   })
   .refine((d) => d.password === d.confirmPassword, {
     message: "Les mots de passe ne correspondent pas",
@@ -212,6 +215,45 @@ type RegisterForm = z.infer<typeof registerSchema>
                 {errors.confirmPassword && (
                   <p className="text-xs text-destructive">
                     {errors.confirmPassword.message}
+                  </p>
+                )}
+              </div>
+
+              {/* Case obligatoire — non transmise à l'API (aucun champ prévu côté backend) */}
+              <div className="space-y-1.5">
+                <div className="flex items-start gap-2.5">
+                  <input
+                    id="acceptTerms"
+                    type="checkbox"
+                    className="mt-0.5 size-4 shrink-0 accent-primary"
+                    aria-invalid={!!errors.acceptTerms}
+                    aria-required="true"
+                    {...registerField("acceptTerms")}
+                  />
+                  <label htmlFor="acceptTerms" className="text-xs leading-relaxed text-muted-foreground">
+                    Je certifie avoir 18 ans ou plus et j&apos;accepte les{" "}
+                    <Link
+                      href="/cgv"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-primary underline underline-offset-4 hover:no-underline"
+                    >
+                      CGV
+                    </Link>{" "}
+                    et la{" "}
+                    <Link
+                      href="/politique-de-confidentialite"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-primary underline underline-offset-4 hover:no-underline"
+                    >
+                      politique de confidentialité
+                    </Link>
+                  </label>
+                </div>
+                {errors.acceptTerms && (
+                  <p className="text-xs text-destructive">
+                    {errors.acceptTerms.message}
                   </p>
                 )}
               </div>
