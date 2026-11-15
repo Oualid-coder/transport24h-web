@@ -176,6 +176,62 @@ export default function PolitiqueConfidentialitePage() {
           </p>
         </section>
 
+        {/* À FAIRE VALIDER PAR AHMED — section factuelle, non validée juridiquement */}
+        <section id="cookies" className="scroll-mt-24 space-y-3">
+          <h2 className="text-lg font-semibold">Cookies et traceurs</h2>
+          <Placeholder />
+          <p className="font-medium text-foreground">
+            Mesure publicitaire : Google Ads
+          </p>
+          <ul className="list-disc pl-5 space-y-1.5 text-muted-foreground">
+            <li>
+              Finalité : mesure des conversions publicitaires, c&apos;est-à-dire savoir si
+              une réservation confirmée fait suite à une annonce Google Ads.
+            </li>
+            <li>
+              Consentement : le script de Google Ads n&apos;est chargé et ses cookies ne
+              sont déposés qu&apos;après avoir cliqué sur « Tout accepter » (ou activé la
+              mesure publicitaire dans « Personnaliser »). En cas de refus, aucun script
+              Google n&apos;est chargé.
+            </li>
+            <li>
+              Durée : votre choix, qu&apos;il s&apos;agisse d&apos;une acceptation ou d&apos;un
+              refus, est conservé 6 mois sur votre appareil. À l&apos;issue de ce délai,
+              il vous est demandé à nouveau.
+            </li>
+            <li>
+              Retirer ou modifier votre choix : à tout moment, via le lien « Gérer mes
+              cookies » en bas de chaque page. Le retrait prend effet immédiatement :
+              plus aucune donnée n&apos;est envoyée à Google Ads.
+            </li>
+          </ul>
+          <p className="font-medium text-foreground">
+            Services tiers contactés par votre navigateur
+          </p>
+          <p className="text-muted-foreground leading-relaxed">
+            Pour fournir certaines fonctionnalités, votre navigateur se connecte
+            directement aux services suivants, qui reçoivent à cette occasion votre
+            adresse IP :
+          </p>
+          <ul className="list-disc pl-5 space-y-1.5 text-muted-foreground">
+            <li>
+              <span className="font-medium text-foreground">Stripe</span> — paiement
+              en ligne (js.stripe.com, api.stripe.com), sur la page de paiement.
+            </li>
+            <li>
+              <span className="font-medium text-foreground">OpenStreetMap</span> —
+              affichage des tuiles de la carte du devis (tile.openstreetmap.org).
+            </li>
+            <li>
+              <span className="font-medium text-foreground">
+                Nominatim (OpenStreetMap)
+              </span>{" "}
+              — recherche et autocomplétion des adresses saisies
+              (nominatim.openstreetmap.org), qui reçoit le texte de l&apos;adresse tapée.
+            </li>
+          </ul>
+        </section>
+
         <section className="space-y-3">
           <h2 className="text-lg font-semibold">7. Sécurité</h2>
           <p className="text-muted-foreground leading-relaxed">

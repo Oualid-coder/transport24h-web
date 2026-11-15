@@ -3,6 +3,7 @@ import Image from "next/image"
 import Link from "next/link"
 import { NavActions } from "@/components/nav-actions"
 import { RoleProvider } from "@/components/RoleProvider"
+import { CookieSettingsLink } from "@/components/CookieConsent"
 import type { UserRole } from "@/lib/types"
 
 export default async function ClientLayout({
@@ -92,6 +93,7 @@ export default async function ClientLayout({
               <Link href="/politique-de-confidentialite" className="hover:text-foreground transition-colors">
                 Confidentialité
               </Link>
+              <CookieSettingsLink className="hover:text-foreground transition-colors" />
               <Link href="/contact" className="hover:text-foreground transition-colors">
                 Contact
               </Link>

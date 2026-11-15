@@ -2,12 +2,7 @@
 
 import { useSearchParams } from "next/navigation"
 import { Suspense, useEffect, useState } from "react"
-
-declare global {
-  interface Window {
-    gtag?: (...args: unknown[]) => void
-  }
-}
+import { sendAdsEvent } from "@/lib/consent"
 import { CheckCircle2, Home, LayoutDashboard, Loader2 } from "lucide-react"
 import { buttonVariants } from "@/components/ui/button"
 import Link from "next/link"
@@ -40,7 +35,8 @@ function ConfirmationContent() {
         if (cancelled) return
         setBooking(b)
         if (!isB2b && PAID_STATUSES.has(b.status)) {
-          window.gtag?.("event", "conversion", {
+          // N'envoie rien sans consentement Google Ads
+          sendAdsEvent("conversion", {
             send_to: "AW-18483112134/DcpjCMyZz48dEMbRt-1E",
             value: 1.0,
             currency: "EUR",
