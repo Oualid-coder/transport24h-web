@@ -2,6 +2,11 @@
 
 ## Stack
 
+- **Runtime** : Node 22 LTS, version exacte `22.23.4` (image `node:22.23.4-alpine` dans les deux étages du
+  `Dockerfile`, `node-version: "22.23.4"` en CI). Monter en version exacte publiée depuis au moins deux semaines.
+- **Dépendances figées** : `next` 16.4.5, `react`/`react-dom` 19.2.4, `zod` 4.6.6, `shadcn` 4.2.0 (CLI, en
+  `devDependencies` : seul `app/globals.css` l'importe, à la compilation). Toute montée : version exacte
+  (`--save-exact`) après audit.
 - **Framework** : Next.js 16 App Router, version figée exacte `16.4.5` dans `package.json` (correctifs de sécurité du 2026-11-03 ; monter en version exacte après audit, jamais de `^`) (voir `node_modules/next/dist/docs/` pour les conventions exactes — APIs et structure peuvent différer du training data)
 - **Langage** : TypeScript strict (`"strict": true` dans tsconfig)
 - **Style** : Tailwind CSS
@@ -79,5 +84,5 @@ Lire le guide pertinent dans `node_modules/next/dist/docs/` — les APIs, conven
   seulement si la case est cochée, jamais de date (posée par le serveur), téléphone nettoyé (espaces, points,
   tirets). Les 422 de l'API sont traduits par `registerErrorMessage`.
 - Cookies : Google Ads uniquement via `lib/consent.ts` (`sendAdsEvent`), jamais de `<Script>` Google direct.
-- Tests : `npm test` (Node >= 23.6, `node --test`, sans dépendance ; résolution des imports `@/` par
+- Tests : `npm test` (Node 22.23.4 ou plus, vérifié dans l'image Docker ; lancé en CI ; `node --test`, sans dépendance ; résolution des imports `@/` par
   `tests/ts-hooks.mjs`). Fichiers dans `tests/*.test.ts`.

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
 import type { UserRole } from "@/lib/types"
+import { safeRedirectPath } from "@/lib/safe-redirect"
 
 const API_URL = process.env.API_URL ?? process.env.NEXT_PUBLIC_API_URL
 
@@ -36,10 +37,8 @@ export async function POST(request: NextRequest) {
   }
 
   // Extrait le param de redirection client — ne le transmet pas au backend Go
-  const clientRedirect =
-    typeof body.redirect === "string" && body.redirect.startsWith("/")
-      ? body.redirect
-      : null
+  // Chemin interne uniquement (pas de "//hôte", "/\hôte" ni d'URL absolue) : sinon redirection par rôle
+  const clientRedirect = safeRedirectPath(body.redirect)
 
   let backendRes: Response
   try {

@@ -271,8 +271,10 @@ export function updateBookingPrice(id: string, priceHT: number): Promise<Booking
   })
 }
 
-export function confirmBooking(id: string): Promise<BookingWithClient> {
-  return apiFetch<BookingWithClient>(`/admin/bookings/${id}/confirm`, {
+// PUT /admin/bookings/{id}/confirm — 204 sans corps.
+// 409 : pas en attente de validation, refus en cours, ou remboursement intégral / à vérifier.
+export function confirmBooking(id: string): Promise<void> {
+  return apiFetch<void>(`/admin/bookings/${id}/confirm`, {
     method: "PUT",
   })
 }
@@ -456,18 +458,19 @@ export function getDriverMyBookings(): Promise<Booking[]> {
   return apiFetch<Booking[]>("/driver/bookings/mine")
 }
 
-// POST /driver/bookings/{id}/photos/{phase} — multipart/form-data, champ "photo", max 8 Mo
-// Bypass apiFetch : Content-Type ne doit pas être forcé à application/json (boundary multipart)
+// POST /driver/bookings/{id}/photos/{phase} — corps brut (le fichier lui-même), max 8 Mo.
+// L'API exige Content-Type image/* et Content-Length (posé par le navigateur) : pas de multipart.
+// Bypass apiFetch : Content-Type ne doit pas être forcé à application/json.
 export async function uploadBookingPhoto(
   bookingId: string,
   phase: "before" | "after",
   file: File,
 ): Promise<void> {
-  const form = new FormData()
-  form.append("photo", file)
   const res = await fetch(`${PROXY_BASE}/driver/bookings/${bookingId}/photos/${phase}`, {
     method: "POST",
-    body: form,
+    // Type vide (certains navigateurs mobiles) : image/jpeg, format de stockage de l'API
+    headers: { "Content-Type": file.type || "image/jpeg" },
+    body: file,
   })
   if (res.status === 401) {
     if (typeof window !== "undefined") {
@@ -486,9 +489,23 @@ export async function uploadBookingPhoto(
   }
 }
 
+// Réponse de GET …/photos : { before: [{ id, phase, url, uploaded_by, uploaded_at }], after: […] }
+type BookingPhotoDTO = { url?: string | null }
+type BookingPhotosDTO = {
+  before?: BookingPhotoDTO[] | null
+  after?: BookingPhotoDTO[] | null
+}
+
+// toBookingPhotos ne garde que les URLs signées, dans l'ordre renvoyé par l'API.
+export function toBookingPhotos(raw: BookingPhotosDTO | null | undefined): BookingPhotos {
+  const urls = (list?: BookingPhotoDTO[] | null): string[] =>
+    (list ?? []).flatMap((p) => (typeof p?.url === "string" && p.url !== "" ? [p.url] : []))
+  return { before: urls(raw?.before), after: urls(raw?.after) }
+}
+
 // GET /driver/bookings/{id}/photos — URLs signées 1h
-export function getDriverBookingPhotos(bookingId: string): Promise<BookingPhotos> {
-  return apiFetch<BookingPhotos>(`/driver/bookings/${bookingId}/photos`)
+export async function getDriverBookingPhotos(bookingId: string): Promise<BookingPhotos> {
+  return toBookingPhotos(await apiFetch<BookingPhotosDTO>(`/driver/bookings/${bookingId}/photos`))
 }
 
 // POST /driver/bookings/{id}/complete — le chauffeur marque la course comme terminée (204)
@@ -497,8 +514,8 @@ export function completeBooking(id: string): Promise<void> {
 }
 
 // GET /admin/bookings/{id}/photos — URLs signées 15 min
-export function getAdminBookingPhotos(bookingId: string): Promise<BookingPhotos> {
-  return apiFetch<BookingPhotos>(`/admin/bookings/${bookingId}/photos`)
+export async function getAdminBookingPhotos(bookingId: string): Promise<BookingPhotos> {
+  return toBookingPhotos(await apiFetch<BookingPhotosDTO>(`/admin/bookings/${bookingId}/photos`))
 }
 
 // ── Auth (via Route Handler Next.js) ─────────────────────────────────────────

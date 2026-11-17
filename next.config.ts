@@ -11,14 +11,19 @@ const googleAds = {
   frame: "https://www.googletagmanager.com",
 }
 
-const csp = [
+// Photos d'état des lieux affichées directement depuis Cloudflare R2 (URL présignée, bucket privé).
+// L'identifiant de compte n'est pas connu du web : sous-domaines de r2.cloudflarestorage.com, HTTPS seul.
+export const r2Images = "https://*.r2.cloudflarestorage.com"
+
+export const csp = [
   "default-src 'self'",
   // Next.js App Router injecte des <script> inline pour le payload RSC — unsafe-inline requis sans nonce middleware
   `script-src 'self' 'unsafe-inline' https://js.stripe.com ${googleAds.script}`,
   // Tailwind génère des styles inline au runtime (CSS-in-JS via shadcn)
   "style-src 'self' 'unsafe-inline'",
-  // next/image (data:), Leaflet map tiles (OpenStreetMap)
-  `img-src 'self' data: blob: https://*.tile.openstreetmap.org ${googleAds.img}`,
+  // next/image (data:), Leaflet map tiles (OpenStreetMap), photos d'état des lieux :
+  // URLs présignées R2 (pkg/storage de l'API, minio-go sur <compte>.r2.cloudflarestorage.com)
+  `img-src 'self' data: blob: https://*.tile.openstreetmap.org ${r2Images} ${googleAds.img}`,
   // Fonts servies localement par next/font — pas besoin de fonts.googleapis.com
   "font-src 'self'",
   // API backend + Stripe (paiement + fraud detection)
