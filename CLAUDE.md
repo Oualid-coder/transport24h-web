@@ -2,7 +2,7 @@
 
 ## Stack
 
-- **Framework** : Next.js 14 App Router (voir `node_modules/next/dist/docs/` pour les conventions exactes — APIs et structure peuvent différer du training data)
+- **Framework** : Next.js 16 App Router, version figée exacte `16.4.5` dans `package.json` (correctifs de sécurité du 2026-11-03 ; monter en version exacte après audit, jamais de `^`) (voir `node_modules/next/dist/docs/` pour les conventions exactes — APIs et structure peuvent différer du training data)
 - **Langage** : TypeScript strict (`"strict": true` dans tsconfig)
 - **Style** : Tailwind CSS
 - **Composants** : shadcn/ui
