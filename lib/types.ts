@@ -172,7 +172,8 @@ export interface BookingPhotos {
 
 // ── Admin ─────────────────────────────────────────────────────────────────────
 
-export type PaymentStatus = "paid" | "pending" | "none"
+// Statut du dernier paiement (API admin) — succeeded est normalisé en paid par l'API
+export type PaymentStatus = "paid" | "pending" | "failed" | "refunded" | "none"
 
 export type InvitationStatus = "not_invited" | "sent" | "expired" | "active"
 

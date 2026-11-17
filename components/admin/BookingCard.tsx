@@ -30,7 +30,8 @@ import {
 } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { cancelUnpaidBooking, confirmBooking, rejectBooking, sendInvoice, updateBookingPrice, ApiError } from "@/lib/api"
-import type { BookingStatus, BookingWithClient, PaginatedBookings, PaymentStatus } from "@/lib/types"
+import type { BookingStatus, BookingWithClient, PaginatedBookings } from "@/lib/types"
+import { paymentBadge } from "@/lib/payment-status"
 import { isChargeInProgress } from "@/lib/booking-status"
 import { BookingPhotoSection } from "@/components/BookingPhotoSection"
 import { AssignDriverModal } from "./AssignDriverModal"
@@ -62,21 +63,6 @@ const STATUS_VARIANT: Record<
   assigned: "default",
   done: "outline",
   cancelled: "destructive",
-}
-
-const PAYMENT_CONFIG: Record<PaymentStatus, { label: string; className: string }> = {
-  paid: {
-    label: "Payé",
-    className: "border-primary/30 bg-primary/10 text-primary",
-  },
-  pending: {
-    label: "Paiement en attente",
-    className: "border-amber-500/30 bg-amber-500/15 text-amber-400",
-  },
-  none: {
-    label: "Non payé",
-    className: "border-border bg-muted text-muted-foreground",
-  },
 }
 
 const fmt = (n: number) =>
@@ -173,7 +159,7 @@ export function BookingCard({
   })
 
   const date = new Date(booking.scheduled_at)
-  const payment = PAYMENT_CONFIG[booking.payment_status]
+  const payment = paymentBadge(booking.payment_status)
 
   return (
     <>
