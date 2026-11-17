@@ -279,6 +279,9 @@ export interface RegisterBody {
   first_name: string
   last_name: string
   phone?: string
+  // Case « 18 ans + CGV + confidentialité » cochée. La date est posée par le serveur.
+  terms_accepted?: boolean
+  terms_version?: string
 }
 
 export interface User {
