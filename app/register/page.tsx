@@ -13,6 +13,7 @@ import { Label } from "@/components/ui/label"
 import { PasswordInput } from "@/components/PasswordInput"
 import { Card, CardContent, CardHeader } from "@/components/ui/card"
 import { register, ApiError } from "@/lib/api"
+import { safeRedirectPath } from "@/lib/safe-redirect"
 import { buildRegisterBody, isValidPhone, registerErrorMessage } from "@/lib/register"
 import { BackButton } from "@/components/BackButton"
 import { useState } from "react"
@@ -49,7 +50,8 @@ const registerSchema = z
 type RegisterForm = z.infer<typeof registerSchema>
 
   const sp = useSearchParams()
-  const redirectParam = sp.get("redirect")
+  // Paramètre ignoré s'il ne désigne pas un chemin interne (redirection ouverte)
+  const redirectParam = safeRedirectPath(sp.get("redirect"))
 
   const router = useRouter()
   const [serverError, setServerError] = useState<string | null>(null)
