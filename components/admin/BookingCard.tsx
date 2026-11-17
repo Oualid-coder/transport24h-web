@@ -88,6 +88,7 @@ export function BookingCard({
   const [invoiceMsg, setInvoiceMsg] = useState<{ type: "success" | "error"; text: string } | null>(null)
   const [cancelError, setCancelError] = useState<string | null>(null)
   const [rejectError, setRejectError] = useState<string | null>(null)
+  const [confirmError, setConfirmError] = useState<string | null>(null)
   const [priceError, setPriceError] = useState<string | null>(null)
 
   const priceTVA = booking.price_ttc - booking.price_ht
@@ -111,12 +112,19 @@ export function BookingCard({
     },
   })
 
+  // 204 sans corps : on recharge la liste. Sur 409 (refus en cours, course remboursée ou
+  // annulée entre-temps), message de l'API affiché et liste rechargée (l'état a changé).
   const confirmMutation = useMutation({
     mutationFn: () => confirmBooking(booking.id),
-    onSuccess: (updated) => {
-      queryClient.setQueryData<PaginatedBookings>(queryKey, (old) =>
-        old ? { ...old, bookings: old.bookings.map((b) => (b.id === updated.id ? updated : b)) } : old,
+    onMutate: () => setConfirmError(null),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey })
+    },
+    onError: (err) => {
+      setConfirmError(
+        err instanceof ApiError ? err.message : "Erreur lors de la confirmation de la réservation.",
       )
+      if (err instanceof ApiError && err.status === 409) queryClient.invalidateQueries({ queryKey })
     },
   })
 
@@ -143,6 +151,7 @@ export function BookingCard({
       setRejectError(
         err instanceof ApiError ? err.message : "Erreur lors du refus de la réservation.",
       )
+      if (err instanceof ApiError && err.status === 409) queryClient.invalidateQueries({ queryKey })
     },
   })
 
@@ -501,6 +510,11 @@ export function BookingCard({
           {/* ── Feedback annulation ─────────────────────────────────────────── */}
           {cancelError && (
             <p className="text-xs text-destructive">{cancelError}</p>
+          )}
+
+          {/* ── Feedback confirmation ─────────────────────────────────────────── */}
+          {confirmError && (
+            <p className="text-xs text-destructive">{confirmError}</p>
           )}
 
           {/* ── Feedback refus ────────────────────────────────────────────────── */}

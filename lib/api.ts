@@ -271,8 +271,10 @@ export function updateBookingPrice(id: string, priceHT: number): Promise<Booking
   })
 }
 
-export function confirmBooking(id: string): Promise<BookingWithClient> {
-  return apiFetch<BookingWithClient>(`/admin/bookings/${id}/confirm`, {
+// PUT /admin/bookings/{id}/confirm — 204 sans corps.
+// 409 : pas en attente de validation, refus en cours, ou remboursement intégral / à vérifier.
+export function confirmBooking(id: string): Promise<void> {
+  return apiFetch<void>(`/admin/bookings/${id}/confirm`, {
     method: "PUT",
   })
 }
