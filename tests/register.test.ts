@@ -108,3 +108,18 @@ test("erreurs API : 422 traduit en message lisible, jamais le texte technique", 
   assert.equal(registerErrorMessage(409, "cet email est déjà utilisé"), "Un compte existe déjà avec cet e-mail.")
   assert.equal(registerErrorMessage(500, "erreur lors de la création du compte"), "erreur lors de la création du compte")
 })
+
+test("erreurs API : bornes de longueur traduites", () => {
+  assert.equal(
+    registerErrorMessage(422, "le mot de passe ne doit pas dépasser 72 octets (72 caractères sans accents)"),
+    "Mot de passe trop long — 72 caractères maximum (sans accents).",
+  )
+  assert.equal(
+    registerErrorMessage(422, "le champ email ne doit pas dépasser 254 caractères"),
+    "Adresse e-mail trop longue (254 caractères maximum).",
+  )
+  assert.equal(
+    registerErrorMessage(422, "le champ last_name ne doit pas dépasser 100 caractères"),
+    "Le prénom et le nom ne doivent pas dépasser 100 caractères.",
+  )
+})

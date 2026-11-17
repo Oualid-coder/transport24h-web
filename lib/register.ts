@@ -87,6 +87,14 @@ export function registerErrorMessage(status: number, apiMessage: string): string
       return "Mot de passe invalide — 8 caractères minimum."
     if (has("FirstName") || has("LastName"))
       return "Le prénom et le nom sont obligatoires."
+    // Bornes de longueur de l'API (message en français, sans nom de champ Go)
+    if (/ne doit pas dépasser/.test(apiMessage)) {
+      if (/mot de passe/.test(apiMessage))
+        return "Mot de passe trop long — 72 caractères maximum (sans accents)."
+      if (/\bemail\b/.test(apiMessage)) return "Adresse e-mail trop longue (254 caractères maximum)."
+      if (/first_name|last_name/.test(apiMessage))
+        return "Le prénom et le nom ne doivent pas dépasser 100 caractères."
+    }
     if (has("TermsVersion"))
       return "Impossible d'enregistrer votre acceptation des conditions. Réessayez plus tard ou contactez-nous."
     return "Certaines informations sont invalides. Vérifiez le formulaire."
