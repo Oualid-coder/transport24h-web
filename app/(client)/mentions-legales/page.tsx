@@ -40,6 +40,7 @@ export default function MentionsLegalesPage() {
           <div className="rounded-lg border border-border/50 bg-card p-5 space-y-2">
             <Row label="Raison sociale" value="Hetzner Online GmbH" />
             <Row label="Adresse" value="Industriestr. 25, 91710 Gunzenhausen, Allemagne" />
+            <Row label="Téléphone" value="+49 9831 505-0" />
             <Row
               label="Site web"
               value="www.hetzner.com"

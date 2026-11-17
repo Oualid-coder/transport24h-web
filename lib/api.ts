@@ -18,6 +18,7 @@ import type {
   GeoPoint,
   HelpersSurcharge,
   PartnerApplyBody,
+  AcceptInvitationBody,
   PartnerApplication,
   PaymentIntent,
   PaginatedBookings,
@@ -537,10 +538,10 @@ export function register(body: RegisterBody): Promise<void> {
 }
 
 // POST /auth/accept-invitation — public, active un compte B2B depuis un token d'invitation
-export function acceptInvitation(token: string, password: string): Promise<void> {
+export function acceptInvitation(body: AcceptInvitationBody): Promise<void> {
   return apiFetch<void>("/auth/accept-invitation", {
     method: "POST",
-    body: JSON.stringify({ token, password }),
+    body: JSON.stringify(body),
   })
 }
 

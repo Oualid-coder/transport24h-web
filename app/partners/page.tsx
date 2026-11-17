@@ -34,8 +34,10 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { registerPartner, uploadPartnerDocument, ApiError } from "@/lib/api"
+import { acceptTermsField, buildPartnerApplyBody } from "@/lib/register"
 import type { TruckType } from "@/lib/types"
 import { BackButton } from "@/components/BackButton"
+import { TermsCheckbox } from "@/components/TermsCheckbox"
 
 const partnerSchema = z.object({
   firstName: z
@@ -60,6 +62,7 @@ const partnerSchema = z.object({
   truckType: z.enum(["6m3", "12m3", "20m3"], {
     error: "Sélectionnez un type de camion",
   }),
+  acceptTerms: acceptTermsField,
 })
 
 type PartnerForm = z.infer<typeof partnerSchema>
@@ -179,14 +182,8 @@ export default function PartnersPage() {
   const onSubmit = async (data: PartnerForm) => {
     setServerError(null)
     try {
-      const application = await registerPartner({
-        first_name: data.firstName,
-        last_name: data.lastName,
-        email: data.email,
-        phone: data.phone,
-        siret: data.siret,
-        truck_type: data.truckType,
-      })
+      // terms_accepted + terms_version (case cochée) ; jamais de date, posée par le serveur
+      const application = await registerPartner(buildPartnerApplyBody(data))
       setApplicationId(application.id)
     } catch (err) {
       if (err instanceof ApiError) {
@@ -447,6 +444,11 @@ export default function PartnersPage() {
                       </p>
                     )}
                   </div>
+
+                  <TermsCheckbox
+                    error={errors.acceptTerms?.message}
+                    {...register("acceptTerms")}
+                  />
 
                   {serverError && (
                     <div className="rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">
