@@ -1,7 +1,12 @@
-// Logique pure de l'inscription : construction du corps envoyé à POST /auth/register
-// et traduction des erreurs de l'API. Sans dépendance runtime (testée avec node --test).
-import type { RegisterBody } from "@/lib/types"
-import { TERMS_VERSION } from "@/lib/legal"
+// Logique pure des formulaires où la personne crée elle-même son compte ou sa candidature :
+// inscription (POST /auth/register), activation d'un compte entreprise (POST /auth/accept-invitation),
+// candidature partenaire (POST /partners). Corps envoyés et traduction des erreurs (testés avec node --test).
+import * as z from "zod"
+import type { AcceptInvitationBody, PartnerApplyBody, RegisterBody, TruckType } from "@/lib/types"
+import { TERMS_REQUIRED_MESSAGE, termsAcceptanceFields } from "@/lib/legal"
+
+// Case obligatoire « 18 ans + CGV + politique de confidentialité », identique sur tous les formulaires
+export const acceptTermsField = z.literal(true, { error: TERMS_REQUIRED_MESSAGE })
 
 // Même règle que l'API (validateur phone_fr), appliquée au numéro nettoyé
 export const PHONE_FR_REGEX = /^(0|\+33)[1-9][0-9]{8}$/
@@ -34,11 +39,37 @@ export function buildRegisterBody(form: RegisterFormValues): RegisterBody {
   const phone = form.phone ? normalizePhone(form.phone) : ""
   if (phone) body.phone = phone
   // La date d'acceptation est posée par le serveur : seule la version est envoyée
-  if (form.acceptTerms === true) {
-    body.terms_accepted = true
-    body.terms_version = TERMS_VERSION
+  return { ...body, ...termsAcceptanceFields(form.acceptTerms) }
+}
+
+export function buildAcceptInvitationBody(
+  token: string,
+  password: string,
+  acceptTerms: boolean,
+): AcceptInvitationBody {
+  return { token, password, ...termsAcceptanceFields(acceptTerms) }
+}
+
+export interface PartnerFormValues {
+  firstName: string
+  lastName: string
+  email: string
+  phone: string
+  siret: string
+  truckType: TruckType
+  acceptTerms: boolean
+}
+
+export function buildPartnerApplyBody(form: PartnerFormValues): PartnerApplyBody {
+  return {
+    first_name: form.firstName,
+    last_name: form.lastName,
+    email: form.email,
+    phone: form.phone,
+    siret: form.siret,
+    truck_type: form.truckType,
+    ...termsAcceptanceFields(form.acceptTerms),
   }
-  return body
 }
 
 // L'API renvoie en 422 le message brut du validateur Go

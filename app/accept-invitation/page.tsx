@@ -8,6 +8,8 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { acceptInvitation, ApiError } from "@/lib/api"
+import { acceptTermsField, buildAcceptInvitationBody } from "@/lib/register"
+import { TermsCheckbox } from "@/components/TermsCheckbox"
 
 function AcceptInvitationContent() {
   const sp = useSearchParams()
@@ -16,6 +18,8 @@ function AcceptInvitationContent() {
 
   const [password, setPassword] = useState("")
   const [confirm, setConfirm] = useState("")
+  const [acceptTerms, setAcceptTerms] = useState(false)
+  const [termsError, setTermsError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState(false)
@@ -38,14 +42,15 @@ function AcceptInvitationContent() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     const validationError = validate()
-    if (validationError) {
-      setError(validationError)
-      return
-    }
+    // Même règle que l'inscription : case obligatoire (z.literal(true)), même message
+    const terms = acceptTermsField.safeParse(acceptTerms)
+    setError(validationError)
+    setTermsError(terms.success ? null : terms.error.issues[0].message)
+    if (validationError || !terms.success) return
     setLoading(true)
-    setError(null)
     try {
-      await acceptInvitation(token, password)
+      // terms_accepted + terms_version ; jamais de date, posée par le serveur
+      await acceptInvitation(buildAcceptInvitationBody(token, password, acceptTerms))
       setSuccess(true)
     } catch (err) {
       if (err instanceof ApiError) {
@@ -121,6 +126,13 @@ function AcceptInvitationContent() {
                 disabled={loading}
               />
             </div>
+
+            <TermsCheckbox
+              checked={acceptTerms}
+              onChange={(e) => setAcceptTerms(e.target.checked)}
+              disabled={loading}
+              error={termsError ?? undefined}
+            />
 
             {error && (
               <p role="alert" className="text-xs text-destructive">

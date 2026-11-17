@@ -305,6 +305,18 @@ export interface PartnerApplyBody {
   phone: string
   siret: string
   truck_type: TruckType
+  // Case « 18 ans + CGV + confidentialité » cochée. La date est posée par le serveur.
+  terms_accepted?: boolean
+  terms_version?: string
+}
+
+// Body vers POST /auth/accept-invitation (activation d'un compte entreprise invité)
+export interface AcceptInvitationBody {
+  token: string
+  password: string
+  // Case « 18 ans + CGV + confidentialité » cochée. La date est posée par le serveur.
+  terms_accepted?: boolean
+  terms_version?: string
 }
 
 // ── Paiement ──────────────────────────────────────────────────────────────────

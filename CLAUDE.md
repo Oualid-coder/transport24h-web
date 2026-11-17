@@ -79,10 +79,18 @@ Lire le guide pertinent dans `node_modules/next/dist/docs/` — les APIs, conven
 
 - `lib/legal.ts` : `TERMS_VERSION` (format API `^[A-Za-z0-9][A-Za-z0-9._-]{0,31}$`) est la source unique :
   envoyée à l'inscription (`terms_version`) et affichée comme « dernière mise à jour » des CGV et de la
-  politique de confidentialité. La changer à chaque modification de l'un de ces textes.
+  politique de confidentialité. La changer à chaque modification de l'un de ces textes (même jour qu'une
+  version déjà déployée : suffixe `.2`, `.3`… ; `formatTermsDate` n'affiche que les 10 premiers caractères).
 - Inscription : corps construit par `buildRegisterBody` (`lib/register.ts`) — `terms_accepted` + `terms_version`
   seulement si la case est cochée, jamais de date (posée par le serveur), téléphone nettoyé (espaces, points,
   tirets). Les 422 de l'API sont traduits par `registerErrorMessage`.
+- Même case (composant `components/TermsCheckbox.tsx`, champ zod `acceptTermsField`, message `TERMS_REQUIRED_MESSAGE`)
+  sur l'activation d'un compte entreprise (`buildAcceptInvitationBody` → POST /auth/accept-invitation) et la
+  candidature partenaire (`buildPartnerApplyBody` → POST /partners). Champs construits par `termsAcceptanceFields`
+  (`lib/legal.ts`). Pas de case pour les comptes créés par l'admin (chauffeurs salariés).
+- Textes : ne rien affirmer qui ne soit prouvé par le code ou la config des deux dépôts. Une information manquante
+  s'affiche en clair entre crochets (`ToComplete` dans la politique, encadré orange dans les CGV), jamais inventée.
+  Les annulations des CGV suivent `computeRefund` de l'API (bornes : 24 h pile → 50 %, 2 h pile → 0 %).
 - Cookies : Google Ads uniquement via `lib/consent.ts` (`sendAdsEvent`), jamais de `<Script>` Google direct.
 - Tests : `npm test` (Node 22.23.4 ou plus, vérifié dans l'image Docker ; lancé en CI ; `node --test`, sans dépendance ; résolution des imports `@/` par
   `tests/ts-hooks.mjs`). Fichiers dans `tests/*.test.ts`.
