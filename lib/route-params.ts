@@ -4,7 +4,8 @@ export type RoutePoints = { fromLat: number; fromLng: number; toLat: number; toL
 
 const KEYS = ["from_lat", "from_lng", "to_lat", "to_lng"] as const
 // Décimal simple ou notation exponentielle de Number#toString (ex. 1e-7)
-const NUMBER_FORMAT = /^-?\d{1,3}(\.\d{1,20})?(e-\d{1,3})?$/i
+// Décimales non limitées ici (pleine précision d'un double : jusqu'à ~22) : la longueur totale est bornée à 32.
+const NUMBER_FORMAT = /^-?\d{1,3}(\.\d{1,28})?(e-\d{1,3})?$/i
 
 function coordinate(raw: string, max: number): number | null {
   if (raw.length > 32 || !NUMBER_FORMAT.test(raw)) return null

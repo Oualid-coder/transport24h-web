@@ -38,3 +38,9 @@ test("route : paramètres invalides → refus", () => {
   dup.append("to_lat", "40")
   assert.equal(parseRouteParams(dup), null)
 })
+
+test("route : coordonnée en pleine précision proche de 0 acceptée", () => {
+  const v = String(0.000012345678901234567) // 21 décimales
+  const sp = new URLSearchParams({ from_lat: v, from_lng: "2.35", to_lat: "48.85", to_lng: `-${v}` })
+  assert.notEqual(parseRouteParams(sp), null)
+})
