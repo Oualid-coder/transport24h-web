@@ -1,6 +1,7 @@
 import Link from "next/link"
 import { Clock } from "lucide-react"
 import { BackButton } from "@/components/BackButton"
+import { TERMS_VERSION, formatTermsDate } from "@/lib/legal"
 
 export default function CGVPage() {
   return (
@@ -11,7 +12,7 @@ export default function CGVPage() {
 
       <h1 className="text-3xl font-bold">Conditions générales de vente</h1>
       <p className="mt-2 text-sm text-muted-foreground">
-        Dernière mise à jour : juin 2026
+        Dernière mise à jour : {formatTermsDate(TERMS_VERSION)}
       </p>
 
       <div className="mt-6 flex items-start gap-3 rounded-lg border border-primary/30 bg-primary/10 px-5 py-4">

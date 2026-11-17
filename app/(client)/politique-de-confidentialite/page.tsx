@@ -1,6 +1,7 @@
 import Link from "next/link"
 import { Clock } from "lucide-react"
 import { BackButton } from "@/components/BackButton"
+import { TERMS_VERSION, formatTermsDate } from "@/lib/legal"
 
 export default function PolitiqueConfidentialitePage() {
   return (
@@ -11,7 +12,7 @@ export default function PolitiqueConfidentialitePage() {
 
       <h1 className="text-3xl font-bold">Politique de confidentialité</h1>
       <p className="mt-2 text-sm text-muted-foreground">
-        Dernière mise à jour : juin 2026
+        Dernière mise à jour : {formatTermsDate(TERMS_VERSION)}
       </p>
 
       <div className="mt-6 flex items-start gap-3 rounded-lg border border-primary/30 bg-primary/10 px-5 py-4">
@@ -59,8 +60,16 @@ export default function PolitiqueConfidentialitePage() {
               horaires
             </li>
             <li>
-              Données de paiement : gérées exclusivement par Stripe — TRANSPORT24H.FR
-              ne stocke aucune donnée bancaire
+              Données de paiement : la carte est saisie dans des champs fournis par
+              Stripe — TRANSPORT24H.FR ne stocke ni le numéro de carte, ni sa date
+              d&apos;expiration, ni son cryptogramme ; sont conservés les identifiants
+              techniques Stripe (client, moyen de paiement, transaction), le montant et
+              le statut du paiement
+            </li>
+            <li>
+              Preuve d&apos;acceptation : à l&apos;inscription, date et version des CGV et
+              de la politique de confidentialité acceptées (case certifiant également
+              avoir 18 ans ou plus)
             </li>
             <li>
               Données de navigation : adresse IP, type de navigateur, pages visitées
@@ -129,10 +138,11 @@ export default function PolitiqueConfidentialitePage() {
         <section className="space-y-3">
           <h2 className="text-lg font-semibold">6. Cookies</h2>
           <p className="text-muted-foreground leading-relaxed">
-            Le site transport24h.fr n&apos;utilise aucun cookie de mesure d&apos;audience,
-            publicitaire ou de traçage commercial. Aucun consentement préalable n&apos;est
-            requis pour les catégories de cookies suivantes, conformément aux
-            recommandations de la CNIL.
+            Le site transport24h.fr utilise des cookies strictement nécessaires, qui ne
+            requièrent pas de consentement préalable (liste ci-dessous), ainsi que, uniquement
+            avec votre accord, des cookies de mesure publicitaire Google Ads (voir la section
+            « Cookies et traceurs » ci-dessous). Il n&apos;utilise aucun cookie de mesure
+            d&apos;audience.
           </p>
           <p className="font-medium text-foreground">
             Cookies strictement nécessaires au fonctionnement du service :
@@ -144,7 +154,7 @@ export default function PolitiqueConfidentialitePage() {
             </li>
             <li>
               <span className="font-medium text-foreground">user_role</span>
-              {" "}— identification du type de compte (client, chauffeur,
+              {" "}— identification du type de compte (client, entreprise, chauffeur,
               administrateur) pour l&apos;affichage de l&apos;interface adaptée
             </li>
             <li>
@@ -201,7 +211,8 @@ export default function PolitiqueConfidentialitePage() {
             </li>
             <li>
               Retirer ou modifier votre choix : à tout moment, via le lien « Gérer mes
-              cookies » en bas de chaque page. Le retrait prend effet immédiatement :
+              cookies » en pied de page (par exemple sur la page d&apos;accueil ou sur
+              cette page). Le retrait prend effet immédiatement :
               plus aucune donnée n&apos;est envoyée à Google Ads.
             </li>
           </ul>

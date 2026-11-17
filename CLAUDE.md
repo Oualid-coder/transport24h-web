@@ -69,3 +69,15 @@ Les route groups `(client)`, `(admin)`, `(driver)` n'apparaissent pas dans les U
 ## Avant d'écrire du code Next.js
 
 Lire le guide pertinent dans `node_modules/next/dist/docs/` — les APIs, conventions et structure de fichiers peuvent avoir des breaking changes par rapport au training data.
+
+## Textes légaux, consentement, tests
+
+- `lib/legal.ts` : `TERMS_VERSION` (format API `^[A-Za-z0-9][A-Za-z0-9._-]{0,31}$`) est la source unique :
+  envoyée à l'inscription (`terms_version`) et affichée comme « dernière mise à jour » des CGV et de la
+  politique de confidentialité. La changer à chaque modification de l'un de ces textes.
+- Inscription : corps construit par `buildRegisterBody` (`lib/register.ts`) — `terms_accepted` + `terms_version`
+  seulement si la case est cochée, jamais de date (posée par le serveur), téléphone nettoyé (espaces, points,
+  tirets). Les 422 de l'API sont traduits par `registerErrorMessage`.
+- Cookies : Google Ads uniquement via `lib/consent.ts` (`sendAdsEvent`), jamais de `<Script>` Google direct.
+- Tests : `npm test` (Node >= 23.6, `node --test`, sans dépendance ; résolution des imports `@/` par
+  `tests/ts-hooks.mjs`). Fichiers dans `tests/*.test.ts`.
