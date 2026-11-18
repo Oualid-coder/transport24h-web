@@ -13,6 +13,10 @@ const googleAds = {
   frame: "https://www.googletagmanager.com",
 }
 
+// Domaines de scripts pour les seuls navigateurs sans 'strict-dynamic' (ignorés sinon)
+const scriptFallbackHosts =
+  "https://js.stripe.com https://www.googletagmanager.com https://www.googleadservices.com https://www.google.com"
+
 // Photos d'état des lieux affichées directement depuis Cloudflare R2 (URL présignée, bucket privé).
 // L'identifiant de compte n'est pas connu du web : sous-domaines de r2.cloudflarestorage.com, HTTPS seul.
 export const r2Images = "https://*.r2.cloudflarestorage.com"
@@ -27,7 +31,10 @@ export function buildCsp(nonce: string, isDev = false): string {
     "default-src 'self'",
     // Next.js lit le nonce dans l'en-tête CSP de la requête et l'ajoute à ses propres scripts.
     // 'unsafe-eval' en développement seulement (traces d'erreur de React), jamais en production.
-    `script-src 'self' 'nonce-${nonce}' 'strict-dynamic'${isDev ? " 'unsafe-eval'" : ""}`,
+    // Repli pour les navigateurs sans 'strict-dynamic' (CSP2, ex. Safari < 15.4) : ils utilisent la
+    // liste de domaines (Stripe, Google Ads) ; 'unsafe-inline' sert aux navigateurs CSP1 seulement.
+    // Les navigateurs CSP3 IGNORENT ces deux valeurs dès qu'un nonce et 'strict-dynamic' sont présents.
+    `script-src 'self' 'nonce-${nonce}' 'strict-dynamic' 'unsafe-inline' ${scriptFallbackHosts}${isDev ? " 'unsafe-eval'" : ""}`,
     // Leaflet et les composants posent des attributs style= : 'unsafe-inline' garde ici
     // (un nonce dans style-src ferait ignorer 'unsafe-inline' et bloquerait ces styles).
     "style-src 'self' 'unsafe-inline'",
@@ -39,7 +46,8 @@ export function buildCsp(nonce: string, isDev = false): string {
     // API backend + Stripe (paiement + fraud detection)
     `connect-src 'self' ${apiOrigin} https://api.stripe.com https://hooks.stripe.com https://nominatim.openstreetmap.org ${googleAds.connect}`,
     // Stripe Elements s'affiche dans un iframe
-    `frame-src https://js.stripe.com ${googleAds.frame}`,
+    // hooks.stripe.com : pages d'authentification forte (3D Secure) recommandées par Stripe
+    `frame-src https://js.stripe.com https://hooks.stripe.com ${googleAds.frame}`,
     "frame-ancestors 'none'",
     "object-src 'none'",
     "base-uri 'self'",

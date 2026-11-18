@@ -11,9 +11,13 @@ function directive(csp: string, name: string): string[] {
   return found.split(" ").slice(1)
 }
 
-test("CSP : script-src = self + nonce + strict-dynamic, sans unsafe-inline ni unsafe-eval en production", () => {
+test("CSP : script-src = nonce + strict-dynamic (CSP3), replis CSP2/CSP1 ensuite, pas d'unsafe-eval en production", () => {
   const csp = buildCsp("abc123")
-  assert.deepEqual(directive(csp, "script-src"), ["'self'", "'nonce-abc123'", "'strict-dynamic'"])
+  const script = directive(csp, "script-src")
+  // Les navigateurs CSP3 ignorent 'unsafe-inline' et les domaines dès que nonce + 'strict-dynamic' sont là
+  assert.deepEqual(script.slice(0, 3), ["'self'", "'nonce-abc123'", "'strict-dynamic'"])
+  assert.ok(script.includes("'unsafe-inline'"))
+  for (const host of ["https://js.stripe.com", "https://www.googletagmanager.com"]) assert.ok(script.includes(host), host)
   assert.ok(!csp.includes("unsafe-eval"))
 })
 
@@ -27,6 +31,7 @@ test("CSP : autres directives inchangées", () => {
   assert.deepEqual(directive(csp, "frame-ancestors"), ["'none'"])
   assert.deepEqual(directive(csp, "object-src"), ["'none'"])
   assert.ok(directive(csp, "frame-src").includes("https://js.stripe.com"))
+  assert.ok(directive(csp, "frame-src").includes("https://hooks.stripe.com"))
   assert.ok(directive(csp, "img-src").includes("https://*.tile.openstreetmap.org"))
   const connect = directive(csp, "connect-src")
   for (const host of ["https://api.stripe.com", "https://hooks.stripe.com", "https://nominatim.openstreetmap.org"]) {
