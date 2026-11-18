@@ -12,6 +12,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog"
 import { assignDriver, getAdminDrivers, ApiError } from "@/lib/api"
+import { errorMessage } from "@/lib/error-message"
 import type { Driver, PaginatedBookings } from "@/lib/types"
 import { CreateDriverModal } from "./CreateDriverModal"
 
@@ -50,7 +51,7 @@ export function AssignDriverModal({
       if (err instanceof ApiError && err.status === 409) {
         setMsg({ type: "error", text: "Cette réservation ne peut pas être assignée dans son état actuel." })
       } else {
-        setMsg({ type: "error", text: "Une erreur est survenue. Veuillez réessayer." })
+        setMsg({ type: "error", text: errorMessage(err, "Une erreur est survenue. Veuillez réessayer.") })
       }
     },
   })

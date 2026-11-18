@@ -11,6 +11,7 @@ import {
   getAdminBookingPhotos,
   ApiError,
 } from "@/lib/api"
+import { errorMessage } from "@/lib/error-message"
 
 const MAX_PHOTO_SIZE = 8 * 1024 * 1024
 
@@ -137,7 +138,7 @@ export function BookingPhotoSection({
   // URLs signées 1h (driver) ou 15 min (admin) — staleTime conservateur en dessous
   const staleTime = variant === "admin" ? 10 * 60 * 1000 : 55 * 60 * 1000
 
-  const { data, isLoading, isError } = useQuery({
+  const { data, isLoading, error } = useQuery({
     queryKey,
     queryFn: () =>
       variant === "driver"
@@ -180,9 +181,9 @@ export function BookingPhotoSection({
               <Loader2 className="size-4 animate-spin text-muted-foreground" />
             </div>
           )}
-          {isError && (
+          {error && (
             <p className="text-xs text-destructive">
-              Impossible de charger les photos.
+              {errorMessage(error, "Impossible de charger les photos.")}
             </p>
           )}
           {data && (

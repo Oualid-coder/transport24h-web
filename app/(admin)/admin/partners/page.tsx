@@ -3,6 +3,7 @@
 import { useState } from "react"
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 import {
+  AlertCircle,
   Check,
   CheckCircle2,
   Copy,
@@ -19,7 +20,8 @@ import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { approvePartner, getAdminPartners, getPartnerDocumentUrl, rejectPartner } from "@/lib/api"
+import { approvePartner, getAdminPartners, getPartnerDocumentUrl, rejectPartner, ApiError } from "@/lib/api"
+import { errorMessage } from "@/lib/error-message"
 import type { PartnerApplication, PartnerStatus } from "@/lib/types"
 import { BackButton } from "@/components/BackButton"
 
@@ -76,10 +78,11 @@ function DocViewButton({
       // URL signée valide 15 min — ouverte directement, jamais stockée dans l'état.
       window.open(url, "_blank", "noopener,noreferrer")
     } catch (err: unknown) {
+      // ApiError.message porte le texte de l'API, jamais le code : tester le statut.
       const msg =
-        err instanceof Error && err.message.includes("404")
+        err instanceof ApiError && err.status === 404
           ? "Document non encore envoyé par le candidat"
-          : "Impossible d'ouvrir le document"
+          : errorMessage(err, "Impossible d'ouvrir le document")
       setError(msg)
     } finally {
       setLoading(false)
@@ -253,7 +256,10 @@ function PartnerCard({
               size="sm"
               className="flex-1"
               disabled={busy}
-              onClick={() => approveMutation.mutate()}
+              onClick={() => {
+                rejectMutation.reset()
+                approveMutation.mutate()
+              }}
             >
               {approveMutation.isPending ? (
                 <Loader2 className="mr-1.5 size-3.5 animate-spin" />
@@ -267,7 +273,10 @@ function PartnerCard({
               variant="destructive"
               className="flex-1"
               disabled={busy}
-              onClick={() => rejectMutation.mutate()}
+              onClick={() => {
+                approveMutation.reset()
+                rejectMutation.mutate()
+              }}
             >
               {rejectMutation.isPending ? (
                 <Loader2 className="mr-1.5 size-3.5 animate-spin" />
@@ -276,6 +285,17 @@ function PartnerCard({
               )}
               Rejeter
             </Button>
+          </div>
+        )}
+        {(approveMutation.error || rejectMutation.error) && (
+          <div
+            role="alert"
+            className="flex items-start gap-2 rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-2 text-xs text-destructive"
+          >
+            <AlertCircle className="mt-0.5 size-3.5 shrink-0" />
+            {approveMutation.error
+              ? errorMessage(approveMutation.error, "La candidature n'a pas pu être approuvée. Réessayez.")
+              : errorMessage(rejectMutation.error, "La candidature n'a pas pu être rejetée. Réessayez.")}
           </div>
         )}
       </CardContent>
@@ -288,7 +308,7 @@ function PartnerCard({
 function PartnerList({ status }: { status?: PartnerStatus }) {
   const queryKey = ["admin-partners", status ?? "all"]
 
-  const { data: partners = [], isLoading } = useQuery({
+  const { data: partners = [], isLoading, error } = useQuery({
     queryKey,
     queryFn: () => getAdminPartners(status),
     refetchInterval: 30_000,
@@ -298,6 +318,18 @@ function PartnerList({ status }: { status?: PartnerStatus }) {
     return (
       <div className="flex justify-center py-16">
         <Loader2 className="size-6 animate-spin text-muted-foreground" />
+      </div>
+    )
+  }
+
+  if (error && partners.length === 0) {
+    return (
+      <div
+        role="alert"
+        className="flex items-start gap-2 rounded-lg border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive"
+      >
+        <AlertCircle className="mt-0.5 size-4 shrink-0" />
+        {errorMessage(error, "Impossible de charger les candidatures.")}
       </div>
     )
   }

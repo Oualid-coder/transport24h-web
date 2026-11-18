@@ -2,6 +2,7 @@
 
 import { useQuery } from "@tanstack/react-query"
 import {
+  AlertCircle,
   Clock,
   CreditCard,
   Euro,
@@ -10,6 +11,7 @@ import {
 import { Card, CardContent } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { getAdminStats } from "@/lib/api"
+import { errorMessage } from "@/lib/error-message"
 import type { AdminStats } from "@/lib/types"
 import { BackButton } from "@/components/BackButton"
 import { BookingList } from "@/components/admin/BookingList"
@@ -52,7 +54,7 @@ function StatCard({
 // ── Page principale ───────────────────────────────────────────────────────────
 
 export default function AdminDashboardPage() {
-  const { data: stats, isLoading: statsLoading } = useQuery<AdminStats>({
+  const { data: stats, isLoading: statsLoading, error: statsError } = useQuery<AdminStats>({
     queryKey: ["admin-stats"],
     queryFn: getAdminStats,
     refetchInterval: 60_000,
@@ -101,6 +103,15 @@ export default function AdminDashboardPage() {
           loading={statsLoading}
         />
       </div>
+      {statsError && !stats && (
+        <div
+          role="alert"
+          className="flex items-start gap-2 rounded-lg border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive"
+        >
+          <AlertCircle className="mt-0.5 size-4 shrink-0" />
+          {errorMessage(statsError, "Impossible de charger les statistiques.")}
+        </div>
+      )}
 
       {/* Tabs */}
       <Tabs defaultValue="all">

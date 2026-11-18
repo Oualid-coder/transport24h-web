@@ -23,6 +23,7 @@ import {
   getDriverMyBookings,
   ApiError,
 } from "@/lib/api"
+import { errorMessage } from "@/lib/error-message"
 import type { AvailableBooking, Booking, BookingStatus } from "@/lib/types"
 import { BackButton } from "@/components/BackButton"
 import { BookingPhotoSection } from "@/components/BookingPhotoSection"
@@ -69,26 +70,15 @@ function AvailableBookingCard({ booking }: { booking: AvailableBooking }) {
   const mutation = useMutation({
     mutationFn: () => acceptBooking(booking.id),
 
-    // Retrait optimiste dès le clic — avant même la réponse réseau
-    onMutate: async () => {
+    // Succès — retire la course des disponibles, rafraîchit "Mes missions".
+    // Retrait après la réponse (pas optimiste) : en cas d'échec la carte reste montée
+    // et garde l'erreur de la mutation (409, 429…), sinon perdue au démontage.
+    onSuccess: async () => {
       await queryClient.cancelQueries({ queryKey: AVAILABLE_KEY })
-      const snapshot = queryClient.getQueryData<AvailableBooking[]>(AVAILABLE_KEY)
       queryClient.setQueryData<AvailableBooking[]>(AVAILABLE_KEY, (old) =>
         old?.filter((b) => b.id !== booking.id),
       )
-      return { snapshot }
-    },
-
-    // Succès — rafraîchit la liste "Mes missions"
-    onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: MY_KEY })
-    },
-
-    // Échec — rollback vers le snapshot + message selon le code HTTP
-    onError: (_err, _vars, context) => {
-      if (context?.snapshot) {
-        queryClient.setQueryData(AVAILABLE_KEY, context.snapshot)
-      }
     },
   })
 
@@ -170,7 +160,7 @@ function AvailableBookingCard({ booking }: { booking: AvailableBooking }) {
 
         {/* Erreur 409 — course prise par un autre chauffeur */}
         {is409 && (
-          <div className="flex items-start gap-2 rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-xs text-amber-400">
+          <div role="alert" className="flex items-start gap-2 rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-xs text-amber-400">
             <AlertCircle className="mt-0.5 size-3.5 shrink-0" />
             Cette course vient d&apos;être prise par un autre chauffeur.
           </div>
@@ -178,9 +168,9 @@ function AvailableBookingCard({ booking }: { booking: AvailableBooking }) {
 
         {/* Autre erreur */}
         {mutation.isError && !is409 && (
-          <div className="flex items-start gap-2 rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-2 text-xs text-destructive">
+          <div role="alert" className="flex items-start gap-2 rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-2 text-xs text-destructive">
             <AlertCircle className="mt-0.5 size-3.5 shrink-0" />
-            Une erreur est survenue. Veuillez réessayer.
+            {errorMessage(mutation.error, "Une erreur est survenue. Veuillez réessayer.")}
           </div>
         )}
       </CardContent>

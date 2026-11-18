@@ -3,10 +3,11 @@
 import { useSearchParams } from "next/navigation"
 import { Suspense, useEffect, useState } from "react"
 import { sendAdsEvent } from "@/lib/consent"
-import { CheckCircle2, Home, LayoutDashboard, Loader2 } from "lucide-react"
+import { AlertCircle, CheckCircle2, Home, LayoutDashboard, Loader2 } from "lucide-react"
 import { buttonVariants } from "@/components/ui/button"
 import Link from "next/link"
 import { getBookingById } from "@/lib/api"
+import { errorMessage } from "@/lib/error-message"
 import { BackButton } from "@/components/BackButton"
 import type { Booking, BookingStatus } from "@/lib/types"
 import { useRole } from "@/components/RoleProvider"
@@ -24,7 +25,7 @@ function ConfirmationContent() {
   const isB2b = useRole() === "b2b"
 
   const [booking, setBooking] = useState<Booking | null>(null)
-  const [error, setError] = useState(false)
+  const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
     if (!id) return
@@ -44,8 +45,10 @@ function ConfirmationContent() {
           })
         }
       })
-      .catch(() => {
-        if (!cancelled) setError(true)
+      .catch((err: unknown) => {
+        if (!cancelled) {
+          setError(errorMessage(err, "La référence de votre réservation n'a pas pu être chargée. Retrouvez-la dans « Mes réservations »."))
+        }
       })
 
     return () => {
@@ -77,6 +80,16 @@ function ConfirmationContent() {
           Votre demande a bien été enregistrée. Notre équipe vous contactera
           sous 2h pour confirmer les détails.
         </p>
+
+        {error && (
+          <div
+            role="alert"
+            className="mt-6 flex items-start gap-2 rounded-lg border border-destructive/30 bg-destructive/10 px-4 py-3 text-left text-sm text-destructive"
+          >
+            <AlertCircle className="mt-0.5 size-4 shrink-0" />
+            {error}
+          </div>
+        )}
 
         {booking && (
           <div className="mt-6 rounded-lg border border-border/50 bg-card px-6 py-4">
