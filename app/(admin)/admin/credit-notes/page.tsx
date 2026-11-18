@@ -5,7 +5,8 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { AlertCircle, FileCheck2, Loader2, Receipt, RefreshCw } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { getCreditNoteRetries, retryCreditNote, ApiError } from "@/lib/api"
+import { getCreditNoteRetries, retryCreditNote } from "@/lib/api"
+import { retryErrorMessage } from "@/lib/credit-note-errors"
 import type { CreditNoteRetry, CreditNoteRetryReason, CreditNoteRetryResult } from "@/lib/types"
 import { BackButton } from "@/components/BackButton"
 
@@ -36,20 +37,6 @@ function retrySuccessMessage(result: CreditNoteRetryResult): string {
   return result.created
     ? `Avoir ${result.credit_note_number} émis et envoyé au client.`
     : `Avoir ${result.credit_note_number} déjà émis : rien n'a été renvoyé.`
-}
-
-function retryErrorMessage(err: unknown): string {
-  if (err instanceof ApiError) {
-    switch (err.status) {
-      case 404:
-        return "Plus rien à émettre pour ce remboursement."
-      case 409:
-        return "Vérification Stripe requise : constatez le remboursement dans Stripe, cochez la case puis réessayez."
-      case 422:
-        return "Aucune facture d'origine pour cette course : l'avoir ne peut pas être émis."
-    }
-  }
-  return "L'avoir n'a pas pu être émis. Réessayez dans quelques instants."
 }
 
 // ── Toast simple ──────────────────────────────────────────────────────────────

@@ -15,3 +15,10 @@ test("confirm-setup : autres statuts inchangés", () => {
   assert.match(confirmSetupErrorMessage(new ApiError(500, "x")), /réessayer dans quelques instants/)
   assert.match(confirmSetupErrorMessage(new Error("réseau")), /réessayer dans quelques instants/)
 })
+
+test("confirm-setup : 429/503 → message passager, sans message brut de l'API pour 403/422", () => {
+  assert.equal(confirmSetupErrorMessage(new ApiError(429, "trop de requêtes", 12)), "Trop de demandes en ce moment, réessayez dans 12 s.")
+  assert.equal(confirmSetupErrorMessage(new ApiError(503, "")), "Service momentanément indisponible, réessayez.")
+  assert.match(confirmSetupErrorMessage(new ApiError(422, "booking non payé ou sans PaymentIntent")), /réessayer dans quelques instants/)
+  assert.match(confirmSetupErrorMessage(new ApiError(403, "x")), /réessayer dans quelques instants/)
+})

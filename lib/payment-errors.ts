@@ -1,8 +1,12 @@
 import { ApiError } from "@/lib/api"
+import { transientErrorMessage } from "@/lib/error-message"
 
 // Traduction des erreurs de POST /payments/confirm-setup.
 // 402 : carte refusée par la banque (l'API renvoie un message français prêt à afficher).
+// 429 / 503 : surcharge ou indisponibilité passagère (aucun autre message brut de l'API).
 export function confirmSetupErrorMessage(err: unknown): string {
+  const transient = transientErrorMessage(err)
+  if (transient) return transient
   if (err instanceof ApiError) {
     if (err.status === 402) {
       return err.message || "Votre carte a été refusée. Essayez avec une autre carte."
