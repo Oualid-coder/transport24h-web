@@ -14,6 +14,7 @@ import { AddressInput } from "@/components/AddressInput"
 import { updateBookingAddress, ApiError } from "@/lib/api"
 import type { Booking, GeoPoint } from "@/lib/types"
 import { useRole } from "@/components/RoleProvider"
+import { priceChanged } from "@/lib/price"
 
 export function EditAddressModal({
   open,
@@ -104,13 +105,24 @@ export function EditAddressModal({
               <p className="font-medium">Adresse modifiée avec succès.</p>
               {!isB2b && (
                 <p className="mt-1 text-primary/80">
-                  Nouveau prix :{" "}
-                  <span className="font-semibold">
-                    {updatedBooking.price_ttc.toFixed(2)} € TTC
-                  </span>{" "}
-                  <span className="text-xs">
-                    (était {booking.price_ttc.toFixed(2)} € TTC)
-                  </span>
+                  {priceChanged(booking.price_ttc, updatedBooking.price_ttc) ? (
+                    <>
+                      Nouveau prix :{" "}
+                      <span className="font-semibold">
+                        {updatedBooking.price_ttc.toFixed(2)} € TTC
+                      </span>{" "}
+                      <span className="text-xs">
+                        (était {booking.price_ttc.toFixed(2)} € TTC)
+                      </span>
+                    </>
+                  ) : (
+                    <>
+                      Prix inchangé :{" "}
+                      <span className="font-semibold">
+                        {updatedBooking.price_ttc.toFixed(2)} € TTC
+                      </span>
+                    </>
+                  )}
                 </p>
               )}
             </div>
@@ -125,9 +137,10 @@ export function EditAddressModal({
             <div className="flex items-start gap-2.5 rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-2.5 text-xs text-amber-500">
               <Info className="mt-0.5 size-3.5 shrink-0" />
               <p>
-                Le prix sera <strong>recalculé automatiquement</strong> selon la
-                nouvelle distance. Vous pouvez modifier l&apos;une ou les deux
-                adresses.
+                Si la réservation n&apos;est pas encore réglée, le prix est{" "}
+                <strong>recalculé automatiquement</strong> selon la nouvelle distance ;
+                une réservation déjà réglée garde son prix. Vous pouvez modifier
+                l&apos;une ou les deux adresses.
               </p>
             </div>
 
