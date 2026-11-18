@@ -50,6 +50,9 @@ async function proxyRequest(
   )
   const responseCt = upstream.headers.get("content-type")
   if (responseCt) response.headers.set("content-type", responseCt)
+  // Délai d'attente des 429 (renvoi du mail de vérification, limites de la gateway)
+  const retryAfter = upstream.headers.get("retry-after")
+  if (retryAfter) response.headers.set("retry-after", retryAfter)
 
   return response
 }

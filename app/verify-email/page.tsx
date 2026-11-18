@@ -1,24 +1,17 @@
-import Link from "next/link"
-import { CheckCircle2, XCircle } from "lucide-react"
-import { buttonVariants } from "@/components/ui/button"
-import { ApiError } from "@/lib/api"
+"use client"
 
-async function verifyToken(token: string): Promise<void> {
-  const res = await fetch(
-    `${process.env.NEXT_PUBLIC_API_URL}/auth/verify-email?token=${encodeURIComponent(token)}`,
-    { cache: "no-store" },
-  )
-  if (!res.ok) {
-    const body = (await res.json().catch(() => ({}))) as {
-      error?: string
-      message?: string
-    }
-    throw new ApiError(
-      res.status,
-      body.error ?? body.message ?? res.statusText,
-    )
-  }
-}
+// Composant client : l'appel part du navigateur après chargement de la page, pas au rendu
+// serveur. Les scanners de liens des messageries (GET sans JavaScript) ne consomment donc pas
+// le jeton à usage unique. Appel via lib/api.ts → /api/proxy (même origine).
+import { Suspense, useEffect, useRef, useState } from "react"
+import Link from "next/link"
+import { useSearchParams } from "next/navigation"
+import { CheckCircle2, Loader2, XCircle } from "lucide-react"
+import { buttonVariants } from "@/components/ui/button"
+import { verifyEmail } from "@/lib/api"
+import { verifyEmailErrorMessage } from "@/lib/email-verification"
+
+type State = { kind: "pending" } | { kind: "success" } | { kind: "error"; message: string }
 
 function SuccessView() {
   return (
@@ -30,11 +23,11 @@ function SuccessView() {
         réserver votre déménagement.
       </p>
       <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:justify-center">
-        <Link href="/booking" className={buttonVariants()}>
-          Faire une réservation
-        </Link>
-        <Link href="/dashboard" className={buttonVariants({ variant: "outline" })}>
+        <Link href="/dashboard" className={buttonVariants()}>
           Mon espace
+        </Link>
+        <Link href="/login" className={buttonVariants({ variant: "outline" })}>
+          Se connecter
         </Link>
       </div>
     </div>
@@ -48,35 +41,57 @@ function ErrorView({ message }: { message: string }) {
       <h1 className="text-2xl font-bold">Vérification échouée</h1>
       <p className="mt-2 text-muted-foreground">{message}</p>
       <p className="mt-1 text-sm text-muted-foreground">
-        Ce lien est valide 24h. Connectez-vous pour en demander un nouveau.
+        Le lien est valable 24 h et ne sert qu&apos;une fois. Si vous avez déjà
+        vérifié votre adresse, connectez-vous. Sinon, connectez-vous puis
+        demandez un nouveau lien depuis la réservation.
       </p>
-      <Link href="/login" className={buttonVariants({ className: "mt-8" })}>
-        Se connecter
-      </Link>
+      <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:justify-center">
+        <Link href="/login" className={buttonVariants()}>
+          Se connecter
+        </Link>
+        <Link href="/dashboard" className={buttonVariants({ variant: "outline" })}>
+          Mon espace
+        </Link>
+      </div>
     </div>
   )
 }
 
-export default async function VerifyEmailPage({
-  searchParams,
-}: {
-  searchParams: Promise<{ token?: string }>
-}) {
-  const { token } = await searchParams
+function PendingView() {
+  return (
+    <div className="flex min-h-[50vh] items-center justify-center gap-2 text-muted-foreground">
+      <Loader2 className="size-5 animate-spin" />
+      Vérification de votre adresse email…
+    </div>
+  )
+}
+
+function VerifyEmailContent() {
+  const token = useSearchParams().get("token") ?? ""
+  const [state, setState] = useState<State>({ kind: "pending" })
+  // Jeton à usage unique : un seul appel par jeton, même si l'effet est rejoué (mode strict)
+  const requested = useRef<string | null>(null)
+
+  useEffect(() => {
+    if (!token || requested.current === token) return
+    requested.current = token
+    verifyEmail(token)
+      .then(() => setState({ kind: "success" }))
+      .catch((err: unknown) => setState({ kind: "error", message: verifyEmailErrorMessage(err) }))
+  }, [token])
 
   if (!token) {
-    return <ErrorView message="Lien de vérification invalide ou incomplet." />
+    return <ErrorView message="Lien de vérification incomplet. Utilisez le lien reçu par email, sans le modifier." />
   }
+  if (state.kind === "success") return <SuccessView />
+  if (state.kind === "error") return <ErrorView message={state.message} />
+  return <PendingView />
+}
 
-  let errorMessage: string | null = null
-  try {
-    await verifyToken(token)
-  } catch (err) {
-    errorMessage = err instanceof Error ? err.message : "Lien invalide ou expiré."
-  }
-
-  if (errorMessage) {
-    return <ErrorView message={errorMessage} />
-  }
-  return <SuccessView />
+export default function VerifyEmailPage() {
+  return (
+    <Suspense fallback={<PendingView />}>
+      <VerifyEmailContent />
+    </Suspense>
+  )
 }

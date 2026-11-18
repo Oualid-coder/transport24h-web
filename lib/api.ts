@@ -43,10 +43,22 @@ export class ApiError extends Error {
   constructor(
     public readonly status: number,
     message: string,
+    // Délai en secondes lu dans l'en-tête Retry-After (429), null s'il est absent
+    public readonly retryAfter: number | null = null,
   ) {
     super(message)
     this.name = "ApiError"
   }
+}
+
+// parseRetryAfter lit Retry-After : nombre de secondes ou date HTTP. null si absent ou illisible.
+export function parseRetryAfter(value: string | null, now: number = Date.now()): number | null {
+  if (!value) return null
+  const v = value.trim()
+  if (/^\d+$/.test(v)) return Number(v)
+  const date = Date.parse(v)
+  if (Number.isNaN(date)) return null
+  return Math.max(0, Math.ceil((date - now) / 1000))
 }
 
 // apiResponse exécute la requête via le proxy et lève ApiError sur tout statut non 2xx.
@@ -81,7 +93,7 @@ async function apiResponse(
     } catch {
       // ignore parse error
     }
-    throw new ApiError(res.status, message)
+    throw new ApiError(res.status, message, parseRetryAfter(res.headers.get("retry-after")))
   }
 
   return res
@@ -547,8 +559,9 @@ export async function logout(): Promise<void> {
   await fetch("/api/auth/logout", { method: "POST", credentials: "include" }).catch(() => {})
 }
 
-export function register(body: RegisterBody): Promise<void> {
-  return apiFetch<void>("/auth/register", {
+// Réponse 201 : email_verified vaut false pour un nouveau client (absent avant l'API de vérification)
+export function register(body: RegisterBody): Promise<{ email_verified?: boolean }> {
+  return apiFetch<{ email_verified?: boolean }>("/auth/register", {
     method: "POST",
     body: JSON.stringify(body),
   })
@@ -562,22 +575,18 @@ export function acceptInvitation(body: AcceptInvitationBody): Promise<void> {
   })
 }
 
-// GET /auth/verify-email?token=... — public, appel direct (pas de JWT)
-export async function verifyEmail(token: string): Promise<{ message: string }> {
-  const res = await fetch(
-    `${PUBLIC_API_URL}/auth/verify-email?token=${encodeURIComponent(token)}`,
+// GET /auth/verify-email?token=… — public ; via le proxy (même origine, pas de CSP à ouvrir).
+// 200 { status: "verified" }, 400 jeton absent, 422 jeton invalide, expiré ou déjà utilisé.
+export function verifyEmail(token: string): Promise<{ status: string }> {
+  return apiFetch<{ status: string }>(
+    `/auth/verify-email?token=${encodeURIComponent(token)}`,
     { cache: "no-store" },
   )
-  if (!res.ok) {
-    const body = (await res.json().catch(() => ({}))) as { error?: string; message?: string }
-    throw new ApiError(res.status, body.error ?? body.message ?? res.statusText)
-  }
-  return res.json() as Promise<{ message: string }>
 }
 
-// POST /auth/resend-verification — protégé JWT
-export function resendVerification(): Promise<{ message: string }> {
-  return apiFetch<{ message: string }>("/auth/resend-verification", {
+// POST /auth/resend-verification — protégé JWT. 200 { status: "sent" }, 429 avec Retry-After.
+export function resendVerification(): Promise<{ status: string }> {
+  return apiFetch<{ status: string }>("/auth/resend-verification", {
     method: "POST",
   })
 }

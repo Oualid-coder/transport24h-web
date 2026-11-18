@@ -10,6 +10,7 @@ import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { createSavedQuote, createBooking, ApiError } from "@/lib/api"
 import { EmailUnverifiedBanner } from "@/components/EmailUnverifiedBanner"
+import { isEmailNotVerifiedError } from "@/lib/email-verification"
 import { BackButton } from "@/components/BackButton"
 import { TRUCK_VOLUME } from "@/lib/types"
 import type { TruckType } from "@/lib/types"
@@ -97,6 +98,7 @@ function BookingContent() {
     if (loading || !scheduledAt || !scheduledTime || !draft) return
     setLoading(true)
     setError(null)
+    setEmailUnverified(false)
 
     // RFC3339 avec offset local : "2026-04-20T09:00:00+02:00"
     const localOffset = -new Date().getTimezoneOffset()
@@ -137,8 +139,8 @@ function BookingContent() {
           router.push("/login?redirect=/booking")
           return
         }
-        if (err.status === 403) {
-          sessionStorage.setItem("email_unverified", "1")
+        // 403 « vérifiez votre email avant de réserver » uniquement ; autre 403 → message normal
+        if (isEmailNotVerifiedError(err)) {
           setEmailUnverified(true)
           return
         }
@@ -272,7 +274,7 @@ function BookingContent() {
             </p>
           )}
 
-          <Button type="submit" size="lg" className="w-full" disabled={loading || emailUnverified}>
+          <Button type="submit" size="lg" className="w-full" disabled={loading}>
             {loading && <Loader2 className="mr-2 size-4 animate-spin" />}
             Confirmer la réservation
           </Button>

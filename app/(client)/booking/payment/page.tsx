@@ -18,6 +18,7 @@ import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { createSetupIntent, confirmSetupIntent, getBookingById, ApiError } from "@/lib/api"
 import { EmailUnverifiedBanner } from "@/components/EmailUnverifiedBanner"
+import { isEmailNotVerifiedError } from "@/lib/email-verification"
 import type { Booking } from "@/lib/types"
 import { isChargeInProgress } from "@/lib/booking-status"
 
@@ -531,8 +532,8 @@ function PaymentContent() {
         setClientSecret(si.client_secret)
       })
       .catch((err) => {
-        if (err instanceof ApiError && err.status === 403) {
-          sessionStorage.setItem("email_unverified", "1")
+        // 403 « vérifiez votre email avant de payer » uniquement ; autre 403 → message normal
+        if (isEmailNotVerifiedError(err)) {
           setEmailUnverified(true)
         } else {
           setFetchError(
@@ -550,6 +551,9 @@ function PaymentContent() {
     return (
       <div className="mx-auto max-w-lg px-4 py-12">
         <EmailUnverifiedBanner visible />
+        <Button type="button" variant="outline" className="mt-4 w-full" onClick={() => window.location.reload()}>
+          J&apos;ai vérifié mon email, réessayer
+        </Button>
       </div>
     )
   }
