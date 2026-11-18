@@ -21,6 +21,7 @@ import { EmailUnverifiedBanner } from "@/components/EmailUnverifiedBanner"
 import { isEmailNotVerifiedError } from "@/lib/email-verification"
 import type { Booking } from "@/lib/types"
 import { isChargeInProgress } from "@/lib/booking-status"
+import { confirmSetupErrorMessage } from "@/lib/payment-errors"
 
 const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY ?? "")
 
@@ -54,17 +55,6 @@ function StripeFieldWrapper({
 // ── Réponses de POST /payments/confirm-setup ─────────────────────────────────
 
 // Messages clients : jamais de détail technique (le message brut de l'API n'est pas affiché).
-function confirmSetupErrorMessage(err: unknown): string {
-  if (err instanceof ApiError) {
-    if (err.status === 404) {
-      return "Réservation introuvable, ou elle n'est pas rattachée à votre compte."
-    }
-    if (err.status === 409) {
-      return "Cette réservation ne peut plus être payée. Consultez son statut dans votre espace client."
-    }
-  }
-  return "Votre carte n'a pas pu être enregistrée. Veuillez réessayer dans quelques instants."
-}
 
 // Suivi du statut après un 202 (débit déjà en cours) : interrogation espacée, bornée.
 const STATUS_POLL_INTERVAL_MS = 3_000
