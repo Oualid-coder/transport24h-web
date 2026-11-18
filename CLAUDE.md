@@ -53,6 +53,13 @@ Les route groups `(client)`, `(admin)`, `(driver)` n'apparaissent pas dans les U
 - Les variables `NEXT_PUBLIC_*` sont exposées côté client
 - Ne jamais exposer de secrets côté client
 
+## Route Handlers `/api/proxy`, `/api/auth/login`, `/api/auth/logout`
+
+- `lib/request-guard.ts` : POST/PUT/PATCH/DELETE avec un `Origin` dont l'hôte diffère de `x-forwarded-host`
+  (sinon `Host`) → 403 (`isCrossOriginMutation`) ; `Origin` absent accepté. Login : `Content-Type:
+  application/json` exigé (415 sinon, login CSRF par formulaire `text/plain`). Proxy : segments ré-encodés
+  (`proxyPath`), `.`, `..` et segment vide → 400. Tout nouveau Route Handler modifiant doit appeler le même contrôle.
+
 ## Git
 
 - Pas de mention de Claude, AI, ou assistant dans les messages de commit
