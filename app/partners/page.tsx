@@ -34,6 +34,7 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { registerPartner, uploadPartnerDocument, ApiError } from "@/lib/api"
+import { errorMessage } from "@/lib/error-message"
 import { acceptTermsField, buildPartnerApplyBody } from "@/lib/register"
 import type { TruckType } from "@/lib/types"
 import { BackButton } from "@/components/BackButton"
@@ -186,11 +187,8 @@ export default function PartnersPage() {
       const application = await registerPartner(buildPartnerApplyBody(data))
       setApplicationId(application.id)
     } catch (err) {
-      if (err instanceof ApiError) {
-        setServerError(err.message)
-      } else {
-        setServerError("Une erreur est survenue. Veuillez réessayer.")
-      }
+      // Messages métier lisibles de l'API (409, 422 CGV…) ; texte technique du validateur → repli
+      setServerError(errorMessage(err, "Certaines informations sont invalides. Vérifiez le formulaire."))
     }
   }
 
@@ -230,8 +228,11 @@ export default function PartnersPage() {
         [docType]: { status: "done", filename: file.name, error: null },
       }))
     } catch (err) {
+      // 415 : contenu du fichier différent du type déclaré (message de l'API, lisible)
       const message =
-        err instanceof ApiError ? err.message : "Erreur lors de l'envoi."
+        err instanceof ApiError && err.status === 415 && err.message
+          ? err.message.charAt(0).toUpperCase() + err.message.slice(1)
+          : errorMessage(err, "Erreur lors de l'envoi.")
       setDocStates((prev) => ({
         ...prev,
         [docType]: { status: "error", filename: null, error: message },
