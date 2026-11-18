@@ -34,7 +34,9 @@ function markAttempt(): void {
   }
 }
 
-type State = { kind: "pending" } | { kind: "retry"; message: string; loginUrl: string; retryAfter: number | null }
+type State =
+  | { kind: "pending" }
+  | { kind: "retry"; message: string; loginUrl: string; retryAfter: number | null; manualOnly: boolean }
 
 function Pending() {
   return (
@@ -59,10 +61,18 @@ function SessionContent() {
       window.location.replace(result.to)
       return
     }
-    setState({ kind: "retry", message: result.message, loginUrl: result.loginUrl, retryAfter: result.retryAfter })
+    setState({
+      kind: "retry",
+      message: result.message,
+      loginUrl: result.loginUrl,
+      retryAfter: result.retryAfter,
+      manualOnly: autoRetried.current,
+    })
   }, [])
 
   const retry = useCallback(() => {
+    // Après un essai (manuel ou automatique), plus aucun essai automatique : le bouton seul
+    autoRetried.current = true
     setState({ kind: "pending" })
     void resumeSession(redirect, readRecentAttempt()).then(apply)
   }, [redirect, apply])
@@ -80,7 +90,6 @@ function SessionContent() {
     const delay = state.retryAfter
     if (delay === null || delay <= 0 || delay > AUTO_RETRY_MAX_S) return
     const timer = window.setTimeout(() => {
-      autoRetried.current = true
       retry()
     }, delay * 1000)
     return () => window.clearTimeout(timer)
@@ -91,7 +100,10 @@ function SessionContent() {
     <div className="mx-auto max-w-md px-4 py-20 text-center">
       <AlertCircle className="mx-auto mb-4 size-12 text-muted-foreground" />
       <h1 className="text-2xl font-bold">Reprise de session impossible pour l&apos;instant</h1>
-      <p className="mt-2 text-muted-foreground" role="status">{state.message}</p>
+      <p className="mt-2 text-muted-foreground" role="status">
+        {state.message}
+        {state.manualOnly ? " Utilisez le bouton « Réessayer » quand vous êtes prêt." : ""}
+      </p>
       <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:justify-center">
         <Button onClick={retry}>Réessayer</Button>
         <Link href={state.loginUrl} className={buttonVariants({ variant: "outline" })}>

@@ -305,6 +305,36 @@ test("resumeSession : refresh 200 mais cookie non enregistré (sans sessionStora
   assert.deepEqual(await resumeSession("/driver/dashboard", false, NO_ROLE_COOKIE), nav(`/login?redirect=${encodeURIComponent("/driver/dashboard")}`))
 })
 
+test("resumeSession : ancien user_role présent mais refresh sans cookie → /login (pas de boucle)", async () => {
+  // Bocal de cookies simulé : un user_role ancien est là, la réponse du refresh n'en pose aucun
+  let jar = "consent=0; user_role=driver"
+  let cleared = 0
+  mockFetch(() => Response.json({ ok: true }))
+  const result = await resumeSession(
+    "/driver/dashboard",
+    false,
+    () => jar,
+    () => {
+      cleared++
+      jar = jar.replace(/;?\s*user_role=[^;]*/, "")
+    },
+  )
+  assert.equal(cleared, 1)
+  assert.deepEqual(result, nav(`/login?redirect=${encodeURIComponent("/driver/dashboard")}`))
+})
+
+test("resumeSession : user_role effacé puis reposé par le refresh → page demandée", async () => {
+  let jar = "consent=0; user_role=driver"
+  mockFetch(() => {
+    jar = "consent=0; user_role=driver" // le Set-Cookie de la réponse a été enregistré
+    return Response.json({ ok: true })
+  })
+  const result = await resumeSession("/driver/dashboard", false, () => jar, () => {
+    jar = "consent=0"
+  })
+  assert.deepEqual(result, nav("/driver/dashboard"))
+})
+
 test("resumeSession : session refusée (401/403) → connexion", async () => {
   for (const status of [401, 403]) {
     mockFetch(() => Response.json({}, { status }))

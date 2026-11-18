@@ -126,14 +126,23 @@ export type ResumeResult =
 // - session refusée → connexion ; 429 / indisponible → message et nouvel essai (pas de redirection).
 // recentAttempt : un renouvellement vient déjà de réussir dans cet onglet (garde sessionStorage, en
 // complément) → connexion directe.
+function clearDocumentRoleCookie(): void {
+  if (typeof document === "undefined") return
+  document.cookie = "user_role=; path=/; max-age=0"
+}
+
 export async function resumeSession(
   rawRedirect: string | null,
   recentAttempt = false,
   readCookies: () => string = readDocumentCookies,
+  clearRoleCookie: () => void = clearDocumentRoleCookie,
 ): Promise<ResumeResult> {
   const asked = safeRedirectPath(rawRedirect)
   const loginUrl = (to: string | null) => (to ? `/login?redirect=${encodeURIComponent(to)}` : "/login")
   if (recentAttempt) return { kind: "navigate", to: loginUrl(asked) }
+  // Un ancien user_role resté dans le navigateur ne doit pas faire croire que le refresh a
+  // posé ses cookies : on l'efface d'abord, sa présence ensuite prouve l'enregistrement.
+  clearRoleCookie()
   const result = await refreshSession()
   if (result.kind === "ok") {
     const role = cookieValue(readCookies(), "user_role")
