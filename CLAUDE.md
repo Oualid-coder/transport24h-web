@@ -147,6 +147,11 @@ Lire le guide pertinent dans `node_modules/next/dist/docs/` — les APIs, conven
 - Inscription : corps construit par `buildRegisterBody` (`lib/register.ts`) — `terms_accepted` + `terms_version`
   seulement si la case est cochée, jamais de date (posée par le serveur), téléphone nettoyé (espaces, points,
   tirets). Les 422 de l'API sont traduits par `registerErrorMessage`.
+- 422 CGV de l'API (« Vous devez accepter les CGV et la politique de confidentialité. », `isTermsRequiredError`) →
+  `TERMS_REQUIRED_MESSAGE` à l'inscription et à l'activation. Activation : `acceptInvitationErrorMessage`
+  (410 / 422 « lien d'invitation » → demander un nouveau lien, 422 mot de passe, 429/503 via `errorMessage`, sinon
+  repli). Candidature partenaire : message de l'API affiché tel quel. Si l'API change ces textes, mettre à jour
+  `lib/register.ts` et `tests/cgv-invitation-errors.test.ts`.
 - Même case (composant `components/TermsCheckbox.tsx`, champ zod `acceptTermsField`, message `TERMS_REQUIRED_MESSAGE`)
   sur l'activation d'un compte entreprise (`buildAcceptInvitationBody` → POST /auth/accept-invitation) et la
   candidature partenaire (`buildPartnerApplyBody` → POST /partners). Champs construits par `termsAcceptanceFields`
