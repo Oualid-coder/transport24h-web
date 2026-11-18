@@ -23,6 +23,12 @@ const nextConfig: NextConfig = {
         source: "/(.*)",
         headers: securityHeaders,
       },
+      {
+        // Réponses JSON de l'API relayées (ou erreurs) : aucune exécution possible même si un jour
+        // du HTML passait par le proxy (la CSP à nonce de proxy.ts ne couvre pas /api/*).
+        source: "/api/(.*)",
+        headers: [{ key: "Content-Security-Policy", value: "default-src 'none'; frame-ancestors 'none'; sandbox" }],
+      },
     ]
   },
 }

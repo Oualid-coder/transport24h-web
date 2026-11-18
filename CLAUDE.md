@@ -67,13 +67,17 @@ Les route groups `(client)`, `(admin)`, `(driver)` n'apparaissent pas dans les U
   `/((?!api|_next/static|_next/image|favicon.ico).*)`, préchargements compris : ils restent soumis à la redirection
   `/session`). Nonce neuf par requête (`generateNonce`), transmis à Next.js par les en-têtes de requête
   `Content-Security-Policy` et `x-nonce` ; Next.js l'ajoute seul à ses scripts. `next.config.ts` garde les autres
-  en-têtes de sécurité, plus de CSP statique (les réponses `/api/*` et `_next/static` n'ont plus de CSP).
-- `script-src 'self' 'nonce-…' 'strict-dynamic'` (+ `'unsafe-eval'` en `next dev` seulement). Pas de liste de domaines :
-  Stripe.js (`loadStripe`) et gtag.js (`lib/consent.ts`) sont créés par `document.createElement` depuis un script
-  de confiance et héritent de la confiance. Effet de bord connu de `'strict-dynamic'` : tout code JS déjà exécuté
+  en-têtes de sécurité, plus de CSP de page statique (CSP stricte dédiée sur `/api/*`, aucune sur `_next/static`).
+- `script-src 'self' 'nonce-…' 'strict-dynamic' 'unsafe-inline' <domaines Stripe et Google>` (+ `'unsafe-eval'` en
+  `next dev` seulement). En CSP3, `'unsafe-inline'` et les domaines sont IGNORÉS dès qu'un nonce et `'strict-dynamic'`
+  sont présents (vérifié en navigateur : script inline injecté bloqué) ; ce sont des replis pour les navigateurs CSP2
+  (Safari < 15.4, qui sinon bloqueraient Stripe) et CSP1 : ne pas les retirer. Stripe.js (`loadStripe`) et gtag.js
+  (`lib/consent.ts`) sont créés par `document.createElement` depuis un script de confiance et héritent de la confiance. Effet de bord connu de `'strict-dynamic'` : tout code JS déjà exécuté
   peut créer un `<script>` (même inline) ; ce qui est bloqué, c'est le HTML injecté (script inline ou externe, même
-  de `'self'`), les attributs `on*=`, `document.write`, `eval`/`new Function`. Navigateurs sans CSP3 (Safari < 15.4) :
-  Stripe et gtag bloqués.
+  de `'self'`), les attributs `on*=`, `document.write`, `eval`/`new Function`.
+- `frame-src` inclut `https://hooks.stripe.com` (3D Secure). Les réponses `/api/*` reçoivent une CSP stricte
+  (`default-src 'none'; frame-ancestors 'none'; sandbox`) posée par `next.config.ts`.
+- zod : importer uniquement `@/lib/zod` (mode `jitless`), jamais `zod` directement (règle ESLint).
 - `style-src 'self' 'unsafe-inline'` gardé (attributs `style=` de Leaflet et des composants) : ne pas y ajouter de
   nonce, il ferait ignorer `'unsafe-inline'`. Autres directives identiques à l'ancienne CSP statique.
 - Toutes les pages sont dynamiques (lecture de `x-nonce` dans `app/layout.tsx`) : plus de prérendu statique ni de

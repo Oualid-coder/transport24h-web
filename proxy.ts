@@ -38,5 +38,5 @@ export const config = {
   // Toutes les pages (CSP), hors routes API, fichiers statiques et optimisation d'images.
   // Pas d'exclusion des préchargements (next-router-prefetch) : ils doivent rester soumis
   // à la redirection des pages protégées.
-  matcher: ["/((?!api|_next/static|_next/image|favicon.ico).*)"],
+  matcher: ["/((?!api/|_next/static|_next/image|favicon.ico).*)"],
 }

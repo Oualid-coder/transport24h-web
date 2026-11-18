@@ -80,7 +80,7 @@ test("proxy : préfixes protégés au segment près", () => {
 
 test("proxy : matcher couvre toutes les pages, pas l'API ni les fichiers statiques", () => {
   const re = new RegExp("^" + config.matcher[0] + "$")
-  for (const p of ["/", "/cgv", "/booking/payment", "/admin/dashboard", "/session", "/logo-transport24h.png"]) {
+  for (const p of ["/", "/cgv", "/booking/payment", "/admin/dashboard", "/session", "/logo-transport24h.png", "/apidocs"]) {
     assert.ok(re.test(p), p)
   }
   for (const p of ["/api/proxy/bookings", "/_next/static/chunks/a.js", "/_next/image", "/favicon.ico"]) {

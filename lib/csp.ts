@@ -21,7 +21,7 @@ const scriptFallbackHosts =
 // L'identifiant de compte n'est pas connu du web : sous-domaines de r2.cloudflarestorage.com, HTTPS seul.
 export const r2Images = "https://*.r2.cloudflarestorage.com"
 
-// Nonce imprévisible et unique par requête (128 bits aléatoires), en base64.
+// Nonce imprévisible et unique par requête (UUID v4 : 122 bits aléatoires), en base64.
 export function generateNonce(): string {
   return Buffer.from(crypto.randomUUID()).toString("base64")
 }
