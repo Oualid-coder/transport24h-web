@@ -18,7 +18,7 @@ export const ROLE_FORBIDDEN_MESSAGE = "Accès réservé : cette page n'est pas d
 
 // Minuscules sans accents : « Rôle insuffisant » et « role insuffisant » se comparent pareil.
 function normalize(s: string): string {
-  return s.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase()
+  return s.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase()
 }
 
 // Texte technique remonté tel quel par l'API (validateur Go « Key: '…' failed on the … tag », erreurs SQL,
