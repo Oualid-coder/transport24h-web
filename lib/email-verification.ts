@@ -5,7 +5,7 @@ import { ApiError } from "@/lib/api"
 // 403 sur POST /bookings, /payments/intent, /payments/setup-intent tant que l'email n'est pas vérifié.
 
 function normalize(text: string): string {
-  return text.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase()
+  return text.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase()
 }
 
 // Seuls les 403 dont le message parle de l'email : « vérifiez votre email avant de réserver »
