@@ -23,6 +23,7 @@ import {
   getDriverMyBookings,
   ApiError,
 } from "@/lib/api"
+import { errorMessage } from "@/lib/error-message"
 import type { AvailableBooking, Booking, BookingStatus } from "@/lib/types"
 import { BackButton } from "@/components/BackButton"
 import { BookingPhotoSection } from "@/components/BookingPhotoSection"
@@ -180,7 +181,7 @@ function AvailableBookingCard({ booking }: { booking: AvailableBooking }) {
         {mutation.isError && !is409 && (
           <div className="flex items-start gap-2 rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-2 text-xs text-destructive">
             <AlertCircle className="mt-0.5 size-3.5 shrink-0" />
-            Une erreur est survenue. Veuillez réessayer.
+            {errorMessage(mutation.error, "Une erreur est survenue. Veuillez réessayer.")}
           </div>
         )}
       </CardContent>

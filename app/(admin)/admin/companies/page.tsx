@@ -2,10 +2,11 @@
 
 import { useState, useCallback } from "react"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
-import { Building2, Loader2, Mail, MailCheck, Plus, RefreshCw, Send } from "lucide-react"
+import { AlertCircle, Building2, Loader2, Mail, MailCheck, Plus, RefreshCw, Send } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { getAdminCompanies, inviteCompany, ApiError } from "@/lib/api"
+import { errorMessage } from "@/lib/error-message"
 import type { Company, InvitationStatus } from "@/lib/types"
 import { BackButton } from "@/components/BackButton"
 import { CreateCompanyModal } from "@/components/admin/CreateCompanyModal"
@@ -138,7 +139,7 @@ export default function CompaniesPage() {
   const [invitingId, setInvitingId] = useState<string | null>(null)
   const { toasts, push: pushToast } = useToast()
 
-  const { data: companies = [], isLoading } = useQuery({
+  const { data: companies = [], isLoading, error } = useQuery({
     queryKey: ["admin-companies"],
     queryFn: getAdminCompanies,
     staleTime: 30_000,
@@ -181,7 +182,9 @@ export default function CompaniesPage() {
           <p className="mt-1 text-muted-foreground">
             {isLoading
               ? "Chargement…"
-              : `${companies.length} entreprise${companies.length > 1 ? "s" : ""}`}
+              : error && companies.length === 0
+                ? "Liste indisponible"
+                : `${companies.length} entreprise${companies.length > 1 ? "s" : ""}`}
           </p>
         </div>
         <Button onClick={() => setCreateOpen(true)}>
@@ -193,6 +196,14 @@ export default function CompaniesPage() {
       {isLoading ? (
         <div className="flex justify-center py-16">
           <Loader2 className="size-6 animate-spin text-muted-foreground" />
+        </div>
+      ) : error && companies.length === 0 ? (
+        <div
+          role="alert"
+          className="flex items-start gap-2 rounded-lg border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive"
+        >
+          <AlertCircle className="mt-0.5 size-4 shrink-0" />
+          {errorMessage(error, "Impossible de charger les entreprises.")}
         </div>
       ) : companies.length === 0 ? (
         <div className="rounded-lg border border-dashed border-border py-16 text-center">

@@ -2,10 +2,11 @@
 
 import { useState } from "react"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
-import { Loader2, Mail, Pencil, Phone, UserPlus, Users, UserX } from "lucide-react"
+import { AlertCircle, Loader2, Mail, Pencil, Phone, UserPlus, Users, UserX } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { deactivateDriver, getAdminDrivers } from "@/lib/api"
+import { errorMessage } from "@/lib/error-message"
 import type { Driver, DriverEmploymentType } from "@/lib/types"
 import { BackButton } from "@/components/BackButton"
 import { CreateDriverModal } from "@/components/admin/CreateDriverModal"
@@ -125,7 +126,7 @@ export default function DriversPage() {
   const [editDriver, setEditDriver] = useState<Driver | null>(null)
   const [confirmingId, setConfirmingId] = useState<string | null>(null)
 
-  const { data: drivers = [], isLoading } = useQuery({
+  const { data: drivers = [], isLoading, error } = useQuery({
     queryKey: ["admin-drivers"],
     queryFn: getAdminDrivers,
     staleTime: 30_000,
@@ -150,7 +151,9 @@ export default function DriversPage() {
           <p className="mt-1 text-muted-foreground">
             {isLoading
               ? "Chargement…"
-              : `${drivers.length} chauffeur${drivers.length > 1 ? "s" : ""} actif${drivers.length > 1 ? "s" : ""}`}
+              : error && drivers.length === 0
+                ? "Liste indisponible"
+                : `${drivers.length} chauffeur${drivers.length > 1 ? "s" : ""} actif${drivers.length > 1 ? "s" : ""}`}
           </p>
         </div>
         <Button onClick={() => setCreateOpen(true)}>
@@ -159,9 +162,27 @@ export default function DriversPage() {
         </Button>
       </div>
 
+      {deactivateMutation.error && (
+        <div
+          role="alert"
+          className="flex items-start gap-2 rounded-lg border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive"
+        >
+          <AlertCircle className="mt-0.5 size-4 shrink-0" />
+          {errorMessage(deactivateMutation.error, "Le chauffeur n'a pas pu être désactivé. Réessayez.")}
+        </div>
+      )}
+
       {isLoading ? (
         <div className="flex justify-center py-16">
           <Loader2 className="size-6 animate-spin text-muted-foreground" />
+        </div>
+      ) : error && drivers.length === 0 ? (
+        <div
+          role="alert"
+          className="flex items-start gap-2 rounded-lg border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive"
+        >
+          <AlertCircle className="mt-0.5 size-4 shrink-0" />
+          {errorMessage(error, "Impossible de charger les chauffeurs.")}
         </div>
       ) : drivers.length === 0 ? (
         <div className="rounded-lg border border-dashed border-border py-16 text-center">

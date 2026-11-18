@@ -10,6 +10,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog"
 import { completeBooking, ApiError } from "@/lib/api"
+import { errorMessage } from "@/lib/error-message"
 
 interface Props {
   open: boolean
@@ -103,7 +104,7 @@ export function CompleteBookingModal({ open, bookingId, onClose, onCompleted }: 
               {mutation.isError && !is403 && !is409 && !is422 && (
                 <div className="flex items-start gap-2 rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-2 text-xs text-destructive">
                   <AlertCircle className="mt-0.5 size-3.5 shrink-0" />
-                  Une erreur est survenue. Veuillez réessayer.
+                  {errorMessage(mutation.error, "Une erreur est survenue. Veuillez réessayer.")}
                 </div>
               )}
 

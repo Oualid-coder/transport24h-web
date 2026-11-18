@@ -2,8 +2,9 @@
 
 import { useState } from "react"
 import { useQuery } from "@tanstack/react-query"
-import { ChevronLeft, ChevronRight, CheckCircle2, Loader2 } from "lucide-react"
+import { AlertCircle, ChevronLeft, ChevronRight, CheckCircle2, Loader2 } from "lucide-react"
 import { getAdminBookings } from "@/lib/api"
+import { errorMessage } from "@/lib/error-message"
 import { BookingCard } from "./BookingCard"
 
 const LIMIT = 20
@@ -12,7 +13,7 @@ export function BookingList({ status, date }: { status?: string; date?: string }
   const [page, setPage] = useState(1)
   const queryKey = ["admin-bookings", status ?? "all", date ?? "all", page]
 
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, error } = useQuery({
     queryKey,
     queryFn: () => getAdminBookings(status, date, page, LIMIT),
     refetchInterval: 30_000,
@@ -29,6 +30,18 @@ export function BookingList({ status, date }: { status?: string; date?: string }
     return (
       <div className="flex justify-center py-16">
         <Loader2 className="size-6 animate-spin text-muted-foreground" />
+      </div>
+    )
+  }
+
+  if (error && sorted.length === 0) {
+    return (
+      <div
+        role="alert"
+        className="flex items-start gap-2 rounded-lg border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive"
+      >
+        <AlertCircle className="mt-0.5 size-4 shrink-0" />
+        {errorMessage(error, "Impossible de charger les réservations.")}
       </div>
     )
   }
