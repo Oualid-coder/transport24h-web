@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server"
-import { cookies } from "next/headers"
+import { clientIpHeaders } from "@/lib/client-ip"
 
 // URL interne du backend — variable serveur uniquement (non exposée au client)
 const API_URL = (process.env.API_URL ?? process.env.NEXT_PUBLIC_API_URL ?? "").replace(/\/$/, "")
@@ -16,10 +16,10 @@ async function proxyRequest(
   const target = `${API_URL}/${path.join("/")}${search}`
 
   // Lit le token depuis le cookie httpOnly — inaccessible côté client
-  const cookieStore = await cookies()
-  const token = cookieStore.get("access_token")?.value
+  const token = req.cookies.get("access_token")?.value
 
-  const forwardHeaders: Record<string, string> = {}
+  // IP du visiteur (limitation de débit par IP à la gateway)
+  const forwardHeaders: Record<string, string> = clientIpHeaders(req.headers)
   const ct = req.headers.get("content-type")
   if (ct) forwardHeaders["content-type"] = ct
   if (token) forwardHeaders["authorization"] = `Bearer ${token}`

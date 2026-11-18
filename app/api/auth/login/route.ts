@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import type { UserRole } from "@/lib/types"
 import { safeRedirectPath } from "@/lib/safe-redirect"
+import { clientIpHeaders } from "@/lib/client-ip"
 
 const API_URL = process.env.API_URL ?? process.env.NEXT_PUBLIC_API_URL
 
@@ -44,7 +45,8 @@ export async function POST(request: NextRequest) {
   try {
     backendRes = await fetch(`${API_URL}/auth/login`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      // IP du visiteur : la limite de tentatives de connexion est comptée par IP à la gateway
+      headers: { "Content-Type": "application/json", ...clientIpHeaders(request.headers) },
       body: JSON.stringify({ email: body.email, password: body.password }),
     })
   } catch {

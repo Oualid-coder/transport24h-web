@@ -10,8 +10,11 @@ registerHooks({
   resolve(specifier, context, nextResolve) {
     let url
     if (specifier.startsWith("@/")) url = new URL(specifier.slice(2), root).href
-    else if (specifier.startsWith(".") && context.parentURL)
+    else if (specifier.startsWith(".") && context.parentURL && !context.parentURL.includes("/node_modules/"))
       url = new URL(specifier, context.parentURL).href
+    // Points d'entrée Next sans champ "exports" (route handlers testés) : extension explicite
+    else if (specifier === "next/server" || specifier === "next/headers")
+      return nextResolve(`${specifier}.js`, context)
     else return nextResolve(specifier, context)
 
     if (!/\.[cm]?[jt]sx?$/.test(url)) {
