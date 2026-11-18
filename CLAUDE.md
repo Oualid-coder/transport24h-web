@@ -94,3 +94,18 @@ Lire le guide pertinent dans `node_modules/next/dist/docs/` — les APIs, conven
 - Cookies : Google Ads uniquement via `lib/consent.ts` (`sendAdsEvent`), jamais de `<Script>` Google direct.
 - Tests : `npm test` (Node 22.23.4 ou plus, vérifié dans l'image Docker ; lancé en CI ; `node --test`, sans dépendance ; résolution des imports `@/` par
   `tests/ts-hooks.mjs`). Fichiers dans `tests/*.test.ts`.
+
+## Vérification d'email (contrat API `feat/email-verification-v2`)
+
+- Lien reçu : `/verify-email?token=<base64url>` (public, hors `PROTECTED_PREFIXES` de `proxy.ts`). Page client
+  sous `<Suspense>` : un seul appel `verifyEmail` (`lib/api.ts`, via `/api/proxy`) après chargement, jamais au
+  rendu serveur (les scanners de liens consommeraient le jeton à usage unique). 200 succès, 400/422/réseau →
+  `verifyEmailErrorMessage` (`lib/email-verification.ts`).
+- L'API n'expose `email_verified` que dans la réponse de `POST /auth/register` (ni JWT, ni endpoint « moi »).
+  Après inscription, `registeredLoginUrl` (`lib/register.ts`) ajoute `verify=sent` si `email_verified === false`.
+- Bandeau `EmailUnverifiedBanner` : uniquement après un 403 reconnu par `isEmailNotVerifiedError` (message
+  « vérifiez votre email avant de réserver / de payer »). Tout autre 403 garde son message. Ne pas déduire l'état
+  d'un drapeau local.
+- Renvoi `POST /auth/resend-verification` : 429 avec `Retry-After` (5/h par compte, 3/min par IP à la gateway).
+  Le proxy relaie `Retry-After`, `ApiError.retryAfter` le porte, `resendErrorMessage` l'affiche.
+- Si l'API change un de ces messages 403, mettre à jour `isEmailNotVerifiedError` et `tests/email-verification.test.ts`.
