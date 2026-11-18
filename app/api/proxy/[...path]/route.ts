@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server"
-import { cookies } from "next/headers"
+import { isCrossOriginMutation, proxyPath } from "@/lib/request-guard"
 
 // URL interne du backend — variable serveur uniquement (non exposée au client)
 const API_URL = (process.env.API_URL ?? process.env.NEXT_PUBLIC_API_URL ?? "").replace(/\/$/, "")
@@ -10,14 +10,22 @@ async function proxyRequest(
   req: NextRequest,
   { params }: RouteContext,
 ): Promise<NextResponse> {
+  // Requête modifiante venue d'un autre site (CSRF) : refusée avant tout appel
+  if (isCrossOriginMutation(req)) {
+    return NextResponse.json({ error: "Requête refusée" }, { status: 403 })
+  }
+
   const { path } = await params
-  // Reconstruit le chemin + query string d'origine
+  // Reconstruit le chemin (segments ré-encodés) + query string d'origine
+  const safePath = proxyPath(path)
+  if (safePath === null) {
+    return NextResponse.json({ error: "Chemin invalide" }, { status: 400 })
+  }
   const search = req.nextUrl.search
-  const target = `${API_URL}/${path.join("/")}${search}`
+  const target = `${API_URL}/${safePath}${search}`
 
   // Lit le token depuis le cookie httpOnly — inaccessible côté client
-  const cookieStore = await cookies()
-  const token = cookieStore.get("access_token")?.value
+  const token = req.cookies.get("access_token")?.value
 
   const forwardHeaders: Record<string, string> = {}
   const ct = req.headers.get("content-type")

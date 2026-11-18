@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import type { UserRole } from "@/lib/types"
 import { safeRedirectPath } from "@/lib/safe-redirect"
+import { isCrossOriginMutation, isJsonContentType } from "@/lib/request-guard"
 
 const API_URL = process.env.API_URL ?? process.env.NEXT_PUBLIC_API_URL
 
@@ -29,6 +30,14 @@ function redirectForRole(role: string): string {
 }
 
 export async function POST(request: NextRequest) {
+  // Login CSRF : origine étrangère refusée, et corps JSON exigé (un formulaire ne peut pas l'envoyer)
+  if (isCrossOriginMutation(request)) {
+    return NextResponse.json({ error: "Requête refusée" }, { status: 403 })
+  }
+  if (!isJsonContentType(request)) {
+    return NextResponse.json({ error: "Type de contenu non pris en charge" }, { status: 415 })
+  }
+
   let body: Record<string, unknown>
   try {
     body = (await request.json()) as Record<string, unknown>
