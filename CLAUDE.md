@@ -53,12 +53,37 @@ Les route groups `(client)`, `(admin)`, `(driver)` n'apparaissent pas dans les U
 - Les variables `NEXT_PUBLIC_*` sont exposées côté client
 - Ne jamais exposer de secrets côté client
 
-## Route Handlers `/api/proxy`, `/api/auth/login`, `/api/auth/logout`
+## Route Handlers `/api/proxy`, `/api/auth/login`, `/api/auth/refresh`, `/api/auth/logout`
 
 - `lib/request-guard.ts` : POST/PUT/PATCH/DELETE avec un `Origin` dont l'hôte diffère de `x-forwarded-host`
   (sinon `Host`) → 403 (`isCrossOriginMutation`) ; `Origin` absent accepté. Login : `Content-Type:
   application/json` exigé (415 sinon, login CSRF par formulaire `text/plain`). Proxy : segments ré-encodés
   (`proxyPath`), `.`, `..` et segment vide → 400. Tout nouveau Route Handler modifiant doit appeler le même contrôle.
+
+## Session et refresh (audit M5, contrat `internal/handler/auth.go` de l'API)
+
+- API : `POST /auth/refresh` lit `refresh_token` dans l'en-tête **Cookie** uniquement (jamais le corps), renvoie
+  `{access_token, expires_in: 900}`, **sans rotation** du refresh ; 401 absent/invalide/expiré/révoqué, 403 compte
+  désactivé ; 10/min par IP à la gateway. `POST /auth/logout` lit le même cookie, le met en liste noire, 204.
+  Refresh token : 7 j (Max-Age 604800), posé par l'API en `Path=/auth` (invisible pour les routes du site).
+- `lib/session-cookies.ts` : source unique des cookies. Login et refresh posent `access_token` (httpOnly, Lax, `/`,
+  `expires_in`), `user_role` (Lax, `/`) et `refresh_token` reposé en `Path=/api/auth` (httpOnly, **Strict**, Max-Age
+  de l'API), Secure en production. `clearSessionCookies` efface aussi l'ancien `refresh_token` en `Path=/auth`
+  (en-tête brut ajouté en dernier : `response.cookies` est indexé par nom).
+- `/api/auth/refresh` (POST, garde d'origine, `X-Real-IP`) : cookie absent ou API 401/403 → même statut + cookies
+  effacés ; 429/5xx relayés, réseau 502, cookies gardés. Rotation gérée si l'API pose un jour un Set-Cookie.
+- `/api/auth/logout` : appelle `/auth/logout` de l'API avec le refresh (timeout 5 s, erreur ignorée), puis efface tout.
+- Client (`lib/api.ts`) : `fetchWithRefresh` (utilisé par `apiResponse` et `uploadBookingPhoto`) → sur 401, un seul
+  `refreshSession()` (une seule promesse en vol partagée) puis un seul rejeu ; sinon redirection `/login`. Corps
+  `ReadableStream` jamais rejoué (`isReplayableBody`) ; `File`/`Blob`/chaîne le sont.
+- `proxy.ts` : page protégée sans `access_token` → `/session?redirect=…` (pas `/login`) : la page client
+  `app/session/page.tsx` appelle `resumeSession` (refresh, puis navigation complète vers la page ou `/login`).
+  Garde anti-boucle : `sessionStorage["session-resume-at"]` (15 s).
+- Non couverts : `window.open` de la facture PDF admin (`/api/proxy/.../pdf`), Server Component `dashboard`
+  (rend `[]` sur 401 dans la fenêtre où le cookie survit au jeton), navbar des pages publiques (`isLoggedIn` lit
+  `access_token`, faux après 15 min d'inactivité jusqu'à la prochaine page protégée ou requête API).
+- Sessions ouvertes avant ce correctif (refresh en `Path=/auth`) : non renouvelables ni révocables par le web ;
+  reconnexion à l'expiration de l'access token, comme avant.
 
 ## Git
 
