@@ -1,9 +1,10 @@
-import { cookies } from "next/headers"
+import { cookies, headers } from "next/headers"
 import { redirect } from "next/navigation"
 import { Package } from "lucide-react"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import type { Booking } from "@/lib/types"
 import { BookingCardClient } from "@/components/BookingCardClient"
+import { clientIpHeaders } from "@/lib/client-ip"
 
 async function getMyBookings(): Promise<Booking[]> {
   const cookieStore = await cookies()
@@ -11,10 +12,10 @@ async function getMyBookings(): Promise<Booking[]> {
   if (!token) redirect("/login?redirect=/dashboard")
 
   const res = await fetch(
-    `${process.env.NEXT_PUBLIC_API_URL}/bookings/me`,
+    `${process.env.API_URL ?? process.env.NEXT_PUBLIC_API_URL}/bookings/me`,
     {
-      // Go auth middleware lit Authorization: Bearer, pas Cookie
-      headers: { Authorization: `Bearer ${token}` },
+      // Go auth middleware lit Authorization: Bearer, pas Cookie ; IP du visiteur pour la gateway
+      headers: { Authorization: `Bearer ${token}`, ...clientIpHeaders(await headers()) },
       cache: "no-store",
     },
   )
