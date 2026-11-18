@@ -107,7 +107,7 @@ export function registerErrorMessage(status: number, apiMessage: string): string
 
 // Minuscules sans accents, pour comparer les messages de l'API
 function normalize(s: string): string {
-  return s.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase()
+  return s.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase()
 }
 
 // 422 de l'API quand la case des conditions manque (inscription, activation, candidature) :
