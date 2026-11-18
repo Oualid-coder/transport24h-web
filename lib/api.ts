@@ -64,13 +64,26 @@ export function parseRetryAfter(value: string | null, now: number = Date.now()):
 
 // Renouvellement de session (audit M5) : POST /api/auth/refresh repose access_token depuis le cookie
 // refresh_token. Une seule tentative en vol : les requêtes qui échouent en parallèle attendent la même.
-let refreshInFlight: Promise<boolean> | null = null
+// unauthorized (401/403) : session finie → connexion. rateLimited (429, limite de la gateway par IP) et
+// unavailable (5xx, réseau) : passagers → message, sans redirection (le formulaire en cours est gardé).
+export type RefreshResult =
+  | { kind: "ok" }
+  | { kind: "unauthorized" }
+  | { kind: "rateLimited"; retryAfter: number | null }
+  | { kind: "unavailable" }
 
-export function refreshSession(): Promise<boolean> {
+let refreshInFlight: Promise<RefreshResult> | null = null
+
+export function refreshSession(): Promise<RefreshResult> {
   if (!refreshInFlight) {
     refreshInFlight = fetch("/api/auth/refresh", { method: "POST", credentials: "same-origin" })
-      .then((res) => res.ok)
-      .catch(() => false)
+      .then((res): RefreshResult => {
+        if (res.ok) return { kind: "ok" }
+        if (res.status === 401 || res.status === 403) return { kind: "unauthorized" }
+        if (res.status === 429) return { kind: "rateLimited", retryAfter: parseRetryAfter(res.headers.get("retry-after")) }
+        return { kind: "unavailable" }
+      })
+      .catch((): RefreshResult => ({ kind: "unavailable" }))
       .finally(() => {
         refreshInFlight = null
       })
@@ -78,14 +91,62 @@ export function refreshSession(): Promise<boolean> {
   return refreshInFlight
 }
 
-// Page /session (redirection de proxy.ts sans access_token) : destination après une tentative de refresh.
-// Succès → page demandée (chemin interne seulement), sinon → connexion avec la même redirection.
-// recentAttempt : un renouvellement vient déjà de réussir dans cet onglet et l'on revient ici (cookie non
-// enregistré) → connexion directe, sans nouvel essai, pour ne jamais boucler.
-export async function resumeSession(rawRedirect: string | null, recentAttempt = false): Promise<string> {
-  const redirect = safeRedirectPath(rawRedirect) ?? "/dashboard"
-  if (!recentAttempt && (await refreshSession())) return redirect
-  return `/login?redirect=${encodeURIComponent(redirect)}`
+// Message affiché quand le renouvellement échoue pour une raison passagère
+export function refreshErrorMessage(result: { kind: "rateLimited"; retryAfter: number | null } | { kind: "unavailable" }): string {
+  if (result.kind === "unavailable") return "Service momentanément indisponible, réessayez."
+  return result.retryAfter !== null && result.retryAfter > 0
+    ? `Trop de demandes en ce moment, réessayez dans ${result.retryAfter} s.`
+    : "Trop de demandes en ce moment, réessayez dans quelques instants."
+}
+
+// Valeur d'un cookie non httpOnly (user_role) dans une chaîne document.cookie
+function cookieValue(cookieString: string, name: string): string | null {
+  for (const part of cookieString.split(";")) {
+    const [k, ...v] = part.trim().split("=")
+    if (k === name) return v.join("=")
+  }
+  return null
+}
+
+function homeForRole(role: string | null): string {
+  if (role === "admin") return "/admin/dashboard"
+  if (role === "driver") return "/driver/dashboard"
+  return "/dashboard"
+}
+
+const readDocumentCookies = (): string => (typeof document !== "undefined" ? document.cookie : "")
+
+export type ResumeResult =
+  | { kind: "navigate"; to: string }
+  | { kind: "retry"; message: string; retryAfter: number | null; loginUrl: string }
+
+// Page /session (redirection de proxy.ts sans access_token) : que faire après une tentative de refresh.
+// - succès ET cookie user_role visible (posé avec access_token) → page demandée, ou accueil du rôle ;
+//   cookie absent (non enregistré) → connexion, jamais de retour vers la page protégée (boucle) ;
+// - session refusée → connexion ; 429 / indisponible → message et nouvel essai (pas de redirection).
+// recentAttempt : un renouvellement vient déjà de réussir dans cet onglet (garde sessionStorage, en
+// complément) → connexion directe.
+export async function resumeSession(
+  rawRedirect: string | null,
+  recentAttempt = false,
+  readCookies: () => string = readDocumentCookies,
+): Promise<ResumeResult> {
+  const asked = safeRedirectPath(rawRedirect)
+  const loginUrl = (to: string | null) => (to ? `/login?redirect=${encodeURIComponent(to)}` : "/login")
+  if (recentAttempt) return { kind: "navigate", to: loginUrl(asked) }
+  const result = await refreshSession()
+  if (result.kind === "ok") {
+    const role = cookieValue(readCookies(), "user_role")
+    if (!role) return { kind: "navigate", to: loginUrl(asked) }
+    return { kind: "navigate", to: asked ?? homeForRole(role) }
+  }
+  if (result.kind === "unauthorized") return { kind: "navigate", to: loginUrl(asked) }
+  return {
+    kind: "retry",
+    message: refreshErrorMessage(result),
+    retryAfter: result.kind === "rateLimited" ? result.retryAfter : null,
+    loginUrl: loginUrl(asked),
+  }
 }
 
 // Un corps ReadableStream est consommé au premier envoi : il ne peut pas être rejoué.
@@ -101,11 +162,15 @@ function redirectToLogin(): void {
 }
 
 // Envoie la requête ; sur 401, un seul renouvellement de session puis un seul rejeu. Jamais de boucle :
-// un 401 après rejeu, ou un refresh refusé, redirige vers la connexion.
+// un 401 après rejeu, ou un refresh refusé (401/403), redirige vers la connexion. Refresh en 429 ou
+// indisponible : ApiError 429 / 503 avec message, sans redirection (l'utilisateur garde sa saisie).
 async function fetchWithRefresh(url: string, init: RequestInit, body: BodyInit | null | undefined): Promise<Response> {
   let res = await fetch(url, init)
-  if (res.status === 401 && isReplayableBody(body) && (await refreshSession())) {
-    res = await fetch(url, init)
+  if (res.status === 401 && isReplayableBody(body)) {
+    const refreshed = await refreshSession()
+    if (refreshed.kind === "ok") res = await fetch(url, init)
+    else if (refreshed.kind === "rateLimited") throw new ApiError(429, refreshErrorMessage(refreshed), refreshed.retryAfter)
+    else if (refreshed.kind === "unavailable") throw new ApiError(503, refreshErrorMessage(refreshed))
   }
   if (res.status === 401) {
     redirectToLogin()

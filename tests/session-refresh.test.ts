@@ -6,7 +6,7 @@ import { NextRequest } from "next/server"
 import { POST as loginPost } from "../app/api/auth/login/route"
 import { POST as refreshPost } from "../app/api/auth/refresh/route"
 import { POST as logoutPost } from "../app/api/auth/logout/route"
-import { getMyBookings, isReplayableBody, resumeSession, uploadBookingPhoto, ApiError } from "../lib/api"
+import { getMyBookings, isReplayableBody, refreshSession, resumeSession, uploadBookingPhoto, ApiError } from "../lib/api"
 import { proxy } from "../proxy"
 
 type Call = { url: string; init: RequestInit }
@@ -136,16 +136,31 @@ test("refresh : API 401 (expiré/révoqué) ou 403 (désactivé) → même statu
   }
 })
 
-test("refresh : API 500/429 → statut relayé, cookies gardés ; réseau → 502", async () => {
+test("refresh : API 500/429 → statut relayé, message exact, cookies gardés ; réseau → 502", async () => {
   mockFetch(() => Response.json({ error: "x" }, { status: 429, headers: { "retry-after": "30" } }))
   const limited = await refreshPost(req("/api/auth/refresh", { headers: { cookie: "refresh_token=RT1" } }))
   assert.equal(limited.status, 429)
   assert.equal(limited.headers.get("retry-after"), "30")
+  assert.deepEqual(await limited.json(), { error: "Trop de demandes" })
   assert.equal(setCookies(limited).length, 0)
+  mockFetch(() => Response.json({ error: "x" }, { status: 500 }))
+  const failed = await refreshPost(req("/api/auth/refresh", { headers: { cookie: "refresh_token=RT1" } }))
+  assert.equal(failed.status, 500)
+  assert.deepEqual(await failed.json(), { error: "Service momentanément indisponible" })
+  assert.equal(setCookies(failed).length, 0)
   mockFetch(() => { throw new TypeError("fetch failed") })
   const down = await refreshPost(req("/api/auth/refresh", { headers: { cookie: "refresh_token=RT1" } }))
   assert.equal(down.status, 502)
   assert.equal(setCookies(down).length, 0)
+})
+
+test("refresh : expires_in <= 0 ou absent → 502 sans cookie posé (sinon boucle /session)", async () => {
+  for (const expires_in of [0, -5, "900", undefined]) {
+    mockFetch(() => Response.json({ access_token: jwt("client"), expires_in }))
+    const res = await refreshPost(req("/api/auth/refresh", { headers: { cookie: "refresh_token=RT1" } }))
+    assert.equal(res.status, 502, String(expires_in))
+    assert.equal(setCookies(res).length, 0)
+  }
 })
 
 test("refresh : autre origine → 403 sans appel à l'API", async () => {
@@ -273,18 +288,89 @@ test("corps rejouables : chaîne, Blob, ArrayBuffer, FormData oui ; ReadableStre
 
 // ── Page /session et proxy.ts ────────────────────────────────────────────────
 
-test("resumeSession : succès → page demandée ; échec → connexion ; redirection externe refusée", async () => {
+const ROLE_COOKIE = () => "consent=0; user_role=driver"
+const NO_ROLE_COOKIE = () => "consent=0"
+const nav = (to: string) => ({ kind: "navigate", to })
+
+test("resumeSession : succès + cookie user_role → page demandée ; redirection externe → accueil du rôle", async () => {
   mockFetch(() => Response.json({ ok: true }))
-  assert.equal(await resumeSession("/booking/new?x=1"), "/booking/new?x=1")
-  assert.equal(await resumeSession("//evil.example"), "/dashboard")
-  mockFetch(() => Response.json({}, { status: 401 }))
-  assert.equal(await resumeSession("/admin/dashboard"), `/login?redirect=${encodeURIComponent("/admin/dashboard")}`)
+  assert.deepEqual(await resumeSession("/booking/new?x=1", false, ROLE_COOKIE), nav("/booking/new?x=1"))
+  assert.deepEqual(await resumeSession("//evil.example", false, ROLE_COOKIE), nav("/driver/dashboard"))
+  assert.deepEqual(await resumeSession(null, false, () => "user_role=admin"), nav("/admin/dashboard"))
+  assert.deepEqual(await resumeSession(null, false, () => "user_role=client"), nav("/dashboard"))
+})
+
+test("resumeSession : refresh 200 mais cookie non enregistré (sans sessionStorage) → /login, pas la page protégée", async () => {
+  mockFetch(() => Response.json({ ok: true }))
+  assert.deepEqual(await resumeSession("/driver/dashboard", false, NO_ROLE_COOKIE), nav(`/login?redirect=${encodeURIComponent("/driver/dashboard")}`))
+})
+
+test("resumeSession : session refusée (401/403) → connexion", async () => {
+  for (const status of [401, 403]) {
+    mockFetch(() => Response.json({}, { status }))
+    assert.deepEqual(await resumeSession("/admin/dashboard", false, ROLE_COOKIE), nav(`/login?redirect=${encodeURIComponent("/admin/dashboard")}`))
+  }
+})
+
+test("resumeSession : 429 / 5xx / réseau → message et nouvel essai, aucune navigation", async () => {
+  mockFetch(() => Response.json({ error: "Trop de demandes" }, { status: 429, headers: { "retry-after": "20" } }))
+  assert.deepEqual(await resumeSession("/booking/new", false, ROLE_COOKIE), {
+    kind: "retry",
+    message: "Trop de demandes en ce moment, réessayez dans 20 s.",
+    retryAfter: 20,
+    loginUrl: `/login?redirect=${encodeURIComponent("/booking/new")}`,
+  })
+  mockFetch(() => Response.json({}, { status: 503 }))
+  const down = await resumeSession("/booking/new", false, ROLE_COOKIE)
+  assert.equal(down.kind, "retry")
+  assert.equal(down.kind === "retry" && down.message, "Service momentanément indisponible, réessayez.")
+  mockFetch(() => { throw new TypeError("fetch failed") })
+  assert.equal((await resumeSession("/booking/new", false, ROLE_COOKIE)).kind, "retry")
 })
 
 test("resumeSession : renouvellement récent déjà tenté → connexion directe, aucun appel (pas de boucle)", async () => {
   const calls = mockFetch(() => Response.json({ ok: true }))
-  assert.equal(await resumeSession("/dashboard", true), `/login?redirect=${encodeURIComponent("/dashboard")}`)
+  assert.deepEqual(await resumeSession("/dashboard", true, ROLE_COOKIE), nav(`/login?redirect=${encodeURIComponent("/dashboard")}`))
   assert.equal(calls.length, 0)
+})
+
+test("refreshSession : statuts ok / unauthorized / rateLimited (+Retry-After) / unavailable", async () => {
+  const cases: [() => Response, unknown][] = [
+    [() => Response.json({ ok: true }), { kind: "ok" }],
+    [() => Response.json({}, { status: 401 }), { kind: "unauthorized" }],
+    [() => Response.json({}, { status: 403 }), { kind: "unauthorized" }],
+    [() => Response.json({}, { status: 429, headers: { "retry-after": "42" } }), { kind: "rateLimited", retryAfter: 42 }],
+    [() => Response.json({}, { status: 429 }), { kind: "rateLimited", retryAfter: null }],
+    [() => Response.json({}, { status: 502 }), { kind: "unavailable" }],
+    [() => { throw new TypeError("fetch failed") }, { kind: "unavailable" }],
+  ]
+  for (const [response, expected] of cases) {
+    mockFetch(response)
+    assert.deepEqual(await refreshSession(), expected)
+  }
+})
+
+test("apiFetch : refresh en 429 → ApiError 429 avec message et Retry-After, sans redirection ni rejeu", async () => {
+  const calls = mockFetch((url) =>
+    url === "/api/auth/refresh"
+      ? Response.json({ error: "Trop de demandes" }, { status: 429, headers: { "retry-after": "30" } })
+      : Response.json({}, { status: 401 }),
+  )
+  const loc = fakeWindow()
+  await assert.rejects(getMyBookings(), (e: unknown) =>
+    e instanceof ApiError && e.status === 429 && e.retryAfter === 30 && e.message === "Trop de demandes en ce moment, réessayez dans 30 s.")
+  assert.deepEqual(calls.map((c) => c.url), ["/api/proxy/bookings/me", "/api/auth/refresh"])
+  assert.equal(loc.href, "")
+})
+
+test("apiFetch : refresh en 5xx ou réseau → ApiError 503, sans redirection", async () => {
+  for (const refresh of [() => Response.json({}, { status: 502 }), (): Response => { throw new TypeError("fetch failed") }]) {
+    mockFetch((url) => (url === "/api/auth/refresh" ? refresh() : Response.json({}, { status: 401 })))
+    const loc = fakeWindow()
+    await assert.rejects(getMyBookings(), (e: unknown) =>
+      e instanceof ApiError && e.status === 503 && e.message === "Service momentanément indisponible, réessayez.")
+    assert.equal(loc.href, "")
+  }
 })
 
 test("proxy.ts : page protégée sans access_token → /session (pas /login) ; avec access_token → laisse passer", () => {

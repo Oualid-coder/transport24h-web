@@ -4,11 +4,12 @@ import { isCrossOriginMutation } from "@/lib/request-guard"
 import { clearSessionCookies, REFRESH_COOKIE, refreshFromSetCookie, setSessionCookies } from "@/lib/session-cookies"
 
 const API_URL = process.env.API_URL ?? process.env.NEXT_PUBLIC_API_URL
+const UNAVAILABLE = "Service momentanément indisponible"
 
 // POST /api/auth/refresh : renouvelle access_token avec le cookie refresh_token (Path=/api/auth).
 // L'API lit le refresh token dans l'en-tête Cookie uniquement et renvoie { access_token, expires_in }.
-// 401 (absent, invalide, expiré, révoqué) et 403 (compte désactivé) : cookies effacés. 429, 5xx et
-// réseau : statut relayé, cookies gardés (erreur passagère).
+// 401 (absent, invalide, expiré, révoqué) et 403 (compte désactivé) : cookies effacés. 429 (« Trop de
+// demandes », Retry-After relayé), 5xx, réseau et réponse invalide (502) : cookies gardés (erreur passagère).
 export async function POST(request: NextRequest) {
   if (isCrossOriginMutation(request)) {
     return NextResponse.json({ error: "Requête refusée" }, { status: 403 })
@@ -30,21 +31,25 @@ export async function POST(request: NextRequest) {
       cache: "no-store",
     })
   } catch {
-    return NextResponse.json({ error: "Backend inaccessible" }, { status: 502 })
+    return NextResponse.json({ error: UNAVAILABLE }, { status: 502 })
   }
 
   if (!backendRes.ok) {
     const status = backendRes.status
-    const response = NextResponse.json({ error: "Session expirée" }, { status })
-    if (status === 401 || status === 403) clearSessionCookies(response)
+    const expired = status === 401 || status === 403
+    const error = expired ? "Session expirée" : status === 429 ? "Trop de demandes" : UNAVAILABLE
+    const response = NextResponse.json({ error }, { status })
+    // Seule une session refusée efface les cookies : 429 et 5xx sont passagers
+    if (expired) clearSessionCookies(response)
     const retryAfter = backendRes.headers.get("retry-after")
     if (retryAfter) response.headers.set("retry-after", retryAfter)
     return response
   }
 
   const data = (await backendRes.json().catch(() => null)) as { access_token?: unknown; expires_in?: unknown } | null
-  if (typeof data?.access_token !== "string" || typeof data.expires_in !== "number") {
-    return NextResponse.json({ error: "Réponse invalide" }, { status: 502 })
+  // expires_in <= 0 : cookie aussitôt expiré, /session ↔ page protégée bouclerait → échec
+  if (typeof data?.access_token !== "string" || typeof data.expires_in !== "number" || !(data.expires_in > 0)) {
+    return NextResponse.json({ error: UNAVAILABLE }, { status: 502 })
   }
 
   const response = NextResponse.json({ ok: true })
