@@ -29,6 +29,12 @@
 - Tous les appels vers le backend passent par `lib/api.ts` — ne pas appeler `fetch` directement dans les composants
 - URL de base : `process.env.NEXT_PUBLIC_API_URL` (défini dans `.env.local`)
 - Ne jamais hardcoder d'URL ou de hostname
+- Appels serveur (Route Handlers `/api/proxy`, `/api/auth/login`, Server Component `dashboard`) : base
+  `process.env.API_URL ?? process.env.NEXT_PUBLIC_API_URL`. En prod `API_URL` = gateway interne
+  (`deployments/k8s/deployment.yaml`, appliqué à la main : le CD ne fait que `kubectl set image`). Jamais
+  `API_URL` dans du code client. Chaque appel serveur transmet l'IP du visiteur avec `clientIpHeaders`
+  (`lib/client-ip.ts` : `x-real-ip` entrant posé par l'ingress, IP validée, sinon rien ; jamais
+  `x-forwarded-for` ni `true-client-ip`).
 
 ## Structure des routes
 

@@ -23,6 +23,12 @@ spec:
           imagePullPolicy: IfNotPresent
           ports:
             - containerPort: 3000
+          env:
+            # Appels serveur (proxy, login, dashboard) vers la gateway par le réseau interne,
+            # sans repasser par l'ingress public qui écraserait X-Real-IP (IP du visiteur).
+            # Lu au runtime, jamais exposé au navigateur (pas de préfixe NEXT_PUBLIC_).
+            - name: API_URL
+              value: "http://gateway.transport24h.svc.cluster.local:8080"
           readinessProbe:
             httpGet:
               path: /
