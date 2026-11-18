@@ -30,6 +30,7 @@ import type {
   TruckSurcharge,
   TruckType,
 } from "@/lib/types"
+import { safeRedirectPath } from "@/lib/safe-redirect"
 
 // Toutes les requêtes authentifiées passent par le proxy Next.js (/api/proxy).
 // Le Route Handler lit le cookie httpOnly access_token côté serveur et injecte
@@ -61,6 +62,58 @@ export function parseRetryAfter(value: string | null, now: number = Date.now()):
   return Math.max(0, Math.ceil((date - now) / 1000))
 }
 
+// Renouvellement de session (audit M5) : POST /api/auth/refresh repose access_token depuis le cookie
+// refresh_token. Une seule tentative en vol : les requêtes qui échouent en parallèle attendent la même.
+let refreshInFlight: Promise<boolean> | null = null
+
+export function refreshSession(): Promise<boolean> {
+  if (!refreshInFlight) {
+    refreshInFlight = fetch("/api/auth/refresh", { method: "POST", credentials: "same-origin" })
+      .then((res) => res.ok)
+      .catch(() => false)
+      .finally(() => {
+        refreshInFlight = null
+      })
+  }
+  return refreshInFlight
+}
+
+// Page /session (redirection de proxy.ts sans access_token) : destination après une tentative de refresh.
+// Succès → page demandée (chemin interne seulement), sinon → connexion avec la même redirection.
+// recentAttempt : un renouvellement vient déjà de réussir dans cet onglet et l'on revient ici (cookie non
+// enregistré) → connexion directe, sans nouvel essai, pour ne jamais boucler.
+export async function resumeSession(rawRedirect: string | null, recentAttempt = false): Promise<string> {
+  const redirect = safeRedirectPath(rawRedirect) ?? "/dashboard"
+  if (!recentAttempt && (await refreshSession())) return redirect
+  return `/login?redirect=${encodeURIComponent(redirect)}`
+}
+
+// Un corps ReadableStream est consommé au premier envoi : il ne peut pas être rejoué.
+// Chaîne, Blob/File (photos), ArrayBuffer, FormData et URLSearchParams sont relus à chaque envoi.
+export function isReplayableBody(body: BodyInit | null | undefined): boolean {
+  return !(typeof ReadableStream !== "undefined" && body instanceof ReadableStream)
+}
+
+function redirectToLogin(): void {
+  if (typeof window !== "undefined") {
+    window.location.href = `/login?redirect=${encodeURIComponent(window.location.pathname + window.location.search)}`
+  }
+}
+
+// Envoie la requête ; sur 401, un seul renouvellement de session puis un seul rejeu. Jamais de boucle :
+// un 401 après rejeu, ou un refresh refusé, redirige vers la connexion.
+async function fetchWithRefresh(url: string, init: RequestInit, body: BodyInit | null | undefined): Promise<Response> {
+  let res = await fetch(url, init)
+  if (res.status === 401 && isReplayableBody(body) && (await refreshSession())) {
+    res = await fetch(url, init)
+  }
+  if (res.status === 401) {
+    redirectToLogin()
+    throw new ApiError(401, "Non autorisé")
+  }
+  return res
+}
+
 // apiResponse exécute la requête via le proxy et lève ApiError sur tout statut non 2xx.
 // Retourne la Response brute pour les appels dont le code 2xx a un sens métier (202 vs 204).
 async function apiResponse(
@@ -69,20 +122,13 @@ async function apiResponse(
 ): Promise<Response> {
   const url = `${PROXY_BASE}${path}`
 
-  const res = await fetch(url, {
+  const res = await fetchWithRefresh(url, {
     headers: {
       "Content-Type": "application/json",
       ...init?.headers,
     },
     ...init,
-  })
-
-  if (res.status === 401) {
-    if (typeof window !== "undefined") {
-      window.location.href = `/login?redirect=${encodeURIComponent(window.location.pathname + window.location.search)}`
-    }
-    throw new ApiError(401, "Non autorisé")
-  }
+  }, init?.body)
 
   if (!res.ok) {
     let message = res.statusText
@@ -479,18 +525,13 @@ export async function uploadBookingPhoto(
   phase: "before" | "after",
   file: File,
 ): Promise<void> {
-  const res = await fetch(`${PROXY_BASE}/driver/bookings/${bookingId}/photos/${phase}`, {
+  // File (Blob) : relu à chaque envoi, donc rejouable après renouvellement de session
+  const res = await fetchWithRefresh(`${PROXY_BASE}/driver/bookings/${bookingId}/photos/${phase}`, {
     method: "POST",
     // Type vide (certains navigateurs mobiles) : image/jpeg, format de stockage de l'API
     headers: { "Content-Type": file.type || "image/jpeg" },
     body: file,
-  })
-  if (res.status === 401) {
-    if (typeof window !== "undefined") {
-      window.location.href = `/login?redirect=${encodeURIComponent(window.location.pathname + window.location.search)}`
-    }
-    throw new ApiError(401, "Non autorisé")
-  }
+  }, file)
   if (!res.ok) {
     let message = res.statusText
     try {
