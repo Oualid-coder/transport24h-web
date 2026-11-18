@@ -17,6 +17,8 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { createSetupIntent, confirmSetupIntent, getBookingById, ApiError } from "@/lib/api"
+import { EmailUnverifiedBanner } from "@/components/EmailUnverifiedBanner"
+import { isEmailNotVerifiedError } from "@/lib/email-verification"
 import type { Booking } from "@/lib/types"
 import { isChargeInProgress } from "@/lib/booking-status"
 
@@ -513,6 +515,7 @@ function PaymentContent() {
   const [booking, setBooking] = useState<Booking | null>(null)
   const [clientSecret, setClientSecret] = useState<string | null>(null)
   const [fetchError, setFetchError] = useState<string | null>(null)
+  const [emailUnverified, setEmailUnverified] = useState(false)
 
   useEffect(() => {
     if (document.cookie.includes("user_role=b2b")) {
@@ -529,15 +532,31 @@ function PaymentContent() {
         setClientSecret(si.client_secret)
       })
       .catch((err) => {
-        setFetchError(
-          err instanceof ApiError
-            ? err.message
-            : "Impossible de charger la page de paiement.",
-        )
+        // 403 « vérifiez votre email avant de payer » uniquement ; autre 403 → message normal
+        if (isEmailNotVerifiedError(err)) {
+          setEmailUnverified(true)
+        } else {
+          setFetchError(
+            err instanceof ApiError
+              ? err.message
+              : "Impossible de charger la page de paiement.",
+          )
+        }
       })
   }, [bookingId])
 
   const displayError = !bookingId ? "Identifiant de réservation manquant." : fetchError
+
+  if (emailUnverified) {
+    return (
+      <div className="mx-auto max-w-lg px-4 py-12">
+        <EmailUnverifiedBanner visible />
+        <Button type="button" variant="outline" className="mt-4 w-full" onClick={() => window.location.reload()}>
+          J&apos;ai vérifié mon email, réessayer
+        </Button>
+      </div>
+    )
+  }
 
   if (displayError) {
     return (

@@ -14,7 +14,7 @@ import { PasswordInput } from "@/components/PasswordInput"
 import { Card, CardContent, CardHeader } from "@/components/ui/card"
 import { register, ApiError } from "@/lib/api"
 import { safeRedirectPath } from "@/lib/safe-redirect"
-import { acceptTermsField, buildRegisterBody, isValidPhone, registerErrorMessage } from "@/lib/register"
+import { acceptTermsField, buildRegisterBody, isValidPhone, registerErrorMessage, registeredLoginUrl } from "@/lib/register"
 import { BackButton } from "@/components/BackButton"
 import { TermsCheckbox } from "@/components/TermsCheckbox"
 import { useState } from "react"
@@ -66,11 +66,8 @@ type RegisterForm = z.infer<typeof registerSchema>
   const onSubmit = async (data: RegisterForm) => {
     setServerError(null)
     try {
-      await register(buildRegisterBody(data))
-      const loginUrl = redirectParam
-        ? `/login?registered=1&redirect=${encodeURIComponent(redirectParam)}`
-        : "/login?registered=1"
-      router.push(loginUrl)
+      const created = await register(buildRegisterBody(data))
+      router.push(registeredLoginUrl(redirectParam, created?.email_verified))
     } catch (err) {
       if (err instanceof ApiError) {
         setServerError(registerErrorMessage(err.status, err.message))

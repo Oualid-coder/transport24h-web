@@ -101,3 +101,12 @@ export function registerErrorMessage(status: number, apiMessage: string): string
   }
   return apiMessage || "Une erreur est survenue. Veuillez réessayer."
 }
+
+// URL de connexion après inscription : `verify=sent` seulement si l'API répond email_verified === false
+// (un mail de vérification a été envoyé). `redirect` conservé pour reprendre le parcours.
+export function registeredLoginUrl(redirect: string | null, emailVerified: boolean | undefined): string {
+  const qs = new URLSearchParams({ registered: "1" })
+  if (emailVerified === false) qs.set("verify", "sent")
+  if (redirect) qs.set("redirect", redirect)
+  return `/login?${qs.toString()}`
+}

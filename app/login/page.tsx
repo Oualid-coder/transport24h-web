@@ -29,6 +29,7 @@ function LoginContent() {
   // Paramètre ignoré s'il ne désigne pas un chemin interne (redirection ouverte)
   const redirectParam = safeRedirectPath(sp.get("redirect"))
   const registered = sp.get("registered") === "1"
+  const verificationSent = sp.get("verify") === "sent"
 
   const router = useRouter()
   const [serverError, setServerError] = useState<string | null>(null)
@@ -74,7 +75,9 @@ function LoginContent() {
         {registered && (
           <div className="mb-4 flex items-center gap-2 rounded-lg border border-primary/30 bg-primary/10 px-4 py-3 text-sm text-primary">
             <CheckCircle2 className="size-4 shrink-0" />
-            Compte créé ! Connectez-vous maintenant.
+            {verificationSent
+              ? "Compte créé ! Un email de vérification vous a été envoyé : cliquez sur le lien qu'il contient avant de réserver. Connectez-vous maintenant."
+              : "Compte créé ! Connectez-vous maintenant."}
           </div>
         )}
 

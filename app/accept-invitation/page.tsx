@@ -1,6 +1,6 @@
 "use client"
 
-import { Suspense, useState } from "react"
+import { Suspense, useEffect, useState } from "react"
 import { useSearchParams, useRouter } from "next/navigation"
 import { CheckCircle, Loader2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
@@ -10,11 +10,16 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { acceptInvitation, ApiError } from "@/lib/api"
 import { acceptTermsField, buildAcceptInvitationBody } from "@/lib/register"
 import { TermsCheckbox } from "@/components/TermsCheckbox"
+import { stripTokenFromAddressBar } from "@/lib/url-token"
 
 function AcceptInvitationContent() {
   const sp = useSearchParams()
   const router = useRouter()
-  const token = sp.get("token") ?? ""
+  // Jeton figé au premier rendu : il est ensuite retiré de l'URL (stripTokenFromAddressBar)
+  const [token] = useState(() => sp.get("token") ?? "")
+  useEffect(() => {
+    stripTokenFromAddressBar()
+  }, [])
 
   const [password, setPassword] = useState("")
   const [confirm, setConfirm] = useState("")

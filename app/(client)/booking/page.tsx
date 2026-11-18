@@ -9,6 +9,8 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { createSavedQuote, createBooking, ApiError } from "@/lib/api"
+import { EmailUnverifiedBanner } from "@/components/EmailUnverifiedBanner"
+import { isEmailNotVerifiedError } from "@/lib/email-verification"
 import { BackButton } from "@/components/BackButton"
 import { TRUCK_VOLUME } from "@/lib/types"
 import type { TruckType } from "@/lib/types"
@@ -55,6 +57,7 @@ function BookingContent() {
   const [scheduledTime, setScheduledTime] = useState("09:00")
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [emailUnverified, setEmailUnverified] = useState(false)
 
   useEffect(() => {
     // user_role est non-httpOnly — lisible depuis document.cookie
@@ -95,6 +98,7 @@ function BookingContent() {
     if (loading || !scheduledAt || !scheduledTime || !draft) return
     setLoading(true)
     setError(null)
+    setEmailUnverified(false)
 
     // RFC3339 avec offset local : "2026-04-20T09:00:00+02:00"
     const localOffset = -new Date().getTimezoneOffset()
@@ -133,6 +137,11 @@ function BookingContent() {
       if (err instanceof ApiError) {
         if (err.status === 401) {
           router.push("/login?redirect=/booking")
+          return
+        }
+        // 403 « vérifiez votre email avant de réserver » uniquement ; autre 403 → message normal
+        if (isEmailNotVerifiedError(err)) {
+          setEmailUnverified(true)
           return
         }
         setError(err.message)
@@ -256,6 +265,8 @@ function BookingContent() {
               </div>
             </CardContent>
           </Card>
+
+          <EmailUnverifiedBanner visible={emailUnverified} />
 
           {error && (
             <p className="rounded-lg border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive">
