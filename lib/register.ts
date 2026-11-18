@@ -1,7 +1,7 @@
 // Logique pure des formulaires où la personne crée elle-même son compte ou sa candidature :
 // inscription (POST /auth/register), activation d'un compte entreprise (POST /auth/accept-invitation),
 // candidature partenaire (POST /partners). Corps envoyés et traduction des erreurs (testés avec node --test).
-import * as z from "zod"
+import * as z from "@/lib/zod"
 import type { AcceptInvitationBody, PartnerApplyBody, RegisterBody, TruckType } from "@/lib/types"
 import { TERMS_REQUIRED_MESSAGE, termsAcceptanceFields } from "@/lib/legal"
 import { ApiError } from "@/lib/api"
