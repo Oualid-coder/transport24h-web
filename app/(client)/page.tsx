@@ -25,6 +25,7 @@ import { DecorativeBlobs } from "@/components/DecorativeBlobs"
 import { getQuoteEstimate } from "@/lib/api"
 import { TRUCK_VOLUME } from "@/lib/types"
 import type { GeoPoint, TruckType } from "@/lib/types"
+import { useRole } from "@/components/RoleProvider"
 
 // Leaflet n'existe pas côté serveur
 const DevisMap = dynamic(
@@ -39,6 +40,8 @@ const TRUCKS: { type: TruckType; label: string; image: string }[] = [
 ]
 
 export default function HomePage() {
+  const role = useRole()
+  const isB2b = role === "b2b"
   const [truckType, setTruckType] = useState<TruckType>("12m3")
   const [handlers, setHandlers] = useState(1)
   const [origin, setOrigin] = useState<GeoPoint | null>(null)
@@ -309,14 +312,16 @@ export default function HomePage() {
                     </div>
                   ) : quote ? (
                     <div className="space-y-4">
-                      <div className="flex items-end justify-between">
-                        <span className="text-sm text-muted-foreground">
-                          Prix HT
-                        </span>
-                        <span className="text-3xl font-bold text-primary">
-                          {quote.price_ht.toFixed(2)} €
-                        </span>
-                      </div>
+                      {!isB2b && (
+                        <div className="flex items-end justify-between">
+                          <span className="text-sm text-muted-foreground">
+                            Prix HT
+                          </span>
+                          <span className="text-3xl font-bold text-primary">
+                            {quote.price_ht.toFixed(2)} €
+                          </span>
+                        </div>
+                      )}
                       <div className="space-y-1 text-xs text-muted-foreground">
                         <div className="flex justify-between">
                           <span>Distance</span>

@@ -1,13 +1,16 @@
 "use client"
 
+import { useState } from "react"
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 import {
   AlertCircle,
   Calendar,
   CheckCircle2,
+  Flag,
   Loader2,
   MapPin,
   Package,
+  Phone,
   Truck,
   Users,
 } from "lucide-react"
@@ -23,16 +26,18 @@ import {
 import type { AvailableBooking, Booking, BookingStatus } from "@/lib/types"
 import { BackButton } from "@/components/BackButton"
 import { BookingPhotoSection } from "@/components/BookingPhotoSection"
+import { CompleteBookingModal } from "@/components/CompleteBookingModal"
 
 // ── Constantes ───────────────────────────────────────────────────────────────
 
 const STATUS_LABEL: Record<BookingStatus, string> = {
   awaiting_payment: "En attente de paiement",
+  payment_processing: "Débit en cours",
   payment_failed: "Paiement échoué",
   pending_review: "En attente",
   confirmed: "Confirmé",
-  in_progress: "En cours",
-  completed: "Terminé",
+  assigned: "Chauffeur assigné",
+  done: "Terminé",
   cancelled: "Annulé",
 }
 
@@ -41,11 +46,12 @@ const STATUS_VARIANT: Record<
   "default" | "secondary" | "destructive" | "outline"
 > = {
   awaiting_payment: "outline",
+  payment_processing: "outline",
   payment_failed: "destructive",
   pending_review: "secondary",
   confirmed: "default",
-  in_progress: "default",
-  completed: "outline",
+  assigned: "default",
+  done: "outline",
   cancelled: "destructive",
 }
 
@@ -185,71 +191,105 @@ function AvailableBookingCard({ booking }: { booking: AvailableBooking }) {
 // ── Carte mission assignée ────────────────────────────────────────────────────
 
 function MyMissionCard({ booking }: { booking: Booking }) {
+  const queryClient = useQueryClient()
+  const [completeOpen, setCompleteOpen] = useState(false)
   const date = new Date(booking.scheduled_at)
+
   return (
-    <Card>
-      <CardHeader className="pb-2">
-        <div className="flex items-start justify-between gap-2">
-          <div className="space-y-0.5">
-            <CardTitle className="text-sm font-medium">
-              #{booking.id.slice(0, 8).toUpperCase()}
-            </CardTitle>
-            <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
-              <Calendar className="size-3" />
-              {date.toLocaleDateString("fr-FR", {
-                weekday: "short",
-                day: "numeric",
-                month: "short",
-              })}{" "}
-              à{" "}
-              {date.toLocaleTimeString("fr-FR", {
-                hour: "2-digit",
-                minute: "2-digit",
-              })}
-            </p>
+    <>
+      <Card>
+        <CardHeader className="pb-2">
+          <div className="flex items-start justify-between gap-2">
+            <div className="space-y-0.5">
+              <CardTitle className="text-sm font-medium">
+                #{booking.id.slice(0, 8).toUpperCase()}
+              </CardTitle>
+              <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                <Calendar className="size-3" />
+                {date.toLocaleDateString("fr-FR", {
+                  weekday: "short",
+                  day: "numeric",
+                  month: "short",
+                })}{" "}
+                à{" "}
+                {date.toLocaleTimeString("fr-FR", {
+                  hour: "2-digit",
+                  minute: "2-digit",
+                })}
+              </p>
+            </div>
+            <Badge variant={STATUS_VARIANT[booking.status]}>
+              {STATUS_LABEL[booking.status]}
+            </Badge>
           </div>
-          <Badge variant={STATUS_VARIANT[booking.status]}>
-            {STATUS_LABEL[booking.status]}
-          </Badge>
-        </div>
-      </CardHeader>
-      <CardContent className="space-y-3">
-        <div className="space-y-1.5 text-sm">
-          <div className="flex gap-2">
-            <MapPin className="mt-0.5 size-4 shrink-0 text-primary" />
-            <span className="line-clamp-1 text-muted-foreground">
-              {booking.pickup_address}
-            </span>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          <div className="space-y-1.5 text-sm">
+            <div className="flex gap-2">
+              <MapPin className="mt-0.5 size-4 shrink-0 text-primary" />
+              <span className="line-clamp-1 text-muted-foreground">
+                {booking.pickup_address}
+              </span>
+            </div>
+            <div className="flex gap-2">
+              <MapPin className="mt-0.5 size-4 shrink-0 text-muted-foreground/50" />
+              <span className="line-clamp-1 text-muted-foreground">
+                {booking.delivery_address}
+              </span>
+            </div>
           </div>
-          <div className="flex gap-2">
-            <MapPin className="mt-0.5 size-4 shrink-0 text-muted-foreground/50" />
-            <span className="line-clamp-1 text-muted-foreground">
-              {booking.delivery_address}
-            </span>
-          </div>
-        </div>
-        <div className="flex flex-wrap gap-3 text-xs text-muted-foreground">
-          <span className="flex items-center gap-1">
-            <Truck className="size-3.5" />
-            {booking.truck_type}
-          </span>
-          {booking.helpers_count > 0 && (
-            <span className="flex items-center gap-1">
-              <Users className="size-3.5" />
-              {booking.helpers_count} manut.
-            </span>
+          {booking.client_phone && (
+            <a
+              href={`tel:${booking.client_phone}`}
+              className="flex items-center gap-1.5 text-sm font-medium text-primary hover:underline"
+            >
+              <Phone className="size-3.5 shrink-0" />
+              {booking.client_phone}
+            </a>
           )}
-          <span className="ml-auto font-medium text-foreground">
-            {fmt(booking.price_ht)} € HT
-          </span>
-        </div>
-        <BookingPhotoSection
-          bookingId={booking.id}
-          variant="driver"
-          canUploadAfter={["confirmed", "in_progress", "completed"].includes(booking.status)}
-        />
-      </CardContent>
-    </Card>
+          <div className="flex flex-wrap gap-3 text-xs text-muted-foreground">
+            <span className="flex items-center gap-1">
+              <Truck className="size-3.5" />
+              {booking.truck_type}
+            </span>
+            {booking.helpers_count > 0 && (
+              <span className="flex items-center gap-1">
+                <Users className="size-3.5" />
+                {booking.helpers_count} manut.
+              </span>
+            )}
+            <span className="ml-auto font-medium text-foreground">
+              {fmt(booking.price_ht)} € HT
+            </span>
+          </div>
+          {booking.status === "assigned" && (
+            <Button
+              size="sm"
+              className="w-full"
+              onClick={() => setCompleteOpen(true)}
+            >
+              <Flag className="mr-2 size-3.5" />
+              Terminer la course
+            </Button>
+          )}
+          <BookingPhotoSection
+            bookingId={booking.id}
+            variant="driver"
+            canUploadAfter={["assigned", "done"].includes(booking.status)}
+          />
+        </CardContent>
+      </Card>
+
+      <CompleteBookingModal
+        open={completeOpen}
+        bookingId={booking.id}
+        onClose={() => setCompleteOpen(false)}
+        onCompleted={() => {
+          setCompleteOpen(false)
+          queryClient.invalidateQueries({ queryKey: MY_KEY })
+        }}
+      />
+    </>
   )
 }
 
@@ -269,14 +309,14 @@ export default function DriverDashboardPage() {
   })
 
   const upcoming = myBookings
-    .filter((b) => ["confirmed", "in_progress"].includes(b.status))
+    .filter((b) => b.status === "assigned")
     .sort(
       (a, b) =>
         new Date(a.scheduled_at).getTime() - new Date(b.scheduled_at).getTime(),
     )
 
   const past = myBookings
-    .filter((b) => ["completed", "cancelled"].includes(b.status))
+    .filter((b) => ["done", "cancelled"].includes(b.status))
     .sort(
       (a, b) =>
         new Date(b.scheduled_at).getTime() - new Date(a.scheduled_at).getTime(),

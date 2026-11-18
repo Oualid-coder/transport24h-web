@@ -5,19 +5,25 @@ import Image from "next/image"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import {
+  Building2,
   ChevronLeft,
   ChevronRight,
   LayoutDashboard,
   LogOut,
+  Receipt,
   Settings,
+  Truck,
   Users,
 } from "lucide-react"
 import { logout } from "@/lib/api"
 
 const NAV_ITEMS = [
-  { href: "/admin/dashboard", icon: LayoutDashboard, label: "Dashboard" },
-  { href: "/admin/pricing",   icon: Settings,        label: "Tarification" },
-  { href: "/admin/partners",  icon: Users,           label: "Partenaires" },
+  { href: "/admin/dashboard",  icon: LayoutDashboard, label: "Dashboard" },
+  { href: "/admin/pricing",    icon: Settings,        label: "Tarification" },
+  { href: "/admin/partners",   icon: Users,           label: "Partenaires" },
+  { href: "/admin/drivers",    icon: Truck,           label: "Chauffeurs" },
+  { href: "/admin/companies",  icon: Building2,       label: "Entreprises" },
+  { href: "/admin/credit-notes", icon: Receipt,       label: "Avoirs à émettre" },
 ]
 
 export function AdminSidebar({ children }: { children: React.ReactNode }) {

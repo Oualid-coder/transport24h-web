@@ -1,18 +1,9 @@
 import { cookies } from "next/headers"
 import { redirect } from "next/navigation"
-import Link from "next/link"
-import { Calendar, Clock, CreditCard, MapPin, Package } from "lucide-react"
-import { buttonVariants } from "@/components/ui/button"
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
+import { Package } from "lucide-react"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import type { Booking, BookingStatus } from "@/lib/types"
+import type { Booking } from "@/lib/types"
+import { BookingCardClient } from "@/components/BookingCardClient"
 import { EmailUnverifiedBanner } from "@/components/EmailUnverifiedBanner"
 
 async function getMyBookings(): Promise<Booking[]> {
@@ -32,121 +23,15 @@ async function getMyBookings(): Promise<Booking[]> {
   return res.json() as Promise<Booking[]>
 }
 
-const STATUS_LABEL: Record<BookingStatus, string> = {
-  awaiting_payment: "En attente de paiement",
-  payment_failed: "Paiement échoué",
-  pending_review: "En attente",
-  confirmed: "Confirmé",
-  in_progress: "En cours",
-  completed: "Terminé",
-  cancelled: "Annulé",
-}
-
-const STATUS_VARIANT: Record<
-  BookingStatus,
-  "default" | "secondary" | "destructive" | "outline"
-> = {
-  awaiting_payment: "outline",
-  payment_failed: "destructive",
-  pending_review: "secondary",
-  confirmed: "default",
-  in_progress: "default",
-  completed: "outline",
-  cancelled: "destructive",
-}
-
-function BookingCard({ booking }: { booking: Booking }) {
-  const date = new Date(booking.scheduled_at)
-  return (
-    <Card>
-      <CardHeader>
-        <div className="flex items-start justify-between gap-4">
-          <div className="space-y-1">
-            <CardTitle className="text-sm font-medium">
-              Transport #{booking.id.slice(0, 8)}
-            </CardTitle>
-            <CardDescription className="flex items-center gap-1">
-              <Calendar className="size-3" />
-              {date.toLocaleDateString("fr-FR", {
-                weekday: "long",
-                day: "numeric",
-                month: "long",
-                year: "numeric",
-              })}
-              {" à "}
-              {date.toLocaleTimeString("fr-FR", {
-                hour: "2-digit",
-                minute: "2-digit",
-              })}
-            </CardDescription>
-          </div>
-          <Badge variant={STATUS_VARIANT[booking.status]}>
-            {STATUS_LABEL[booking.status]}
-          </Badge>
-        </div>
-      </CardHeader>
-      <CardContent className="space-y-3">
-        <div className="space-y-1.5 text-sm">
-          <div className="flex gap-2">
-            <MapPin className="mt-0.5 size-4 shrink-0 text-primary" />
-            <span className="text-muted-foreground line-clamp-1">
-              {booking.pickup_address}
-            </span>
-          </div>
-          <div className="flex gap-2">
-            <MapPin className="mt-0.5 size-4 shrink-0 text-muted-foreground" />
-            <span className="text-muted-foreground line-clamp-1">
-              {booking.delivery_address}
-            </span>
-          </div>
-        </div>
-        <div className="flex flex-wrap gap-3 text-xs text-muted-foreground">
-          <span className="flex items-center gap-1">
-            <Package className="size-3" />
-            {booking.truck_type}
-          </span>
-          {booking.helpers_count > 0 && (
-            <span className="flex items-center gap-1">
-              <Clock className="size-3" />
-              {booking.helpers_count} manutentionnaire
-              {booking.helpers_count > 1 ? "s" : ""}
-            </span>
-          )}
-          <span className="ml-auto font-medium text-foreground">
-            {booking.price_ht.toFixed(2)} € HT
-          </span>
-        </div>
-        {booking.status === "awaiting_payment" && (
-          <Link
-            href={`/booking/payment?id=${booking.id}`}
-            className={buttonVariants({ size: "sm", className: "w-full" })}
-          >
-            <CreditCard className="mr-2 size-3.5" />
-            Reprendre le paiement
-          </Link>
-        )}
-        {booking.status === "payment_failed" && (
-          <Link
-            href={`/booking/payment?id=${booking.id}`}
-            className={buttonVariants({ variant: "destructive", size: "sm", className: "w-full" })}
-          >
-            <CreditCard className="mr-2 size-3.5" />
-            Mettre à jour mon paiement
-          </Link>
-        )}
-      </CardContent>
-    </Card>
-  )
-}
 
 export default async function DashboardPage() {
   const bookings = await getMyBookings()
 
   const upcoming = bookings.filter((b) =>
-    ["awaiting_payment", "payment_failed", "pending_review", "confirmed", "in_progress"].includes(b.status),
+    ["awaiting_payment", "payment_processing", "payment_failed", "pending_review", "confirmed", "assigned"].includes(b.status),
   )
   const history = bookings.filter((b) =>
-    ["completed", "cancelled"].includes(b.status),
+    ["done", "cancelled"].includes(b.status),
   )
 
   return (
@@ -179,7 +64,7 @@ export default async function DashboardPage() {
           ) : (
             <div className="space-y-4">
               {upcoming.map((b) => (
-                <BookingCard key={b.id} booking={b} />
+                <BookingCardClient key={b.id} booking={b} />
               ))}
             </div>
           )}
@@ -193,7 +78,7 @@ export default async function DashboardPage() {
           ) : (
             <div className="space-y-4">
               {history.map((b) => (
-                <BookingCard key={b.id} booking={b} />
+                <BookingCardClient key={b.id} booking={b} />
               ))}
             </div>
           )}

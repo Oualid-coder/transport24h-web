@@ -8,14 +8,15 @@ export const TRUCK_VOLUME: Record<TruckType, number> = {
 
 export type BookingStatus =
   | "awaiting_payment"
+  | "payment_processing" // débit Stripe en cours — annulation, remboursement, prix et adresse bloqués (409)
   | "payment_failed"
   | "pending_review"
   | "confirmed"
-  | "in_progress"
-  | "completed"
+  | "assigned"
+  | "done"
   | "cancelled"
 
-export type UserRole = "client" | "admin" | "driver"
+export type UserRole = "client" | "admin" | "driver" | "b2b"
 
 // ── Chauffeur (retourné par /admin/drivers) ───────────────────────────────────
 
@@ -55,6 +56,10 @@ export interface PartnerApplication {
   status: PartnerStatus
   created_at: string
   documents_count: number
+  kbis_uploaded: boolean
+  licence_mere_uploaded: boolean
+  rcp_uploaded: boolean
+  urssaf_uploaded: boolean
 }
 
 // ── Localisation ──────────────────────────────────────────────────────────────
@@ -150,6 +155,8 @@ export interface Booking {
   helpers_count: number
   truck_type: TruckType
   price_ht: number
+  vat_rate: number   // taux TVA en %, ex. 20.00
+  price_ttc: number  // price_ht × (1 + vat_rate/100)
   // Booking proprement dit
   scheduled_at: string
   client_comment?: string
@@ -165,7 +172,19 @@ export interface BookingPhotos {
 
 // ── Admin ─────────────────────────────────────────────────────────────────────
 
-export type PaymentStatus = "paid" | "pending" | "none"
+// Statut du dernier paiement (API admin) — succeeded est normalisé en paid par l'API
+export type PaymentStatus = "paid" | "pending" | "failed" | "refunded" | "none"
+
+export type InvitationStatus = "not_invited" | "sent" | "expired" | "active"
+
+export interface Company {
+  id: string
+  name: string
+  contact_email: string
+  invitation_status: InvitationStatus
+  created_at: string
+  invited_at?: string
+}
 
 // Booking enrichi retourné par les endpoints admin — inclut les infos client
 // et le statut de paiement. Étend Booking en rendant client_phone requis.
@@ -175,8 +194,8 @@ export interface BookingWithClient extends Omit<Booking, "client_phone"> {
   client_last_name: string
   client_email: string
   payment_status: PaymentStatus
+  price_locked: boolean // true → modification directe du prix refusée par l'API (409)
   last4?: string       // 4 derniers chiffres CB — présent si payment_status === "paid"
-  price_ttc: number    // price_ht × 1.20 calculé côté backend
   invoice_id?: string  // présent si une facture (FACT ou AVOIR) a été générée
 }
 
@@ -191,6 +210,48 @@ export interface RefundResult {
   status: string        // "refunded"
   amount_cents: number
   reason: string
+}
+
+// Réponse de POST /bookings/{id}/cancel — retournée par le handler Cancel
+export interface CancellationResult {
+  refund_percent: number        // 0 | 50 | 100
+  refund_amount_cents: number   // 0 si refund_failed ou palier 0 % ou jamais payé
+  refund_failed: boolean        // true si Stripe a rejeté — action admin requise
+  refund_message?: string       // message à afficher au client (présent notamment si refund_failed)
+}
+
+// Réponse de POST /payments/confirm-setup : 204 = carte enregistrée et débit lancé,
+// 202 = un débit est déjà en cours pour cette réservation (ne pas relancer).
+export interface ConfirmSetupResult {
+  processing: boolean
+}
+
+// ── Admin — avoirs à émettre ──────────────────────────────────────────────────
+
+// avoir_failed : remboursement confirmé, avoir non émis.
+// refund_ambiguous : issue du remboursement inconnue — à vérifier dans Stripe avant d'émettre.
+export type CreditNoteRetryReason = "avoir_failed" | "refund_ambiguous"
+
+// Ligne de GET /admin/credit-note-retries — mirrors Go creditNoteRetryResponse
+export interface CreditNoteRetry {
+  booking_id: string
+  refund_key: string
+  stripe_refund_id?: string
+  amount_cents: number
+  reason: CreditNoteRetryReason
+  last_error?: string
+  attempts: number
+  created_at: string
+  updated_at: string
+  resolved_at?: string
+}
+
+// Réponse 201 / 200 de POST /admin/credit-note-retries/{refund_key}/retry
+export interface CreditNoteRetryResult {
+  credit_note_id: string
+  credit_note_number: string
+  amount_ttc: number
+  created: boolean // true = avoir émis et envoyé (201), false = déjà émis (200)
 }
 
 export interface AdminStats {
@@ -219,6 +280,9 @@ export interface RegisterBody {
   first_name: string
   last_name: string
   phone?: string
+  // Case « 18 ans + CGV + confidentialité » cochée. La date est posée par le serveur.
+  terms_accepted?: boolean
+  terms_version?: string
 }
 
 export interface User {
@@ -241,6 +305,18 @@ export interface PartnerApplyBody {
   phone: string
   siret: string
   truck_type: TruckType
+  // Case « 18 ans + CGV + confidentialité » cochée. La date est posée par le serveur.
+  terms_accepted?: boolean
+  terms_version?: string
+}
+
+// Body vers POST /auth/accept-invitation (activation d'un compte entreprise invité)
+export interface AcceptInvitationBody {
+  token: string
+  password: string
+  // Case « 18 ans + CGV + confidentialité » cochée. La date est posée par le serveur.
+  terms_accepted?: boolean
+  terms_version?: string
 }
 
 // ── Paiement ──────────────────────────────────────────────────────────────────

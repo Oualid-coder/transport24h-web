@@ -2,7 +2,12 @@
 
 ## Stack
 
-- **Framework** : Next.js 14 App Router (voir `node_modules/next/dist/docs/` pour les conventions exactes — APIs et structure peuvent différer du training data)
+- **Runtime** : Node 22 LTS, version exacte `22.23.4` (image `node:22.23.4-alpine` dans les deux étages du
+  `Dockerfile`, `node-version: "22.23.4"` en CI). Monter en version exacte publiée depuis au moins deux semaines.
+- **Dépendances figées** : `next` 16.4.5, `react`/`react-dom` 19.2.4, `zod` 4.6.6, `shadcn` 4.2.0 (CLI, en
+  `devDependencies` : seul `app/globals.css` l'importe, à la compilation). Toute montée : version exacte
+  (`--save-exact`) après audit.
+- **Framework** : Next.js 16 App Router, version figée exacte `16.4.5` dans `package.json` (correctifs de sécurité du 2026-11-03 ; monter en version exacte après audit, jamais de `^`) (voir `node_modules/next/dist/docs/` pour les conventions exactes — APIs et structure peuvent différer du training data)
 - **Langage** : TypeScript strict (`"strict": true` dans tsconfig)
 - **Style** : Tailwind CSS
 - **Composants** : shadcn/ui
@@ -69,3 +74,23 @@ Les route groups `(client)`, `(admin)`, `(driver)` n'apparaissent pas dans les U
 ## Avant d'écrire du code Next.js
 
 Lire le guide pertinent dans `node_modules/next/dist/docs/` — les APIs, conventions et structure de fichiers peuvent avoir des breaking changes par rapport au training data.
+
+## Textes légaux, consentement, tests
+
+- `lib/legal.ts` : `TERMS_VERSION` (format API `^[A-Za-z0-9][A-Za-z0-9._-]{0,31}$`) est la source unique :
+  envoyée à l'inscription (`terms_version`) et affichée comme « dernière mise à jour » des CGV et de la
+  politique de confidentialité. La changer à chaque modification de l'un de ces textes (même jour qu'une
+  version déjà déployée : suffixe `.2`, `.3`… ; `formatTermsDate` n'affiche que les 10 premiers caractères).
+- Inscription : corps construit par `buildRegisterBody` (`lib/register.ts`) — `terms_accepted` + `terms_version`
+  seulement si la case est cochée, jamais de date (posée par le serveur), téléphone nettoyé (espaces, points,
+  tirets). Les 422 de l'API sont traduits par `registerErrorMessage`.
+- Même case (composant `components/TermsCheckbox.tsx`, champ zod `acceptTermsField`, message `TERMS_REQUIRED_MESSAGE`)
+  sur l'activation d'un compte entreprise (`buildAcceptInvitationBody` → POST /auth/accept-invitation) et la
+  candidature partenaire (`buildPartnerApplyBody` → POST /partners). Champs construits par `termsAcceptanceFields`
+  (`lib/legal.ts`). Pas de case pour les comptes créés par l'admin (chauffeurs salariés).
+- Textes : ne rien affirmer qui ne soit prouvé par le code ou la config des deux dépôts. Une information manquante
+  s'affiche en clair entre crochets (`ToComplete` dans la politique, encadré orange dans les CGV), jamais inventée.
+  Les annulations des CGV suivent `computeRefund` de l'API (bornes : 24 h pile → 50 %, 2 h pile → 0 %).
+- Cookies : Google Ads uniquement via `lib/consent.ts` (`sendAdsEvent`), jamais de `<Script>` Google direct.
+- Tests : `npm test` (Node 22.23.4 ou plus, vérifié dans l'image Docker ; lancé en CI ; `node --test`, sans dépendance ; résolution des imports `@/` par
+  `tests/ts-hooks.mjs`). Fichiers dans `tests/*.test.ts`.

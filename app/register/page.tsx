@@ -13,7 +13,10 @@ import { Label } from "@/components/ui/label"
 import { PasswordInput } from "@/components/PasswordInput"
 import { Card, CardContent, CardHeader } from "@/components/ui/card"
 import { register, ApiError } from "@/lib/api"
+import { safeRedirectPath } from "@/lib/safe-redirect"
+import { acceptTermsField, buildRegisterBody, isValidPhone, registerErrorMessage } from "@/lib/register"
 import { BackButton } from "@/components/BackButton"
+import { TermsCheckbox } from "@/components/TermsCheckbox"
 import { useState } from "react"
 
 function RegisterContent() {
@@ -26,7 +29,8 @@ const registerSchema = z
     phone: z
       .string()
       .trim()
-      .refine((v) => !v || /^(0|\+33)[1-9][0-9]{8}$/.test(v), {
+      // Espaces, points et tirets tolérés : retirés avant l'envoi (buildRegisterBody)
+      .refine((v) => !v || isValidPhone(v), {
         message: "Numéro invalide — ex : 0612345678 ou +33612345678",
       })
       .optional(),
@@ -35,6 +39,7 @@ const registerSchema = z
       .min(8, { error: "8 caractères minimum" })
       .regex(/[0-9]/, { message: "Le mot de passe doit contenir au moins un chiffre" }),
     confirmPassword: z.string(),
+    acceptTerms: acceptTermsField,
   })
   .refine((d) => d.password === d.confirmPassword, {
     message: "Les mots de passe ne correspondent pas",
@@ -44,7 +49,8 @@ const registerSchema = z
 type RegisterForm = z.infer<typeof registerSchema>
 
   const sp = useSearchParams()
-  const redirectParam = sp.get("redirect")
+  // Paramètre ignoré s'il ne désigne pas un chemin interne (redirection ouverte)
+  const redirectParam = safeRedirectPath(sp.get("redirect"))
 
   const router = useRouter()
   const [serverError, setServerError] = useState<string | null>(null)
@@ -60,22 +66,14 @@ type RegisterForm = z.infer<typeof registerSchema>
   const onSubmit = async (data: RegisterForm) => {
     setServerError(null)
     try {
-      await register({
-        first_name: data.firstName,
-        last_name: data.lastName,
-        email: data.email,
-        password: data.password,
-        phone: data.phone || undefined,
-      })
+      await register(buildRegisterBody(data))
       const loginUrl = redirectParam
         ? `/login?registered=1&redirect=${encodeURIComponent(redirectParam)}`
         : "/login?registered=1"
       router.push(loginUrl)
     } catch (err) {
-      if (err instanceof ApiError && err.status === 409) {
-        setServerError("Un compte existe déjà avec cet e-mail.")
-      } else if (err instanceof ApiError) {
-        setServerError(err.message)
+      if (err instanceof ApiError) {
+        setServerError(registerErrorMessage(err.status, err.message))
       } else {
         setServerError("Une erreur est survenue. Veuillez réessayer.")
       }
@@ -215,6 +213,12 @@ type RegisterForm = z.infer<typeof registerSchema>
                   </p>
                 )}
               </div>
+
+              {/* Case obligatoire — transmise à l'API (terms_accepted + terms_version, voir buildRegisterBody) */}
+              <TermsCheckbox
+                error={errors.acceptTerms?.message}
+                {...registerField("acceptTerms")}
+              />
 
               {serverError && (
                 <div className="rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">

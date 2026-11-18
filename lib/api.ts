@@ -4,7 +4,12 @@ import type {
   Booking,
   BookingPhotos,
   BookingWithClient,
+  CancellationResult,
+  Company,
+  ConfirmSetupResult,
   CreateBookingBody,
+  CreditNoteRetry,
+  CreditNoteRetryResult,
   CreateQuoteBody,
   Driver,
   DriverCreated,
@@ -13,6 +18,7 @@ import type {
   GeoPoint,
   HelpersSurcharge,
   PartnerApplyBody,
+  AcceptInvitationBody,
   PartnerApplication,
   PaymentIntent,
   PaginatedBookings,
@@ -43,10 +49,12 @@ export class ApiError extends Error {
   }
 }
 
-async function apiFetch<T>(
+// apiResponse exécute la requête via le proxy et lève ApiError sur tout statut non 2xx.
+// Retourne la Response brute pour les appels dont le code 2xx a un sens métier (202 vs 204).
+async function apiResponse(
   path: string,
   init?: RequestInit,
-): Promise<T> {
+): Promise<Response> {
   const url = `${PROXY_BASE}${path}`
 
   const res = await fetch(url, {
@@ -76,6 +84,14 @@ async function apiFetch<T>(
     throw new ApiError(res.status, message)
   }
 
+  return res
+}
+
+async function apiFetch<T>(
+  path: string,
+  init?: RequestInit,
+): Promise<T> {
+  const res = await apiResponse(path, init)
   if (res.status === 204) return undefined as T
   return res.json() as Promise<T>
 }
@@ -195,21 +211,51 @@ export function getMyBookings(): Promise<Booking[]> {
   return apiFetch<Booking[]>("/bookings/me")
 }
 
+// PUT /bookings/{id}/address — modifie les adresses et recalcule le prix
+// Bloque côté serveur si la date est passée ou le statut non modifiable.
+export function updateBookingAddress(
+  id: string,
+  body: {
+    pickup_address?: string
+    pickup_lat?: number
+    pickup_lng?: number
+    delivery_address?: string
+    delivery_lat?: number
+    delivery_lng?: number
+  },
+): Promise<Booking> {
+  return apiFetch<Booking>(`/bookings/${id}/address`, {
+    method: "PUT",
+    body: JSON.stringify(body),
+  })
+}
+
 export function getBookingById(id: string): Promise<Booking> {
   return apiFetch<Booking>(`/bookings/${id}`)
+}
+
+// POST /bookings/{id}/cancel — annulation par le client (JWT requis, propriétaire uniquement)
+export function cancelBooking(id: string): Promise<CancellationResult> {
+  return apiFetch<CancellationResult>(`/bookings/${id}/cancel`, { method: "POST" })
 }
 
 // ── Admin ─────────────────────────────────────────────────────────────────────
 
 // GET /admin/bookings — retourne un format paginé
-// Paramètres : status optionnel ("pending_review" | "today"), page (défaut 1), limit (défaut 20)
+// Paramètres :
+//   status : filtre par statut ("pending_review" | "confirmed" | "cancelled" | …)
+//   date   : filtre par date de course ("today" ou "YYYY-MM-DD")
+//   page, limit : pagination (défaut 1, 20)
+// Sans status, les réservations cancelled et payment_failed sont exclues (active_only).
 export function getAdminBookings(
   status?: string,
+  date?: string,
   page = 1,
   limit = 20,
 ): Promise<PaginatedBookings> {
   const params = new URLSearchParams()
   if (status) params.set("status", status)
+  if (date) params.set("date", date)
   params.set("page", String(page))
   params.set("limit", String(limit))
   return apiFetch<PaginatedBookings>(`/admin/bookings?${params.toString()}`)
@@ -221,14 +267,16 @@ export function getAdminStats(): Promise<AdminStats> {
 
 export function updateBookingPrice(id: string, priceHT: number): Promise<BookingWithClient> {
   return apiFetch<BookingWithClient>(`/admin/bookings/${id}/price`, {
-    method: "PATCH",
+    method: "PUT",
     body: JSON.stringify({ price_ht: priceHT }),
   })
 }
 
-export function confirmBooking(id: string): Promise<BookingWithClient> {
-  return apiFetch<BookingWithClient>(`/admin/bookings/${id}/confirm`, {
-    method: "POST",
+// PUT /admin/bookings/{id}/confirm — 204 sans corps.
+// 409 : pas en attente de validation, refus en cours, ou remboursement intégral / à vérifier.
+export function confirmBooking(id: string): Promise<void> {
+  return apiFetch<void>(`/admin/bookings/${id}/confirm`, {
+    method: "PUT",
   })
 }
 
@@ -244,11 +292,77 @@ export function adminRefund(
   })
 }
 
+// PUT /admin/bookings/{id}/schedule — modifie la date de la course
+// 422 si la date est passée, 409 si la course est terminée ou annulée
+export function updateBookingSchedule(
+  id: string,
+  scheduledAt: string,
+): Promise<BookingWithClient> {
+  return apiFetch<BookingWithClient>(`/admin/bookings/${id}/schedule`, {
+    method: "PUT",
+    body: JSON.stringify({ scheduled_at: scheduledAt }),
+  })
+}
+
+// POST /admin/bookings/{id}/cancel — annule un booking bloqué en awaiting_payment (aucun paiement capturé)
+export function cancelUnpaidBooking(id: string): Promise<void> {
+  return apiFetch<void>(`/admin/bookings/${id}/cancel`, { method: "POST" })
+}
+
+// POST /admin/bookings/{id}/reject — refuse un booking payé en pending_review (remboursement Stripe intégral)
+export function rejectBooking(id: string): Promise<void> {
+  return apiFetch<void>(`/admin/bookings/${id}/reject`, { method: "POST" })
+}
+
 // POST /admin/invoices/{id}/send — envoie la facture par email au client
 export function sendInvoice(invoiceId: string): Promise<{ status: string }> {
   return apiFetch<{ status: string }>(`/admin/invoices/${invoiceId}/send`, {
     method: "POST",
   })
+}
+
+// ── Admin — avoirs à émettre ──────────────────────────────────────────────────
+
+// GET /admin/credit-note-retries — remboursements dont l'avoir reste à émettre
+export function getCreditNoteRetries(): Promise<CreditNoteRetry[]> {
+  return apiFetch<CreditNoteRetry[]>("/admin/credit-note-retries")
+}
+
+// POST /admin/credit-note-retries/{refund_key}/retry
+// 201 → avoir émis et envoyé (created: true), 200 → déjà émis (created: false).
+// Erreurs : 404 plus rien à émettre, 409 vérification Stripe requise, 422 aucune facture d'origine.
+export function retryCreditNote(
+  refundKey: string,
+  confirmedInStripe: boolean,
+): Promise<CreditNoteRetryResult> {
+  return apiFetch<CreditNoteRetryResult>(
+    `/admin/credit-note-retries/${encodeURIComponent(refundKey)}/retry`,
+    {
+      method: "POST",
+      body: JSON.stringify({ confirmed_in_stripe: confirmedInStripe }),
+    },
+  )
+}
+
+// ── Admin — entreprises B2B ───────────────────────────────────────────────────
+
+// GET /admin/companies
+export function getAdminCompanies(): Promise<Company[]> {
+  return apiFetch<Company[]>("/admin/companies")
+}
+
+// POST /admin/companies — crée une entreprise (name, contact_email)
+export function createCompany(body: { name: string; contact_email: string }): Promise<Company> {
+  return apiFetch<Company>("/admin/companies", {
+    method: "POST",
+    body: JSON.stringify(body),
+  })
+}
+
+// POST /admin/companies/{id}/invite — envoie ou renvoie l'invitation B2B
+// 409 si le compte est déjà actif
+export function inviteCompany(id: string): Promise<void> {
+  return apiFetch<void>(`/admin/companies/${id}/invite`, { method: "POST" })
 }
 
 // ── Admin — chauffeurs & partenaires ─────────────────────────────────────────
@@ -269,6 +383,22 @@ export function createDriver(body: {
     method: "POST",
     body: JSON.stringify(body),
   })
+}
+
+// PUT /admin/drivers/{id} — met à jour les informations d'un chauffeur
+export function updateDriver(
+  id: string,
+  body: { first_name: string; last_name: string; email: string; phone: string },
+): Promise<Driver> {
+  return apiFetch<Driver>(`/admin/drivers/${id}`, {
+    method: "PUT",
+    body: JSON.stringify(body),
+  })
+}
+
+// DELETE /admin/drivers/{id} — désactive un chauffeur (soft-delete)
+export function deactivateDriver(id: string): Promise<void> {
+  return apiFetch<void>(`/admin/drivers/${id}`, { method: "DELETE" })
 }
 
 // PUT /admin/bookings/{id}/assign — assigne un chauffeur à une course
@@ -298,6 +428,19 @@ export function rejectPartner(id: string): Promise<PartnerApplication> {
   return apiFetch<PartnerApplication>(`/admin/partners/${id}/reject`, { method: "PUT" })
 }
 
+// GET /admin/partners/{id}/documents/{doc_type}
+// Retourne une URL signée valide 15 min pour consulter un document légal.
+// Ne jamais stocker l'URL retournée — elle expire.
+export async function getPartnerDocumentUrl(
+  applicationId: string,
+  docType: "kbis" | "licence_mere" | "rcp" | "urssaf",
+): Promise<string> {
+  const data = await apiFetch<{ url: string; expires_in: number }>(
+    `/admin/partners/${applicationId}/documents/${docType}`,
+  )
+  return data.url
+}
+
 // ── Chauffeur ─────────────────────────────────────────────────────────────────
 
 // GET /driver/bookings/available — courses non assignées visibles par tous les chauffeurs
@@ -316,18 +459,19 @@ export function getDriverMyBookings(): Promise<Booking[]> {
   return apiFetch<Booking[]>("/driver/bookings/mine")
 }
 
-// POST /driver/bookings/{id}/photos/{phase} — multipart/form-data, champ "photo", max 8 Mo
-// Bypass apiFetch : Content-Type ne doit pas être forcé à application/json (boundary multipart)
+// POST /driver/bookings/{id}/photos/{phase} — corps brut (le fichier lui-même), max 8 Mo.
+// L'API exige Content-Type image/* et Content-Length (posé par le navigateur) : pas de multipart.
+// Bypass apiFetch : Content-Type ne doit pas être forcé à application/json.
 export async function uploadBookingPhoto(
   bookingId: string,
   phase: "before" | "after",
   file: File,
 ): Promise<void> {
-  const form = new FormData()
-  form.append("photo", file)
   const res = await fetch(`${PROXY_BASE}/driver/bookings/${bookingId}/photos/${phase}`, {
     method: "POST",
-    body: form,
+    // Type vide (certains navigateurs mobiles) : image/jpeg, format de stockage de l'API
+    headers: { "Content-Type": file.type || "image/jpeg" },
+    body: file,
   })
   if (res.status === 401) {
     if (typeof window !== "undefined") {
@@ -346,14 +490,33 @@ export async function uploadBookingPhoto(
   }
 }
 
+// Réponse de GET …/photos : { before: [{ id, phase, url, uploaded_by, uploaded_at }], after: […] }
+type BookingPhotoDTO = { url?: string | null }
+type BookingPhotosDTO = {
+  before?: BookingPhotoDTO[] | null
+  after?: BookingPhotoDTO[] | null
+}
+
+// toBookingPhotos ne garde que les URLs signées, dans l'ordre renvoyé par l'API.
+export function toBookingPhotos(raw: BookingPhotosDTO | null | undefined): BookingPhotos {
+  const urls = (list?: BookingPhotoDTO[] | null): string[] =>
+    (list ?? []).flatMap((p) => (typeof p?.url === "string" && p.url !== "" ? [p.url] : []))
+  return { before: urls(raw?.before), after: urls(raw?.after) }
+}
+
 // GET /driver/bookings/{id}/photos — URLs signées 1h
-export function getDriverBookingPhotos(bookingId: string): Promise<BookingPhotos> {
-  return apiFetch<BookingPhotos>(`/driver/bookings/${bookingId}/photos`)
+export async function getDriverBookingPhotos(bookingId: string): Promise<BookingPhotos> {
+  return toBookingPhotos(await apiFetch<BookingPhotosDTO>(`/driver/bookings/${bookingId}/photos`))
+}
+
+// POST /driver/bookings/{id}/complete — le chauffeur marque la course comme terminée (204)
+export function completeBooking(id: string): Promise<void> {
+  return apiFetch<void>(`/driver/bookings/${id}/complete`, { method: "POST" })
 }
 
 // GET /admin/bookings/{id}/photos — URLs signées 15 min
-export function getAdminBookingPhotos(bookingId: string): Promise<BookingPhotos> {
-  return apiFetch<BookingPhotos>(`/admin/bookings/${bookingId}/photos`)
+export async function getAdminBookingPhotos(bookingId: string): Promise<BookingPhotos> {
+  return toBookingPhotos(await apiFetch<BookingPhotosDTO>(`/admin/bookings/${bookingId}/photos`))
 }
 
 // ── Auth (via Route Handler Next.js) ─────────────────────────────────────────
@@ -386,6 +549,14 @@ export async function logout(): Promise<void> {
 
 export function register(body: RegisterBody): Promise<void> {
   return apiFetch<void>("/auth/register", {
+    method: "POST",
+    body: JSON.stringify(body),
+  })
+}
+
+// POST /auth/accept-invitation — public, active un compte B2B depuis un token d'invitation
+export function acceptInvitation(body: AcceptInvitationBody): Promise<void> {
+  return apiFetch<void>("/auth/accept-invitation", {
     method: "POST",
     body: JSON.stringify(body),
   })
@@ -450,6 +621,20 @@ export async function uploadPartnerDocument(
   }
 }
 
+// ── Contact ───────────────────────────────────────────────────────────────────
+
+// POST /contact — public
+export function sendContact(body: {
+  email: string
+  subject: string
+  message: string
+}): Promise<void> {
+  return apiFetch<void>("/contact", {
+    method: "POST",
+    body: JSON.stringify(body),
+  })
+}
+
 // ── Paiement ──────────────────────────────────────────────────────────────────
 
 export function createPaymentIntent(bookingId: string): Promise<PaymentIntent> {
@@ -466,11 +651,18 @@ export function createSetupIntent(bookingId: string): Promise<SetupIntentRespons
   })
 }
 
-export function confirmSetupIntent(bookingId: string, paymentMethodId: string): Promise<void> {
-  return apiFetch<void>("/payments/confirm-setup", {
+// POST /payments/confirm-setup
+// 204 → carte enregistrée, débit lancé ; 202 → un débit est déjà en cours (ne pas relancer).
+// Erreurs : 404 réservation introuvable ou d'un autre client, 409 réservation non payable.
+export async function confirmSetupIntent(
+  bookingId: string,
+  paymentMethodId: string,
+): Promise<ConfirmSetupResult> {
+  const res = await apiResponse("/payments/confirm-setup", {
     method: "POST",
     body: JSON.stringify({ booking_id: bookingId, payment_method_id: paymentMethodId }),
   })
+  return { processing: res.status === 202 }
 }
 
 // ── Tarification (admin) ──────────────────────────────────────────────────────

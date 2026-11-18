@@ -14,6 +14,7 @@ import { Label } from "@/components/ui/label"
 import { PasswordInput } from "@/components/PasswordInput"
 import { Card, CardContent, CardHeader } from "@/components/ui/card"
 import { login, ApiError } from "@/lib/api"
+import { safeRedirectPath } from "@/lib/safe-redirect"
 import { BackButton } from "@/components/BackButton"
 
 const loginSchema = z.object({
@@ -25,7 +26,8 @@ type LoginForm = z.infer<typeof loginSchema>
 
 function LoginContent() {
   const sp = useSearchParams()
-  const redirectParam = sp.get("redirect")
+  // Paramètre ignoré s'il ne désigne pas un chemin interne (redirection ouverte)
+  const redirectParam = safeRedirectPath(sp.get("redirect"))
   const registered = sp.get("registered") === "1"
 
   const router = useRouter()

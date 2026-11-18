@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 import { Loader2, UserPlus, X } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
@@ -48,12 +48,20 @@ export function AssignDriverModal({
     },
     onError: (err) => {
       if (err instanceof ApiError && err.status === 409) {
-        setMsg({ type: "error", text: "Ce chauffeur est déjà assigné à cette course." })
+        setMsg({ type: "error", text: "Cette réservation ne peut pas être assignée dans son état actuel." })
       } else {
         setMsg({ type: "error", text: "Une erreur est survenue. Veuillez réessayer." })
       }
     },
   })
+
+  useEffect(() => {
+    if (open) {
+      setMsg(null)
+      mutation.reset()
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open])
 
   return (
     <Dialog

@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server"
+import { osrmRoutePath, parseRouteParams } from "@/lib/route-params"
 
 // Proxy vers OSRM — le browser ne doit jamais appeler OSRM directement.
 // OSRM tourne sur localhost (ou réseau interne), inaccessible depuis le client.
@@ -6,22 +7,18 @@ import { NextRequest, NextResponse } from "next/server"
 const OSRM_URL = process.env.OSRM_URL ?? "http://localhost:5001"
 
 export async function GET(request: NextRequest) {
-  const sp = request.nextUrl.searchParams
-  const fromLat = sp.get("from_lat")
-  const fromLng = sp.get("from_lng")
-  const toLat = sp.get("to_lat")
-  const toLng = sp.get("to_lng")
-
-  if (!fromLat || !fromLng || !toLat || !toLng) {
+  const points = parseRouteParams(request.nextUrl.searchParams)
+  if (!points) {
     return NextResponse.json(
-      { error: "Paramètres requis : from_lat, from_lng, to_lat, to_lng" },
+      {
+        error:
+          "Paramètres requis : from_lat, from_lng, to_lat, to_lng (nombres décimaux, latitude ±90, longitude ±180)",
+      },
       { status: 400 },
     )
   }
 
-  const url =
-    `${OSRM_URL}/route/v1/driving/${fromLng},${fromLat};${toLng},${toLat}` +
-    `?overview=full&geometries=geojson`
+  const url = `${OSRM_URL}${osrmRoutePath(points)}`
 
   try {
     const res = await fetch(url, {

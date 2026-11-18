@@ -2,26 +2,56 @@
 
 import { useSearchParams } from "next/navigation"
 import { Suspense, useEffect, useState } from "react"
+import { sendAdsEvent } from "@/lib/consent"
 import { CheckCircle2, Home, LayoutDashboard, Loader2 } from "lucide-react"
 import { buttonVariants } from "@/components/ui/button"
 import Link from "next/link"
 import { getBookingById } from "@/lib/api"
 import { BackButton } from "@/components/BackButton"
-import type { Booking } from "@/lib/types"
+import type { Booking, BookingStatus } from "@/lib/types"
+import { useRole } from "@/components/RoleProvider"
+
+const PAID_STATUSES = new Set<BookingStatus>([
+  "pending_review",
+  "confirmed",
+  "assigned",
+  "done",
+])
 
 function ConfirmationContent() {
   const sp = useSearchParams()
   const id = sp.get("id") ?? ""
+  const isB2b = useRole() === "b2b"
 
   const [booking, setBooking] = useState<Booking | null>(null)
   const [error, setError] = useState(false)
 
   useEffect(() => {
     if (!id) return
+    let cancelled = false
+
     getBookingById(id)
-      .then(setBooking)
-      .catch(() => setError(true))
-  }, [id])
+      .then((b) => {
+        if (cancelled) return
+        setBooking(b)
+        if (!isB2b && PAID_STATUSES.has(b.status)) {
+          // N'envoie rien sans consentement Google Ads
+          sendAdsEvent("conversion", {
+            send_to: "AW-18483112134/DcpjCMyZz48dEMbRt-1E",
+            value: 1.0,
+            currency: "EUR",
+            transaction_id: id,
+          })
+        }
+      })
+      .catch(() => {
+        if (!cancelled) setError(true)
+      })
+
+    return () => {
+      cancelled = true
+    }
+  }, [id, isB2b])
 
   if (id && !error && !booking) {
     return (

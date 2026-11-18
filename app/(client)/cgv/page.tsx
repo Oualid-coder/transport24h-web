@@ -1,6 +1,7 @@
 import Link from "next/link"
 import { Clock } from "lucide-react"
 import { BackButton } from "@/components/BackButton"
+import { TERMS_VERSION, formatTermsDate } from "@/lib/legal"
 
 export default function CGVPage() {
   return (
@@ -11,7 +12,7 @@ export default function CGVPage() {
 
       <h1 className="text-3xl font-bold">Conditions générales de vente</h1>
       <p className="mt-2 text-sm text-muted-foreground">
-        Dernière mise à jour : juin 2026
+        Dernière mise à jour : {formatTermsDate(TERMS_VERSION)}
       </p>
 
       <div className="mt-6 flex items-start gap-3 rounded-lg border border-primary/30 bg-primary/10 px-5 py-4">
@@ -99,8 +100,12 @@ export default function CGVPage() {
             </li>
           </ol>
           <p className="text-muted-foreground leading-relaxed">
-            Aucun débit n&apos;est effectué avant confirmation de la réservation. Le
-            paiement est prélevé selon les modalités décrites à l&apos;Article 5.
+            Si, à l&apos;issue de cet examen, Transport24h.fr ne peut pas réaliser
+            la prestation, la réservation est annulée et le Client est intégralement
+            remboursé.
+          </p>
+          <p className="text-muted-foreground leading-relaxed">
+            Le paiement est effectué dans les conditions décrites à l&apos;Article&nbsp;5.
           </p>
           <p className="text-muted-foreground leading-relaxed">
             Un chauffeur est ensuite affecté à la prestation. Le Client est informé
@@ -112,9 +117,10 @@ export default function CGVPage() {
           <h2 className="text-lg font-semibold">5. Paiement</h2>
           <p className="text-muted-foreground leading-relaxed">
             Le paiement s&apos;effectue exclusivement par carte bancaire via la plateforme
-            sécurisée Stripe. La carte du Client est enregistrée lors de la réservation et
-            débitée 24 heures avant la date de transport prévue. Aucun prélèvement
-            n&apos;est effectué au moment de la réservation.
+            sécurisée Stripe. Le montant TTC de la prestation est prélevé immédiatement
+            lors de la validation du paiement par le Client, y compris lorsque la
+            réservation comporte des précisions complémentaires nécessitant un examen
+            préalable par Transport24h.fr (Article&nbsp;4, alinéa&nbsp;4).
           </p>
           <p className="text-muted-foreground leading-relaxed">
             TRANSPORT24H.FR ne stocke aucune donnée bancaire — celles-ci sont gérées
@@ -153,7 +159,7 @@ export default function CGVPage() {
               <span className="mt-1.5 size-1.5 shrink-0 rounded-full bg-muted-foreground/50" />
               <span>
                 <span className="font-medium text-foreground">
-                  Entre 2 et 24 heures
+                  Plus de 2 heures et jusqu&apos;à 24 heures
                 </span>{" "}
                 avant la date et l&apos;heure prévues : remboursement à hauteur
                 de 50&nbsp;% du montant versé (TTC), le solde restant acquis à
@@ -165,7 +171,7 @@ export default function CGVPage() {
               <span className="mt-1.5 size-1.5 shrink-0 rounded-full bg-muted-foreground/50" />
               <span>
                 <span className="font-medium text-foreground">
-                  Moins de 2 heures
+                  2 heures ou moins
                 </span>{" "}
                 avant la date et l&apos;heure prévues : aucun remboursement,
                 sauf cas de force majeure dûment justifié.
@@ -179,8 +185,31 @@ export default function CGVPage() {
           </p>
         </section>
 
+        <section id="retractation" className="scroll-mt-24 space-y-3">
+          <h2 className="text-lg font-semibold">7. Droit de rétractation</h2>
+          <p className="text-muted-foreground leading-relaxed">
+            Conformément à l&apos;article L221-28, 12° du Code de la consommation, le
+            droit de rétractation ne peut être exercé pour les contrats «&nbsp;de
+            prestations de services d&apos;hébergement, autres que d&apos;hébergement
+            résidentiel, de services de transport de biens, de locations de voitures, de
+            restauration ou d&apos;activités de loisirs qui doivent être fournis à une
+            date ou à une période déterminée&nbsp;».
+          </p>
+          <p className="text-muted-foreground leading-relaxed">
+            Les prestations proposées sur transport24h.fr sont des services de transport
+            de biens exécutés à la date et à l&apos;heure choisies par le Client lors de
+            la réservation (Article&nbsp;4). Le Client ne dispose donc pas du droit de
+            rétractation de quatorze jours prévu pour les contrats conclus à distance.
+          </p>
+          <p className="text-muted-foreground leading-relaxed">
+            Le Client peut toutefois annuler sa réservation dans les conditions et
+            selon le barème de remboursement prévus à
+            l&apos;Article&nbsp;6 (Annulation et remboursement).
+          </p>
+        </section>
+
         <section className="space-y-3">
-          <h2 className="text-lg font-semibold">7. Responsabilités</h2>
+          <h2 className="text-lg font-semibold">8. Responsabilités</h2>
           <Placeholder />
           <p className="text-muted-foreground leading-relaxed">
             [À compléter — responsabilités respectives du prestataire et du Client,
@@ -189,7 +218,7 @@ export default function CGVPage() {
         </section>
 
         <section className="space-y-3">
-          <h2 className="text-lg font-semibold">8. Données personnelles</h2>
+          <h2 className="text-lg font-semibold">9. Données personnelles</h2>
           <p className="text-muted-foreground leading-relaxed">
             Les données personnelles collectées dans le cadre de la réservation sont
             traitées conformément à notre{" "}
@@ -204,20 +233,40 @@ export default function CGVPage() {
         </section>
 
         <section className="space-y-3">
-          <h2 className="text-lg font-semibold">9. Droit applicable et litiges</h2>
+          <h2 className="text-lg font-semibold">10. Droit applicable et litiges</h2>
           <p className="text-muted-foreground leading-relaxed">
             Les présentes CGV sont soumises au droit français. En cas de litige, et après
             tentative de résolution amiable, les tribunaux français seront seuls compétents.
           </p>
+          <p className="font-medium text-foreground">Médiation de la consommation</p>
           <p className="text-muted-foreground leading-relaxed">
-            Conformément aux dispositions du Code de la consommation, vous pouvez recourir
-            gratuitement à un médiateur de la consommation. [À compléter — coordonnées
-            du médiateur retenu]
+            Conformément aux articles L612-1 et suivants du Code de la consommation, le
+            Client consommateur a le droit de recourir gratuitement à un médiateur de la
+            consommation en vue de la résolution amiable d&apos;un litige qui l&apos;oppose
+            à TRANSPORT24H.FR.
+          </p>
+          <p className="text-muted-foreground leading-relaxed">
+            Avant de saisir le médiateur, le Client doit avoir tenté de résoudre le litige
+            directement auprès de TRANSPORT24H.FR par une réclamation écrite adressée à{" "}
+            <a
+              href="mailto:contact@transport24h.fr"
+              className="text-primary underline underline-offset-4 hover:no-underline"
+            >
+              contact@transport24h.fr
+            </a>
+            , restée sans réponse satisfaisante. La demande de médiation doit être
+            introduite dans un délai d&apos;un an à compter de cette réclamation écrite.
+          </p>
+          <p className="text-muted-foreground leading-relaxed">
+            Médiateur compétent :{" "}
+            <span className="rounded bg-amber-500/15 px-1.5 py-0.5 font-medium text-amber-600 dark:text-amber-400">
+              [coordonnées du médiateur à compléter]
+            </span>
           </p>
         </section>
 
         <section className="space-y-3">
-          <h2 className="text-lg font-semibold">10. Contact</h2>
+          <h2 className="text-lg font-semibold">11. Contact</h2>
           <p className="text-muted-foreground leading-relaxed">
             Pour toute question relative aux présentes CGV :{" "}
             <a

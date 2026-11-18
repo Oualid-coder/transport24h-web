@@ -78,7 +78,7 @@ export default function AdminDashboardPage() {
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <StatCard
           icon={<Euro className="size-5 text-primary" />}
-          label="CA aujourd'hui (HT)"
+          label="Réservations du jour (HT)"
           value={stats ? `${fmt(stats.revenue_today)} €` : "—"}
           loading={statsLoading}
         />
@@ -96,7 +96,7 @@ export default function AdminDashboardPage() {
         />
         <StatCard
           icon={<CreditCard className="size-5 text-primary" />}
-          label="Paiements reçus"
+          label="Réservations payées (total)"
           value={stats ? String(stats.paid_count) : "—"}
           loading={statsLoading}
         />
@@ -117,9 +117,11 @@ export default function AdminDashboardPage() {
             </span>
           </TabsTrigger>
           <TabsTrigger value="today">Aujourd&apos;hui</TabsTrigger>
+          <TabsTrigger value="cancelled">Annulées</TabsTrigger>
         </TabsList>
 
         <TabsContent value="all" className="mt-6">
+          {/* cancelled et payment_failed exclus par défaut (active_only côté API) */}
           <BookingList />
         </TabsContent>
 
@@ -128,7 +130,12 @@ export default function AdminDashboardPage() {
         </TabsContent>
 
         <TabsContent value="today" className="mt-6">
-          <BookingList status="today" />
+          {/* date=today filtre sur scheduled_at::date = CURRENT_DATE */}
+          <BookingList date="today" />
+        </TabsContent>
+
+        <TabsContent value="cancelled" className="mt-6">
+          <BookingList status="cancelled" />
         </TabsContent>
       </Tabs>
     </div>

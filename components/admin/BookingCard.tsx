@@ -3,9 +3,11 @@
 import { useState } from "react"
 import { useMutation, useQueryClient } from "@tanstack/react-query"
 import {
+  Ban,
   Calendar,
   CheckCircle2,
   CreditCard,
+  FileText,
   Loader2,
   Mail,
   MapPin,
@@ -15,26 +17,37 @@ import {
   Truck,
   UserPlus,
   Users,
+  X,
 } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader } from "@/components/ui/card"
+import {
+  Dialog,
+  DialogContent,
+  DialogTitle,
+  DialogClose,
+} from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
-import { confirmBooking, sendInvoice, updateBookingPrice, ApiError } from "@/lib/api"
-import type { BookingStatus, BookingWithClient, PaginatedBookings, PaymentStatus } from "@/lib/types"
+import { cancelUnpaidBooking, confirmBooking, rejectBooking, sendInvoice, updateBookingPrice, ApiError } from "@/lib/api"
+import type { BookingStatus, BookingWithClient, PaginatedBookings } from "@/lib/types"
+import { paymentBadge } from "@/lib/payment-status"
+import { isChargeInProgress } from "@/lib/booking-status"
 import { BookingPhotoSection } from "@/components/BookingPhotoSection"
 import { AssignDriverModal } from "./AssignDriverModal"
+import { EditDateModal } from "./EditDateModal"
 import { RefundModal } from "./RefundModal"
 
 // ── Constantes d'affichage ────────────────────────────────────────────────────
 
 const STATUS_LABEL: Record<BookingStatus, string> = {
   awaiting_payment: "En attente de paiement",
+  payment_processing: "Débit en cours",
   payment_failed: "Paiement échoué",
   pending_review: "À valider",
   confirmed: "Confirmé",
-  in_progress: "En cours",
-  completed: "Terminé",
+  assigned: "Chauffeur assigné",
+  done: "Terminé",
   cancelled: "Annulé",
 }
 
@@ -43,27 +56,13 @@ const STATUS_VARIANT: Record<
   "default" | "secondary" | "destructive" | "outline"
 > = {
   awaiting_payment: "outline",
+  payment_processing: "outline", // même badge que l'attente de paiement
   payment_failed: "destructive",
   pending_review: "secondary",
   confirmed: "default",
-  in_progress: "default",
-  completed: "outline",
+  assigned: "default",
+  done: "outline",
   cancelled: "destructive",
-}
-
-const PAYMENT_CONFIG: Record<PaymentStatus, { label: string; className: string }> = {
-  paid: {
-    label: "Payé",
-    className: "border-primary/30 bg-primary/10 text-primary",
-  },
-  pending: {
-    label: "Paiement en attente",
-    className: "border-amber-500/30 bg-amber-500/15 text-amber-400",
-  },
-  none: {
-    label: "Non payé",
-    className: "border-border bg-muted text-muted-foreground",
-  },
 }
 
 const fmt = (n: number) =>
@@ -82,13 +81,29 @@ export function BookingCard({
   const [editingPrice, setEditingPrice] = useState(false)
   const [priceInput, setPriceInput] = useState(fmt(booking.price_ht))
   const [assignOpen, setAssignOpen] = useState(false)
+  const [editDateOpen, setEditDateOpen] = useState(false)
   const [refundOpen, setRefundOpen] = useState(false)
+  const [cancelOpen, setCancelOpen] = useState(false)
+  const [rejectOpen, setRejectOpen] = useState(false)
   const [invoiceMsg, setInvoiceMsg] = useState<{ type: "success" | "error"; text: string } | null>(null)
+  const [cancelError, setCancelError] = useState<string | null>(null)
+  const [rejectError, setRejectError] = useState<string | null>(null)
+  const [confirmError, setConfirmError] = useState<string | null>(null)
+  const [priceError, setPriceError] = useState<string | null>(null)
 
   const priceTVA = booking.price_ttc - booking.price_ht
+  const chargeInProgress = isChargeInProgress(booking.status)
+  // price_locked est la règle de l'API (domain.IsPriceLocked) ; le débit en cours bloque aussi.
+  const priceEditable = !booking.price_locked && !chargeInProgress
 
   const priceMutation = useMutation({
     mutationFn: (ht: number) => updateBookingPrice(booking.id, ht),
+    onMutate: () => setPriceError(null),
+    onError: (err) => {
+      setPriceError(
+        err instanceof ApiError ? err.message : "Erreur lors de la modification du prix.",
+      )
+    },
     onSuccess: (updated) => {
       setEditingPrice(false)
       queryClient.setQueryData<PaginatedBookings>(queryKey, (old) =>
@@ -97,12 +112,46 @@ export function BookingCard({
     },
   })
 
+  // 204 sans corps : on recharge la liste. Sur 409 (refus en cours, course remboursée ou
+  // annulée entre-temps), message de l'API affiché et liste rechargée (l'état a changé).
   const confirmMutation = useMutation({
     mutationFn: () => confirmBooking(booking.id),
-    onSuccess: (updated) => {
-      queryClient.setQueryData<PaginatedBookings>(queryKey, (old) =>
-        old ? { ...old, bookings: old.bookings.map((b) => (b.id === updated.id ? updated : b)) } : old,
+    onMutate: () => setConfirmError(null),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey })
+    },
+    onError: (err) => {
+      setConfirmError(
+        err instanceof ApiError ? err.message : "Erreur lors de la confirmation de la réservation.",
       )
+      if (err instanceof ApiError && err.status === 409) queryClient.invalidateQueries({ queryKey })
+    },
+  })
+
+  const cancelMutation = useMutation({
+    mutationFn: () => cancelUnpaidBooking(booking.id),
+    onSuccess: () => {
+      setCancelOpen(false)
+      queryClient.invalidateQueries({ queryKey })
+    },
+    onError: (err) => {
+      setCancelError(
+        err instanceof ApiError ? err.message : "Erreur lors de l'annulation.",
+      )
+    },
+  })
+
+  const rejectMutation = useMutation({
+    mutationFn: () => rejectBooking(booking.id),
+    onSuccess: () => {
+      setRejectOpen(false)
+      queryClient.invalidateQueries({ queryKey })
+    },
+    onError: (err) => {
+      setRejectError(
+        err instanceof ApiError ? err.message : "Erreur lors du refus de la réservation.",
+      )
+      if (err instanceof ApiError && err.status === 409) queryClient.invalidateQueries({ queryKey })
     },
   })
 
@@ -119,7 +168,7 @@ export function BookingCard({
   })
 
   const date = new Date(booking.scheduled_at)
-  const payment = PAYMENT_CONFIG[booking.payment_status]
+  const payment = paymentBadge(booking.payment_status)
 
   return (
     <>
@@ -171,7 +220,18 @@ export function BookingCard({
               </p>
               <p className="mt-0.5 truncate text-xs text-muted-foreground">
                 {booking.client_email}
-                {booking.client_phone ? ` · ${booking.client_phone}` : ""}
+                {booking.client_phone && (
+                  <>
+                    {" · "}
+                    <a
+                      href={`tel:${booking.client_phone}`}
+                      className="hover:underline"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      {booking.client_phone}
+                    </a>
+                  </>
+                )}
               </p>
             </div>
           </div>
@@ -221,7 +281,7 @@ export function BookingCard({
 
           {/* ── Prix ────────────────────────────────────────────────────── */}
           <div className="rounded-lg bg-accent/40 px-3 py-2.5">
-            {editingPrice ? (
+            {editingPrice && priceEditable ? (
               <div className="flex items-center gap-2">
                 <div className="flex flex-1 items-center gap-2">
                   <Input
@@ -252,6 +312,7 @@ export function BookingCard({
                   className="h-7"
                   onClick={() => {
                     setEditingPrice(false)
+                    setPriceError(null)
                     setPriceInput(fmt(booking.price_ht))
                   }}
                 >
@@ -280,35 +341,67 @@ export function BookingCard({
                     </span>
                   </span>
                 </div>
-                <Button
-                  size="icon"
-                  variant="ghost"
-                  className="size-7 shrink-0"
-                  onClick={() => setEditingPrice(true)}
-                  title="Modifier le prix"
-                >
-                  <PencilLine className="size-3.5" />
-                </Button>
+                {chargeInProgress ? (
+                  <span className="shrink-0 text-xs text-muted-foreground">
+                    Prix bloqué (débit en cours)
+                  </span>
+                ) : booking.price_locked ? (
+                  <span className="shrink-0 text-xs text-muted-foreground">
+                    Prix verrouillé (course payée)
+                  </span>
+                ) : (
+                  <Button
+                    size="icon"
+                    variant="ghost"
+                    className="size-7 shrink-0"
+                    onClick={() => {
+                      setPriceError(null)
+                      setEditingPrice(true)
+                    }}
+                    title="Modifier le prix"
+                  >
+                    <PencilLine className="size-3.5" />
+                  </Button>
+                )}
               </div>
+            )}
+            {priceError && (
+              <p role="alert" className="mt-2 text-xs text-destructive">
+                {priceError}
+              </p>
             )}
           </div>
 
           {/* ── Actions ─────────────────────────────────────────────────── */}
           <div className="flex flex-wrap gap-2">
-            {booking.status === "pending_review" && (
-              <Button
-                size="sm"
-                className="flex-1"
-                disabled={confirmMutation.isPending}
-                onClick={() => confirmMutation.mutate()}
-              >
-                {confirmMutation.isPending ? (
-                  <Loader2 className="mr-1.5 size-3.5 animate-spin" />
-                ) : (
-                  <CheckCircle2 className="mr-1.5 size-3.5" />
-                )}
-                Confirmer
-              </Button>
+            {booking.status === "pending_review" && !chargeInProgress && (
+              <>
+                <Button
+                  size="sm"
+                  className="flex-1"
+                  disabled={confirmMutation.isPending}
+                  onClick={() => confirmMutation.mutate()}
+                >
+                  {confirmMutation.isPending ? (
+                    <Loader2 className="mr-1.5 size-3.5 animate-spin" />
+                  ) : (
+                    <CheckCircle2 className="mr-1.5 size-3.5" />
+                  )}
+                  Confirmer
+                </Button>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="flex-1 text-destructive hover:border-destructive/50 hover:bg-destructive/10 hover:text-destructive"
+                  onClick={() => {
+                    setRejectError(null)
+                    setRejectOpen(true)
+                  }}
+                >
+                  <Ban className="mr-1.5 size-3.5" />
+                  Refuser
+                </Button>
+              </>
             )}
             <Button
               size="sm"
@@ -319,28 +412,57 @@ export function BookingCard({
               <UserPlus className="mr-1.5 size-3.5" />
               Assigner un chauffeur
             </Button>
-            {booking.invoice_id && (
+            {booking.status !== "done" && booking.status !== "cancelled" && (
               <Button
                 size="sm"
                 variant="outline"
                 className="flex-1"
-                disabled={sendMutation.isPending}
-                onClick={() => {
-                  const id = booking.invoice_id
-                  if (!id) return
-                  setInvoiceMsg(null)
-                  sendMutation.mutate(id)
-                }}
+                onClick={() => setEditDateOpen(true)}
               >
-                {sendMutation.isPending ? (
-                  <Loader2 className="mr-1.5 size-3.5 animate-spin" />
-                ) : (
-                  <Mail className="mr-1.5 size-3.5" />
-                )}
-                Envoyer la facture
+                <Calendar className="mr-1.5 size-3.5" />
+                Modifier la date
               </Button>
             )}
-            {booking.payment_status === "paid" && (
+            {booking.invoice_id && (
+              <>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="flex-1"
+                  onClick={() =>
+                    window.open(
+                      `/api/proxy/admin/invoices/${booking.invoice_id}/pdf`,
+                      "_blank",
+                    )
+                  }
+                >
+                  <FileText className="mr-1.5 size-3.5" />
+                  Voir la facture
+                </Button>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="flex-1"
+                  disabled={sendMutation.isPending}
+                  onClick={() => {
+                    const id = booking.invoice_id
+                    if (!id) return
+                    setInvoiceMsg(null)
+                    sendMutation.mutate(id)
+                  }}
+                >
+                  {sendMutation.isPending ? (
+                    <Loader2 className="mr-1.5 size-3.5 animate-spin" />
+                  ) : (
+                    <Mail className="mr-1.5 size-3.5" />
+                  )}
+                  Envoyer la facture
+                </Button>
+              </>
+            )}
+            {booking.payment_status === "paid" &&
+              booking.status !== "pending_review" &&
+              !chargeInProgress && (
               <Button
                 size="sm"
                 variant="outline"
@@ -351,7 +473,28 @@ export function BookingCard({
                 Rembourser
               </Button>
             )}
+            {booking.status === "awaiting_payment" && !chargeInProgress && (
+              <Button
+                size="sm"
+                variant="outline"
+                className="flex-1 text-destructive hover:border-destructive/50 hover:bg-destructive/10 hover:text-destructive"
+                onClick={() => {
+                  setCancelError(null)
+                  setCancelOpen(true)
+                }}
+              >
+                <Ban className="mr-1.5 size-3.5" />
+                Annuler la réservation
+              </Button>
+            )}
           </div>
+
+          {chargeInProgress && (
+            <p className="rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-xs text-amber-400">
+              Débit en cours : annulation, remboursement et modification du prix sont
+              bloqués jusqu&apos;à la fin du paiement.
+            </p>
+          )}
 
           {/* ── Feedback envoi facture ───────────────────────────────────── */}
           {invoiceMsg && (
@@ -364,16 +507,172 @@ export function BookingCard({
             </p>
           )}
 
+          {/* ── Feedback annulation ─────────────────────────────────────────── */}
+          {cancelError && (
+            <p className="text-xs text-destructive">{cancelError}</p>
+          )}
+
+          {/* ── Feedback confirmation ─────────────────────────────────────────── */}
+          {confirmError && (
+            <p className="text-xs text-destructive">{confirmError}</p>
+          )}
+
+          {/* ── Feedback refus ────────────────────────────────────────────────── */}
+          {rejectError && (
+            <p className="text-xs text-destructive">{rejectError}</p>
+          )}
+
           {/* ── Photos ──────────────────────────────────────────────────── */}
           <BookingPhotoSection bookingId={booking.id} variant="admin" />
         </CardContent>
       </Card>
+
+      <Dialog
+        open={cancelOpen}
+        onOpenChange={(isOpen) => {
+          if (!isOpen && !cancelMutation.isPending) setCancelOpen(false)
+        }}
+      >
+        <DialogContent
+          showCloseButton={false}
+          className="max-w-md gap-0 overflow-hidden p-0 bg-background"
+        >
+          <div className="flex items-center justify-between border-b border-border px-5 py-4">
+            <DialogTitle className="font-semibold">
+              Annuler la réservation ?
+            </DialogTitle>
+            <DialogClose
+              render={
+                <button
+                  disabled={cancelMutation.isPending}
+                  className="rounded p-1 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground disabled:opacity-50"
+                  aria-label="Fermer"
+                />
+              }
+            >
+              <X className="size-4" />
+            </DialogClose>
+          </div>
+          <div className="space-y-4 p-5">
+            <div className="flex items-start gap-3 rounded-lg border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive">
+              <Ban className="mt-0.5 size-4 shrink-0" />
+              <p>
+                Cette réservation n&apos;a jamais été payée, elle sera{" "}
+                <strong>annulée définitivement</strong>. Aucun remboursement ne
+                sera effectué.
+              </p>
+            </div>
+            {cancelError && (
+              <p role="alert" className="text-xs text-destructive">
+                {cancelError}
+              </p>
+            )}
+            <div className="flex gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                className="flex-1"
+                disabled={cancelMutation.isPending}
+                onClick={() => setCancelOpen(false)}
+              >
+                Retour
+              </Button>
+              <Button
+                type="button"
+                variant="destructive"
+                className="flex-1"
+                disabled={cancelMutation.isPending}
+                onClick={() => cancelMutation.mutate()}
+              >
+                {cancelMutation.isPending && (
+                  <Loader2 className="mr-1.5 size-3.5 animate-spin" />
+                )}
+                Confirmer l&apos;annulation
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog
+        open={rejectOpen}
+        onOpenChange={(isOpen) => {
+          if (!isOpen && !rejectMutation.isPending) setRejectOpen(false)
+        }}
+      >
+        <DialogContent
+          showCloseButton={false}
+          className="max-w-md gap-0 overflow-hidden p-0 bg-background"
+        >
+          <div className="flex items-center justify-between border-b border-border px-5 py-4">
+            <DialogTitle className="font-semibold">
+              Refuser la réservation ?
+            </DialogTitle>
+            <DialogClose
+              render={
+                <button
+                  disabled={rejectMutation.isPending}
+                  className="rounded p-1 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground disabled:opacity-50"
+                  aria-label="Fermer"
+                />
+              }
+            >
+              <X className="size-4" />
+            </DialogClose>
+          </div>
+          <div className="space-y-4 p-5">
+            <div className="flex items-start gap-3 rounded-lg border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive">
+              <Ban className="mt-0.5 size-4 shrink-0" />
+              <p>
+                La réservation sera <strong>refusée</strong> et le client{" "}
+                <strong>remboursé intégralement</strong>. Cette action est
+                irréversible.
+              </p>
+            </div>
+            {rejectError && (
+              <p role="alert" className="text-xs text-destructive">
+                {rejectError}
+              </p>
+            )}
+            <div className="flex gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                className="flex-1"
+                disabled={rejectMutation.isPending}
+                onClick={() => setRejectOpen(false)}
+              >
+                Retour
+              </Button>
+              <Button
+                type="button"
+                variant="destructive"
+                className="flex-1"
+                disabled={rejectMutation.isPending}
+                onClick={() => rejectMutation.mutate()}
+              >
+                {rejectMutation.isPending && (
+                  <Loader2 className="mr-1.5 size-3.5 animate-spin" />
+                )}
+                Confirmer le refus
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       <AssignDriverModal
         open={assignOpen}
         bookingId={booking.id}
         queryKey={queryKey}
         onClose={() => setAssignOpen(false)}
+      />
+      <EditDateModal
+        open={editDateOpen}
+        bookingId={booking.id}
+        currentScheduledAt={booking.scheduled_at}
+        queryKey={queryKey}
+        onClose={() => setEditDateOpen(false)}
       />
       <RefundModal
         open={refundOpen}
