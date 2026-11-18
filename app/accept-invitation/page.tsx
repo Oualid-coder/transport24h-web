@@ -7,8 +7,8 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { acceptInvitation, ApiError } from "@/lib/api"
-import { acceptTermsField, buildAcceptInvitationBody } from "@/lib/register"
+import { acceptInvitation } from "@/lib/api"
+import { acceptInvitationErrorMessage, acceptTermsField, buildAcceptInvitationBody } from "@/lib/register"
 import { TermsCheckbox } from "@/components/TermsCheckbox"
 import { stripTokenFromAddressBar } from "@/lib/url-token"
 
@@ -58,19 +58,7 @@ function AcceptInvitationContent() {
       await acceptInvitation(buildAcceptInvitationBody(token, password, acceptTerms))
       setSuccess(true)
     } catch (err) {
-      if (err instanceof ApiError) {
-        if (err.status === 410) {
-          setError("Ce lien d'invitation a expiré. Veuillez contacter l'administrateur.")
-        } else if (err.status === 409) {
-          setError("Ce compte a déjà été activé.")
-        } else if (err.status === 422) {
-          setError("Mot de passe invalide.")
-        } else {
-          setError(err.message)
-        }
-      } else {
-        setError("Une erreur est survenue. Veuillez réessayer.")
-      }
+      setError(acceptInvitationErrorMessage(err))
     } finally {
       setLoading(false)
     }

@@ -4,6 +4,8 @@
 import * as z from "zod"
 import type { AcceptInvitationBody, PartnerApplyBody, RegisterBody, TruckType } from "@/lib/types"
 import { TERMS_REQUIRED_MESSAGE, termsAcceptanceFields } from "@/lib/legal"
+import { ApiError } from "@/lib/api"
+import { errorMessage } from "@/lib/error-message"
 
 // Case obligatoire « 18 ans + CGV + politique de confidentialité », identique sur tous les formulaires
 export const acceptTermsField = z.literal(true, { error: TERMS_REQUIRED_MESSAGE })
@@ -78,6 +80,7 @@ export function buildPartnerApplyBody(form: PartnerFormValues): PartnerApplyBody
 export function registerErrorMessage(status: number, apiMessage: string): string {
   if (status === 409) return "Un compte existe déjà avec cet e-mail."
   if (status === 422) {
+    if (isTermsRequiredError(status, apiMessage)) return TERMS_REQUIRED_MESSAGE
     // Le champ apparaît sous la forme 'registerRequest.Phone' et/ou 'Phone'
     const has = (field: string) => new RegExp(`[.']${field}'`).test(apiMessage)
     if (has("Phone"))
@@ -100,6 +103,47 @@ export function registerErrorMessage(status: number, apiMessage: string): string
     return "Certaines informations sont invalides. Vérifiez le formulaire."
   }
   return apiMessage || "Une erreur est survenue. Veuillez réessayer."
+}
+
+// Minuscules sans accents, pour comparer les messages de l'API
+function normalize(s: string): string {
+  return s.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase()
+}
+
+// 422 de l'API quand la case des conditions manque (inscription, activation, candidature) :
+// « Vous devez accepter les CGV et la politique de confidentialité. »
+export function isTermsRequiredError(status: number, apiMessage: string): boolean {
+  return status === 422 && normalize(apiMessage).includes("accepter les cgv")
+}
+
+export const INVITATION_LINK_INVALID_MESSAGE =
+  "Ce lien d'invitation est invalide ou a déjà été utilisé. Si votre compte n'est pas encore activé, demandez un nouveau lien à votre interlocuteur Transport24h."
+export const INVITATION_LINK_EXPIRED_MESSAGE =
+  "Ce lien d'invitation a expiré. Demandez un nouveau lien à votre interlocuteur Transport24h."
+const ACCEPT_INVITATION_FALLBACK = "Une erreur est survenue. Veuillez réessayer."
+
+// Erreurs de POST /auth/accept-invitation (handler AcceptInvitation de l'API) :
+// 410 lien expiré ; 422 « lien d'invitation invalide ou déjà utilisé », mot de passe (< 8 caractères,
+// > 72 octets), CGV, « token et password obligatoires » ou texte du validateur Go ; 400 JSON ; 500.
+export function acceptInvitationErrorMessage(err: unknown): string {
+  if (err instanceof ApiError) {
+    const msg = normalize(err.message)
+    if (err.status === 410) return INVITATION_LINK_EXPIRED_MESSAGE
+    // Non renvoyé par le handler actuel : conservé de l'ancien écran
+    if (err.status === 409) return "Ce compte a déjà été activé."
+    if (err.status === 422) {
+      if (isTermsRequiredError(err.status, err.message)) return TERMS_REQUIRED_MESSAGE
+      if (msg.includes("lien d'invitation")) return INVITATION_LINK_INVALID_MESSAGE
+      if (msg.includes("mot de passe")) {
+        if (msg.includes("ne doit pas depasser"))
+          return "Mot de passe trop long — 72 caractères maximum (sans accents)."
+        return "Mot de passe invalide."
+      }
+      return ACCEPT_INVITATION_FALLBACK
+    }
+  }
+  // 429 / 503 : messages communs ; 400, 5xx, réseau : repli
+  return errorMessage(err, ACCEPT_INVITATION_FALLBACK)
 }
 
 // URL de connexion après inscription : `verify=sent` seulement si l'API répond email_verified === false
