@@ -10,6 +10,7 @@ import { CheckCircle2, Loader2, XCircle } from "lucide-react"
 import { buttonVariants } from "@/components/ui/button"
 import { verifyEmail } from "@/lib/api"
 import { verifyEmailErrorMessage } from "@/lib/email-verification"
+import { stripTokenFromAddressBar } from "@/lib/url-token"
 
 type State = { kind: "pending" } | { kind: "success" } | { kind: "error"; message: string }
 
@@ -67,8 +68,14 @@ function PendingView() {
 }
 
 function VerifyEmailContent() {
-  const token = useSearchParams().get("token") ?? ""
+  const searchParams = useSearchParams()
+  // Jeton figé au premier rendu : il est ensuite retiré de l'URL (stripTokenFromAddressBar)
+  const [token] = useState(() => searchParams.get("token") ?? "")
   const [state, setState] = useState<State>({ kind: "pending" })
+
+  useEffect(() => {
+    stripTokenFromAddressBar()
+  }, [])
   // Jeton à usage unique : un seul appel par jeton, même si l'effet est rejoué (mode strict)
   const requested = useRef<string | null>(null)
 
