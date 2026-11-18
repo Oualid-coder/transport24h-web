@@ -48,6 +48,11 @@ const securityHeaders = [
 const nextConfig: NextConfig = {
   output: "standalone",
   poweredByHeader: false,
+  // Les mails d'invitation entreprise envoyés avant le correctif de l'API pointaient vers
+  // /auth/accept-invitation (route de l'API, 404 sur le site) : on redirige, jeton conservé.
+  async redirects() {
+    return [{ source: "/auth/accept-invitation", destination: "/accept-invitation", permanent: false }]
+  },
   async headers() {
     return [
       {
