@@ -14,14 +14,34 @@ export function transientErrorMessage(err: unknown): string | null {
   return null
 }
 
-// Message à afficher pour une erreur d'appel API : 429/503, sinon le message métier de l'API
-// (première lettre en majuscule), sinon le repli propre à l'écran.
+export const ROLE_FORBIDDEN_MESSAGE = "Accès réservé : cette page n'est pas disponible pour votre compte."
+
+// Minuscules sans accents : « Rôle insuffisant » et « role insuffisant » se comparent pareil.
+function normalize(s: string): string {
+  return s.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase()
+}
+
+// Texte technique remonté tel quel par l'API (validateur Go « Key: '…' failed on the … tag », erreurs SQL,
+// pq, encoding/json, identifiant entre guillemets Go) : jamais affiché.
+function looksTechnical(msg: string): boolean {
+  return (
+    msg.startsWith("Key: '") ||
+    /failed on the|sql|pq:|json:/i.test(msg) ||
+    /"[A-Za-z_][A-Za-z0-9_.]*"/.test(msg)
+  )
+}
+
+// Message à afficher pour une erreur d'appel API : 429/503, 403 de rôle de la gateway (message neutre),
+// sinon le message métier de l'API (première lettre en majuscule) s'il n'est pas technique,
+// sinon le repli propre à l'écran.
 export function errorMessage(err: unknown, fallback: string): string {
   const transient = transientErrorMessage(err)
   if (transient) return transient
   if (err instanceof ApiError && API_MESSAGE_STATUSES.has(err.status)) {
     const msg = err.message.trim()
-    if (msg) return msg.charAt(0).toUpperCase() + msg.slice(1)
+    // middleware RequireRole de la gateway (/admin/*, /driver/*) : `rôle insuffisant : "client"`
+    if (err.status === 403 && normalize(msg).startsWith("role insuffisant")) return ROLE_FORBIDDEN_MESSAGE
+    if (msg && !looksTechnical(msg)) return msg.charAt(0).toUpperCase() + msg.slice(1)
   }
   return fallback
 }

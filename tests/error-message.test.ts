@@ -1,7 +1,7 @@
 import { test } from "node:test"
 import assert from "node:assert/strict"
 import { ApiError } from "../lib/api"
-import { errorMessage, transientErrorMessage } from "../lib/error-message"
+import { errorMessage, transientErrorMessage, ROLE_FORBIDDEN_MESSAGE } from "../lib/error-message"
 import { retryErrorMessage } from "../lib/credit-note-errors"
 
 const FALLBACK = "Une erreur est survenue. Veuillez réessayer."
@@ -59,4 +59,28 @@ test("retryErrorMessage (avoirs) : 429/503 lisibles, repli inchangé", () => {
   assert.equal(retryErrorMessage(new ApiError(503, "avoirs désactivés")), "Service momentanément indisponible, réessayez.")
   assert.equal(retryErrorMessage(new ApiError(500, "x")), "L'avoir n'a pas pu être émis. Réessayez dans quelques instants.")
   assert.equal(retryErrorMessage(new Error("réseau")), "L'avoir n'a pas pu être émis. Réessayez dans quelques instants.")
+})
+
+test("errorMessage : 403 de rôle de la gateway → message neutre, sans le rôle", () => {
+  assert.equal(ROLE_FORBIDDEN_MESSAGE, "Accès réservé : cette page n'est pas disponible pour votre compte.")
+  assert.equal(errorMessage(new ApiError(403, 'rôle insuffisant : "client"'), FALLBACK), ROLE_FORBIDDEN_MESSAGE)
+  assert.equal(errorMessage(new ApiError(403, 'Rôle insuffisant : "driver"'), FALLBACK), ROLE_FORBIDDEN_MESSAGE)
+  assert.equal(errorMessage(new ApiError(403, "ROLE INSUFFISANT"), FALLBACK), ROLE_FORBIDDEN_MESSAGE)
+  // Autre 403 métier : inchangé
+  assert.equal(errorMessage(new ApiError(403, "ce compte est désactivé"), FALLBACK), "Ce compte est désactivé")
+})
+
+test("errorMessage : message technique de l'API → repli", () => {
+  // PUT /admin/bookings/{id}/assign : 422 avec le texte brut du validateur Go
+  const validator = "Key: 'AssignRequest.DriverID' Error:Field validation for 'DriverID' failed on the 'required' tag"
+  assert.equal(errorMessage(new ApiError(422, validator), FALLBACK), FALLBACK)
+  assert.equal(errorMessage(new ApiError(422, "champ failed on the 'uuid' tag"), FALLBACK), FALLBACK)
+  assert.equal(errorMessage(new ApiError(409, "pq: duplicate key value violates unique constraint"), FALLBACK), FALLBACK)
+  assert.equal(errorMessage(new ApiError(409, "sql: no rows in result set"), FALLBACK), FALLBACK)
+  assert.equal(errorMessage(new ApiError(422, "json: cannot unmarshal string into Go value"), FALLBACK), FALLBACK)
+  assert.equal(errorMessage(new ApiError(403, 'statut "pending_review" refusé'), FALLBACK), FALLBACK)
+  // Messages métier réels de l'API : gardés
+  assert.equal(errorMessage(new ApiError(422, "adresse non localisée : choisissez l'adresse dans la liste de suggestions"), FALLBACK),
+    "Adresse non localisée : choisissez l'adresse dans la liste de suggestions")
+  assert.equal(errorMessage(new ApiError(422, "truck_type invalide (6m3, 12m3 ou 20m3)"), FALLBACK), "Truck_type invalide (6m3, 12m3 ou 20m3)")
 })
