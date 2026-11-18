@@ -71,14 +71,23 @@ Les route groups `(client)`, `(admin)`, `(driver)` n'apparaissent pas dans les U
   de l'API), Secure en production. `clearSessionCookies` efface aussi l'ancien `refresh_token` en `Path=/auth`
   (en-tête brut ajouté en dernier : `response.cookies` est indexé par nom).
 - `/api/auth/refresh` (POST, garde d'origine, `X-Real-IP`) : cookie absent ou API 401/403 → même statut + cookies
-  effacés ; 429/5xx relayés, réseau 502, cookies gardés. Rotation gérée si l'API pose un jour un Set-Cookie.
+  effacés (« Session expirée ») ; 429 « Trop de demandes » (Retry-After relayé), 5xx « Service momentanément
+  indisponible », réseau et `expires_in` absent ou `<= 0` → 502 : cookies gardés, rien posé. Rotation gérée si l'API
+  pose un jour un Set-Cookie.
 - `/api/auth/logout` : appelle `/auth/logout` de l'API avec le refresh (timeout 5 s, erreur ignorée), puis efface tout.
-- Client (`lib/api.ts`) : `fetchWithRefresh` (utilisé par `apiResponse` et `uploadBookingPhoto`) → sur 401, un seul
-  `refreshSession()` (une seule promesse en vol partagée) puis un seul rejeu ; sinon redirection `/login`. Corps
-  `ReadableStream` jamais rejoué (`isReplayableBody`) ; `File`/`Blob`/chaîne le sont.
+- Client (`lib/api.ts`) : `refreshSession()` → `ok | unauthorized | rateLimited(retryAfter) | unavailable` (une seule
+  promesse en vol partagée). `fetchWithRefresh` (utilisé par `apiResponse` et `uploadBookingPhoto`) → sur 401, un seul
+  refresh puis un seul rejeu ; `unauthorized` → redirection `/login` ; `rateLimited` / `unavailable` → `ApiError` 429
+  (avec `retryAfter`) / 503 et `refreshErrorMessage`, **sans redirection** (le formulaire garde sa saisie). Raison :
+  `/auth/refresh` est limité à 10/min par IP à la gateway, et tant que l'ingress n'est pas en
+  `externalTrafficPolicy: Local`, tous les visiteurs partagent une IP. Corps `ReadableStream` jamais rejoué
+  (`isReplayableBody`) ; `File`/`Blob`/chaîne le sont.
 - `proxy.ts` : page protégée sans `access_token` → `/session?redirect=…` (pas `/login`) : la page client
-  `app/session/page.tsx` appelle `resumeSession` (refresh, puis navigation complète vers la page ou `/login`).
-  Garde anti-boucle : `sessionStorage["session-resume-at"]` (15 s).
+  `app/session/page.tsx` appelle `resumeSession` (refresh, puis navigation complète). Sans redirection valide :
+  accueil du rôle (`user_role`). 429 / indisponible : message, bouton « Réessayer », lien « Se reconnecter », un seul
+  nouvel essai automatique si `Retry-After` ≤ 60 s. Gardes anti-boucle : après un refresh réussi, `document.cookie`
+  doit contenir `user_role=` (posé avec `access_token`), sinon `/login` ; en complément
+  `sessionStorage["session-resume-at"]` (15 s, ignoré si le stockage lève).
 - Non couverts : `window.open` de la facture PDF admin (`/api/proxy/.../pdf`), Server Component `dashboard`
   (rend `[]` sur 401 dans la fenêtre où le cookie survit au jeton), navbar des pages publiques (`isLoggedIn` lit
   `access_token`, faux après 15 min d'inactivité jusqu'à la prochaine page protégée ou requête API).
