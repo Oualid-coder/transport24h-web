@@ -100,6 +100,11 @@ Les route groups `(client)`, `(admin)`, `(driver)` n'apparaissent pas dans les U
   429 → « Trop de demandes en ce moment, réessayez dans N s. » (`retryAfter`), 503 → « Service momentanément
   indisponible, réessayez. », 403/409/413/422 → message métier de l'API (majuscule initiale), sinon le repli de
   l'écran (400, 404, 5xx, réseau). Traductions propres à un écran (409, 404…) testées **avant** l'appel au helper.
+- 403 de rôle de la gateway (`rôle insuffisant : "client"`, RequireRole sur /admin/* et /driver/*) → « Accès
+  réservé : cette page n'est pas disponible pour votre compte. ». Message technique (`Key: '`, `failed on the`,
+  `sql`, `pq:`, `json:`, identifiant entre guillemets Go, ex. 422 du validateur sur l'assignation) → repli.
+- Pas de retrait optimiste d'un élément qui porte sa propre mutation : la carte démontée perd l'erreur
+  (dashboard chauffeur : la course quitte la liste seulement après le succès d'« Accepter »).
 - Paiement (pas de message brut de l'API) : `transientErrorMessage(err) ?? repli` (429/503 seulement).
 - `ApiError.message` est le texte de l'API, jamais le code : tester `err.status`, pas `message.includes("404")`.
 - Liste `useQuery` : `error && liste vide` → encadré `role="alert"` (bordure `destructive/30`, `AlertCircle`) à la
