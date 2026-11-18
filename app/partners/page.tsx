@@ -3,7 +3,7 @@
 import { useRef, useState } from "react"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
-import * as z from "zod"
+import * as z from "@/lib/zod"
 import Link from "next/link"
 import {
   ArrowRight,

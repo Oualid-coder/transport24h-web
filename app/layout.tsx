@@ -1,4 +1,6 @@
 import type { Metadata } from "next"
+import { headers } from "next/headers"
+import { CSPProvider } from "@base-ui/react/csp-provider"
 import { Geist, Geist_Mono } from "next/font/google"
 import { QueryProvider } from "@/components/providers/QueryProvider"
 import { CookieConsent } from "@/components/CookieConsent"
@@ -21,11 +23,16 @@ export const metadata: Metadata = {
   keywords: ["déménagement", "transport", "camion", "livraison express"],
 }
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: {
   children: React.ReactNode
 }) {
+  // CSP à nonce (proxy.ts) : lire l'en-tête rend chaque page à la requête, condition pour que
+  // Next.js pose le nonce sur ses scripts (une page prérendue au build serait bloquée).
+  // Base UI (Slider, Tabs) émet des <script> inline avant hydratation : il reçoit le même nonce.
+  const nonce = (await headers()).get("x-nonce") ?? undefined
+
   return (
     <html
       lang="fr"
@@ -33,9 +40,11 @@ export default function RootLayout({
       suppressHydrationWarning
     >
       <body className="min-h-screen bg-background text-foreground antialiased">
-        <QueryProvider>{children}</QueryProvider>
-        {/* gtag.js n'est injecté qu'après consentement (voir lib/consent.ts) */}
-        <CookieConsent />
+        <CSPProvider nonce={nonce}>
+          <QueryProvider>{children}</QueryProvider>
+          {/* gtag.js n'est injecté qu'après consentement (voir lib/consent.ts) */}
+          <CookieConsent />
+        </CSPProvider>
       </body>
     </html>
   )

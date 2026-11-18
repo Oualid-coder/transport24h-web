@@ -2,7 +2,7 @@
 import { test } from "node:test"
 import assert from "node:assert/strict"
 import { getAdminBookingPhotos, getDriverBookingPhotos, toBookingPhotos, uploadBookingPhoto } from "../lib/api"
-import { csp } from "../next.config"
+import { buildCsp } from "../lib/csp"
 
 type Call = { url: string; init: RequestInit }
 
@@ -86,7 +86,7 @@ test("lecture photos : objets {url,…} de l'API → tableaux d'URL", async () =
 })
 
 test("CSP : img-src autorise les URL présignées R2, en HTTPS seulement", () => {
-  const imgSrc = csp.split("; ").find((d) => d.startsWith("img-src "))
+  const imgSrc = buildCsp("n").split("; ").find((d) => d.startsWith("img-src "))
   assert.ok(imgSrc)
   assert.ok(imgSrc.split(" ").includes("https://*.r2.cloudflarestorage.com"))
   assert.ok(!imgSrc.includes("http://*.r2"))
