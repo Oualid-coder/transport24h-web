@@ -30,6 +30,7 @@ import type {
   TruckSurcharge,
   TruckType,
 } from "@/lib/types"
+import { safeRedirectPath } from "@/lib/safe-redirect"
 
 // Toutes les requêtes authentifiées passent par le proxy Next.js (/api/proxy).
 // Le Route Handler lit le cookie httpOnly access_token côté serveur et injecte
@@ -61,6 +62,132 @@ export function parseRetryAfter(value: string | null, now: number = Date.now()):
   return Math.max(0, Math.ceil((date - now) / 1000))
 }
 
+// Renouvellement de session (audit M5) : POST /api/auth/refresh repose access_token depuis le cookie
+// refresh_token. Une seule tentative en vol : les requêtes qui échouent en parallèle attendent la même.
+// unauthorized (401/403) : session finie → connexion. rateLimited (429, limite de la gateway par IP) et
+// unavailable (5xx, réseau) : passagers → message, sans redirection (le formulaire en cours est gardé).
+export type RefreshResult =
+  | { kind: "ok" }
+  | { kind: "unauthorized" }
+  | { kind: "rateLimited"; retryAfter: number | null }
+  | { kind: "unavailable" }
+
+let refreshInFlight: Promise<RefreshResult> | null = null
+
+export function refreshSession(): Promise<RefreshResult> {
+  if (!refreshInFlight) {
+    refreshInFlight = fetch("/api/auth/refresh", { method: "POST", credentials: "same-origin" })
+      .then((res): RefreshResult => {
+        if (res.ok) return { kind: "ok" }
+        if (res.status === 401 || res.status === 403) return { kind: "unauthorized" }
+        if (res.status === 429) return { kind: "rateLimited", retryAfter: parseRetryAfter(res.headers.get("retry-after")) }
+        return { kind: "unavailable" }
+      })
+      .catch((): RefreshResult => ({ kind: "unavailable" }))
+      .finally(() => {
+        refreshInFlight = null
+      })
+  }
+  return refreshInFlight
+}
+
+// Message affiché quand le renouvellement échoue pour une raison passagère
+export function refreshErrorMessage(result: { kind: "rateLimited"; retryAfter: number | null } | { kind: "unavailable" }): string {
+  if (result.kind === "unavailable") return "Service momentanément indisponible, réessayez."
+  return result.retryAfter !== null && result.retryAfter > 0
+    ? `Trop de demandes en ce moment, réessayez dans ${result.retryAfter} s.`
+    : "Trop de demandes en ce moment, réessayez dans quelques instants."
+}
+
+// Valeur d'un cookie non httpOnly (user_role) dans une chaîne document.cookie
+function cookieValue(cookieString: string, name: string): string | null {
+  for (const part of cookieString.split(";")) {
+    const [k, ...v] = part.trim().split("=")
+    if (k === name) return v.join("=")
+  }
+  return null
+}
+
+function homeForRole(role: string | null): string {
+  if (role === "admin") return "/admin/dashboard"
+  if (role === "driver") return "/driver/dashboard"
+  return "/dashboard"
+}
+
+const readDocumentCookies = (): string => (typeof document !== "undefined" ? document.cookie : "")
+
+export type ResumeResult =
+  | { kind: "navigate"; to: string }
+  | { kind: "retry"; message: string; retryAfter: number | null; loginUrl: string }
+
+// Page /session (redirection de proxy.ts sans access_token) : que faire après une tentative de refresh.
+// - succès ET cookie user_role visible (posé avec access_token) → page demandée, ou accueil du rôle ;
+//   cookie absent (non enregistré) → connexion, jamais de retour vers la page protégée (boucle) ;
+// - session refusée → connexion ; 429 / indisponible → message et nouvel essai (pas de redirection).
+// recentAttempt : un renouvellement vient déjà de réussir dans cet onglet (garde sessionStorage, en
+// complément) → connexion directe.
+function clearDocumentRoleCookie(): void {
+  if (typeof document === "undefined") return
+  document.cookie = "user_role=; path=/; max-age=0"
+}
+
+export async function resumeSession(
+  rawRedirect: string | null,
+  recentAttempt = false,
+  readCookies: () => string = readDocumentCookies,
+  clearRoleCookie: () => void = clearDocumentRoleCookie,
+): Promise<ResumeResult> {
+  const asked = safeRedirectPath(rawRedirect)
+  const loginUrl = (to: string | null) => (to ? `/login?redirect=${encodeURIComponent(to)}` : "/login")
+  if (recentAttempt) return { kind: "navigate", to: loginUrl(asked) }
+  // Un ancien user_role resté dans le navigateur ne doit pas faire croire que le refresh a
+  // posé ses cookies : on l'efface d'abord, sa présence ensuite prouve l'enregistrement.
+  clearRoleCookie()
+  const result = await refreshSession()
+  if (result.kind === "ok") {
+    const role = cookieValue(readCookies(), "user_role")
+    if (!role) return { kind: "navigate", to: loginUrl(asked) }
+    return { kind: "navigate", to: asked ?? homeForRole(role) }
+  }
+  if (result.kind === "unauthorized") return { kind: "navigate", to: loginUrl(asked) }
+  return {
+    kind: "retry",
+    message: refreshErrorMessage(result),
+    retryAfter: result.kind === "rateLimited" ? result.retryAfter : null,
+    loginUrl: loginUrl(asked),
+  }
+}
+
+// Un corps ReadableStream est consommé au premier envoi : il ne peut pas être rejoué.
+// Chaîne, Blob/File (photos), ArrayBuffer, FormData et URLSearchParams sont relus à chaque envoi.
+export function isReplayableBody(body: BodyInit | null | undefined): boolean {
+  return !(typeof ReadableStream !== "undefined" && body instanceof ReadableStream)
+}
+
+function redirectToLogin(): void {
+  if (typeof window !== "undefined") {
+    window.location.href = `/login?redirect=${encodeURIComponent(window.location.pathname + window.location.search)}`
+  }
+}
+
+// Envoie la requête ; sur 401, un seul renouvellement de session puis un seul rejeu. Jamais de boucle :
+// un 401 après rejeu, ou un refresh refusé (401/403), redirige vers la connexion. Refresh en 429 ou
+// indisponible : ApiError 429 / 503 avec message, sans redirection (l'utilisateur garde sa saisie).
+async function fetchWithRefresh(url: string, init: RequestInit, body: BodyInit | null | undefined): Promise<Response> {
+  let res = await fetch(url, init)
+  if (res.status === 401 && isReplayableBody(body)) {
+    const refreshed = await refreshSession()
+    if (refreshed.kind === "ok") res = await fetch(url, init)
+    else if (refreshed.kind === "rateLimited") throw new ApiError(429, refreshErrorMessage(refreshed), refreshed.retryAfter)
+    else if (refreshed.kind === "unavailable") throw new ApiError(503, refreshErrorMessage(refreshed))
+  }
+  if (res.status === 401) {
+    redirectToLogin()
+    throw new ApiError(401, "Non autorisé")
+  }
+  return res
+}
+
 // apiResponse exécute la requête via le proxy et lève ApiError sur tout statut non 2xx.
 // Retourne la Response brute pour les appels dont le code 2xx a un sens métier (202 vs 204).
 async function apiResponse(
@@ -69,20 +196,13 @@ async function apiResponse(
 ): Promise<Response> {
   const url = `${PROXY_BASE}${path}`
 
-  const res = await fetch(url, {
+  const res = await fetchWithRefresh(url, {
     headers: {
       "Content-Type": "application/json",
       ...init?.headers,
     },
     ...init,
-  })
-
-  if (res.status === 401) {
-    if (typeof window !== "undefined") {
-      window.location.href = `/login?redirect=${encodeURIComponent(window.location.pathname + window.location.search)}`
-    }
-    throw new ApiError(401, "Non autorisé")
-  }
+  }, init?.body)
 
   if (!res.ok) {
     let message = res.statusText
@@ -479,18 +599,13 @@ export async function uploadBookingPhoto(
   phase: "before" | "after",
   file: File,
 ): Promise<void> {
-  const res = await fetch(`${PROXY_BASE}/driver/bookings/${bookingId}/photos/${phase}`, {
+  // File (Blob) : relu à chaque envoi, donc rejouable après renouvellement de session
+  const res = await fetchWithRefresh(`${PROXY_BASE}/driver/bookings/${bookingId}/photos/${phase}`, {
     method: "POST",
     // Type vide (certains navigateurs mobiles) : image/jpeg, format de stockage de l'API
     headers: { "Content-Type": file.type || "image/jpeg" },
     body: file,
-  })
-  if (res.status === 401) {
-    if (typeof window !== "undefined") {
-      window.location.href = `/login?redirect=${encodeURIComponent(window.location.pathname + window.location.search)}`
-    }
-    throw new ApiError(401, "Non autorisé")
-  }
+  }, file)
   if (!res.ok) {
     let message = res.statusText
     try {
