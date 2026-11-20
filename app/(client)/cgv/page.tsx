@@ -40,6 +40,18 @@ export default function CGVPage() {
           <p className="text-muted-foreground leading-relaxed">
             Toute réservation implique l&apos;acceptation sans réserve des présentes CGV.
           </p>
+          <p className="font-medium text-foreground">Comptes entreprises</p>
+          <p className="text-muted-foreground leading-relaxed">
+            Les réservations effectuées au moyen d&apos;un compte entreprise, ouvert sur
+            invitation de TRANSPORT24H.FR, relèvent en outre de conditions particulières
+            convenues entre TRANSPORT24H.FR et l&apos;entreprise concernée, notamment en
+            matière de tarifs, de facturation, d&apos;annulation et de remboursement. Ces
+            réservations ne sont pas payées en ligne : TRANSPORT24H.FR établit une facture
+            à l&apos;entreprise selon ces conditions particulières. Les règles de paiement en
+            ligne (Articles&nbsp;4 et&nbsp;5) et de remboursement (Article&nbsp;6) des
+            présentes CGV ne leur sont pas applicables. En cas de contradiction, les
+            conditions particulières prévalent sur les présentes CGV.
+          </p>
         </section>
 
         <section className="space-y-3">
@@ -191,6 +203,10 @@ export default function CGVPage() {
             En cas d&apos;annulation par Transport24h.fr, le Client sera
             intégralement remboursé et pourra prétendre, le cas échéant, à une
             indemnisation conformément aux dispositions légales applicables.
+          </p>
+          <p className="text-muted-foreground leading-relaxed">
+            Pour les comptes entreprises, l&apos;annulation et le remboursement sont régis
+            par les conditions particulières mentionnées à l&apos;Article&nbsp;1.
           </p>
         </section>
 
