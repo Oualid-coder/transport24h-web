@@ -74,8 +74,8 @@ test("case non cochée : aucun champ terms_* envoyé", async () => {
 
 test("TERMS_VERSION respecte le format exigé par l'API", () => {
   assert.match(TERMS_VERSION, /^[A-Za-z0-9][A-Za-z0-9._-]{0,31}$/)
-  assert.equal(TERMS_VERSION, "2026-11-17.2")
-  assert.equal(formatTermsDate(), "17 novembre 2026")
+  assert.equal(TERMS_VERSION, "2026-11-19")
+  assert.equal(formatTermsDate(), "19 novembre 2026")
 })
 
 test("formatTermsDate : seuls les 10 premiers caractères (AAAA-MM-JJ) font la date", () => {

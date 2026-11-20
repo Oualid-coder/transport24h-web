@@ -198,8 +198,52 @@ export interface BookingWithClient extends Omit<Booking, "client_phone"> {
   client_email: string
   payment_status: PaymentStatus
   price_locked: boolean // true → modification directe du prix refusée par l'API (409)
+  is_b2b: boolean      // course d'un compte entreprise (facturée hors application)
   last4?: string       // 4 derniers chiffres CB — présent si payment_status === "paid"
   invoice_id?: string  // présent si une facture (FACT ou AVOIR) a été générée
+}
+
+// ── Admin — ajustement du prix d'une course payée ─────────────────────────────
+
+export type PriceAdjustmentDirection = "increase" | "decrease"
+
+// Réponse de GET /admin/bookings/{id}/price-adjustments/preview
+export interface PriceAdjustmentPreview {
+  old_price_ht: number
+  new_price_ht: number
+  old_price_ttc_cents: number
+  new_price_ttc_cents: number
+  delta_cents: number // > 0 : hausse débitée sur la carte, < 0 : baisse remboursée
+  direction: PriceAdjustmentDirection
+  charged_cents: number
+  refundable_cents: number
+}
+
+// Corps de POST /admin/bookings/{id}/price-adjustments
+export interface PriceAdjustmentBody {
+  new_price_ht: number
+  reason: string
+  client_agreed: true
+  request_id: string // UUID v4 : le même pour chaque nouvel essai de la même opération
+}
+
+export interface PriceAdjustment {
+  id: string
+  booking_id: string
+  direction: PriceAdjustmentDirection
+  old_price_ht: number
+  new_price_ht: number
+  delta_cents: number
+  status: string
+  reason: string
+  admin_id: string
+  created_at: string
+  completed_at?: string | null
+  credit_note_number?: string | null
+  invoice_number?: string | null
+  request_id: string              // pour reprendre une ligne « pending » avec le même identifiant
+  step?: string                   // étape atteinte (texte de l'API)
+  failure_reason?: string | null  // cause d'un « failed »
 }
 
 export interface PaginatedBookings {
