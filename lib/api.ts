@@ -497,6 +497,12 @@ export function inviteCompany(id: string): Promise<void> {
   return apiFetch<void>(`/admin/companies/${id}/invite`, { method: "POST" })
 }
 
+// POST /admin/companies/{id}/resend-invitation — compte entreprise non activé : nouveau lien
+// (l'ancien ne fonctionne plus). 409 si activé ou sans invitation, 429 + Retry-After (1 / 5 min, 5 / 24 h).
+export function resendCompanyInvitation(id: string): Promise<void> {
+  return apiFetch<void>(`/admin/companies/${encodeURIComponent(id)}/resend-invitation`, { method: "POST" })
+}
+
 // ── Admin — chauffeurs & partenaires ─────────────────────────────────────────
 
 // GET /admin/drivers — liste des chauffeurs actifs
@@ -558,6 +564,12 @@ export function approvePartner(id: string): Promise<PartnerApplication> {
 // PUT /admin/partners/{id}/reject
 export function rejectPartner(id: string): Promise<PartnerApplication> {
   return apiFetch<PartnerApplication>(`/admin/partners/${id}/reject`, { method: "PUT" })
+}
+
+// POST /admin/partners/{id}/resend-link — candidature pending : renvoie le mail avec le lien
+// d'envoi des documents. 409 si déjà traitée, 429 + Retry-After (1 / 5 min, 5 / 24 h).
+export function resendPartnerLink(id: string): Promise<void> {
+  return apiFetch<void>(`/admin/partners/${encodeURIComponent(id)}/resend-link`, { method: "POST" })
 }
 
 // GET /admin/partners/{id}/documents/{doc_type}

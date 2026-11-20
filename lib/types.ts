@@ -175,7 +175,8 @@ export interface BookingPhotos {
 // Statut du dernier paiement (API admin) — succeeded est normalisé en paid par l'API
 export type PaymentStatus = "paid" | "pending" | "failed" | "refunded" | "none"
 
-export type InvitationStatus = "not_invited" | "sent" | "expired" | "active"
+// Valeurs renvoyées par GET /admin/companies (domain.InvitationStatus côté API : "invited", pas "sent")
+export type InvitationStatus = "not_invited" | "invited" | "expired" | "active"
 
 export interface Company {
   id: string
