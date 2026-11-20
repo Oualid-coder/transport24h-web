@@ -7,6 +7,7 @@ import {
   Calendar,
   CheckCircle2,
   CreditCard,
+  Euro,
   FileText,
   Loader2,
   Mail,
@@ -33,9 +34,11 @@ import { cancelUnpaidBooking, confirmBooking, rejectBooking, sendInvoice, update
 import type { BookingStatus, BookingWithClient, PaginatedBookings } from "@/lib/types"
 import { paymentBadge } from "@/lib/payment-status"
 import { isChargeInProgress } from "@/lib/booking-status"
+import { canAdjustPrice } from "@/lib/price-adjustment"
 import { BookingPhotoSection } from "@/components/BookingPhotoSection"
 import { AssignDriverModal } from "./AssignDriverModal"
 import { EditDateModal } from "./EditDateModal"
+import { PriceAdjustmentModal } from "./PriceAdjustmentModal"
 import { RefundModal } from "./RefundModal"
 
 // ── Constantes d'affichage ────────────────────────────────────────────────────
@@ -83,6 +86,7 @@ export function BookingCard({
   const [assignOpen, setAssignOpen] = useState(false)
   const [editDateOpen, setEditDateOpen] = useState(false)
   const [refundOpen, setRefundOpen] = useState(false)
+  const [adjustOpen, setAdjustOpen] = useState(false)
   const [cancelOpen, setCancelOpen] = useState(false)
   const [rejectOpen, setRejectOpen] = useState(false)
   const [invoiceMsg, setInvoiceMsg] = useState<{ type: "success" | "error"; text: string } | null>(null)
@@ -473,6 +477,17 @@ export function BookingCard({
                 Rembourser
               </Button>
             )}
+            {canAdjustPrice(booking) && (
+              <Button
+                size="sm"
+                variant="outline"
+                className="flex-1"
+                onClick={() => setAdjustOpen(true)}
+              >
+                <Euro className="mr-1.5 size-3.5" />
+                Ajuster le prix
+              </Button>
+            )}
             {booking.status === "awaiting_payment" && !chargeInProgress && (
               <Button
                 size="sm"
@@ -680,6 +695,13 @@ export function BookingCard({
         amountTTC={booking.price_ttc}
         queryKey={queryKey}
         onClose={() => setRefundOpen(false)}
+      />
+      <PriceAdjustmentModal
+        open={adjustOpen}
+        bookingId={booking.id}
+        currentPriceHT={booking.price_ht}
+        queryKey={queryKey}
+        onClose={() => setAdjustOpen(false)}
       />
     </>
   )

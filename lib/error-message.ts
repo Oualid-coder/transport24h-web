@@ -23,7 +23,7 @@ function normalize(s: string): string {
 
 // Texte technique remonté tel quel par l'API (validateur Go « Key: '…' failed on the … tag », erreurs SQL,
 // pq, encoding/json, identifiant entre guillemets Go) : jamais affiché.
-function looksTechnical(msg: string): boolean {
+export function looksTechnical(msg: string): boolean {
   return (
     msg.startsWith("Key: '") ||
     /failed on the|sql|pq:|json:/i.test(msg) ||

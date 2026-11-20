@@ -126,6 +126,15 @@ export default function CGVPage() {
             TRANSPORT24H.FR ne stocke aucune donnée bancaire — celles-ci sont gérées
             intégralement par Stripe (certifié PCI DSS).
           </p>
+          <p className="font-medium text-foreground">Modification d&apos;une réservation payée</p>
+          <p className="text-muted-foreground leading-relaxed">
+            Toute modification d&apos;une réservation déjà payée entraînant un changement de
+            prix intervient uniquement à la demande du Client. En cas de hausse du prix, la
+            différence TTC est prélevée sur le moyen de paiement enregistré lors de la
+            réservation, après accord du Client sur le nouveau prix. En cas de baisse du
+            prix, la différence TTC est remboursée au Client sur le moyen de paiement
+            utilisé, et un avoir est émis.
+          </p>
         </section>
 
         <section className="space-y-3">
