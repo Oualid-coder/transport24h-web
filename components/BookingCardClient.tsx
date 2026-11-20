@@ -17,7 +17,7 @@ import type { Booking, BookingStatus } from "@/lib/types"
 import { EditAddressModal } from "@/components/EditAddressModal"
 import { CancelBookingModal } from "@/components/CancelBookingModal"
 import { useRole } from "@/components/RoleProvider"
-import { isChargeInProgress } from "@/lib/booking-status"
+import { ADDRESS_PAID_MESSAGE, addressEditAction, isChargeInProgress } from "@/lib/booking-status"
 
 export const STATUS_LABEL: Record<BookingStatus, string> = {
   awaiting_payment: "En attente de paiement",
@@ -44,12 +44,6 @@ export const STATUS_VARIANT: Record<
   cancelled: "destructive",
 }
 
-const MODIFIABLE_STATUSES = new Set<BookingStatus>([
-  "awaiting_payment",
-  "pending_review",
-  "confirmed",
-])
-
 const CANCELLABLE_STATUSES = new Set<BookingStatus>([
   "awaiting_payment",
   "pending_review",
@@ -57,19 +51,13 @@ const CANCELLABLE_STATUSES = new Set<BookingStatus>([
   "assigned",
 ])
 
-function canEditAddress(booking: Booking): boolean {
-  return (
-    MODIFIABLE_STATUSES.has(booking.status) &&
-    new Date(booking.scheduled_at) > new Date()
-  )
-}
-
 export function BookingCardClient({ booking }: { booking: Booking }) {
   const router = useRouter()
   const isB2b = useRole() === "b2b"
   const [editOpen, setEditOpen] = useState(false)
   const [cancelOpen, setCancelOpen] = useState(false)
   const date = new Date(booking.scheduled_at)
+  const addressAction = addressEditAction(booking)
 
   return (
     <Card>
@@ -164,7 +152,23 @@ export function BookingCardClient({ booking }: { booking: Booking }) {
           </p>
         )}
 
-        {canEditAddress(booking) && (
+        {addressAction === "paid" && (
+          <p className="rounded-lg border border-border bg-muted/40 px-3 py-2 text-xs text-muted-foreground">
+            {ADDRESS_PAID_MESSAGE}{" "}
+            <Link href="/contact" className="font-medium text-foreground underline underline-offset-2">
+              Formulaire de contact
+            </Link>
+            {" ou "}
+            <a
+              href="mailto:contact@transport24h.fr"
+              className="font-medium text-foreground underline underline-offset-2"
+            >
+              contact@transport24h.fr
+            </a>
+          </p>
+        )}
+
+        {addressAction === "edit" && (
           <Button
             size="sm"
             variant="outline"
