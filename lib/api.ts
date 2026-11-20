@@ -22,6 +22,9 @@ import type {
   PartnerApplication,
   PaymentIntent,
   PaginatedBookings,
+  PriceAdjustment,
+  PriceAdjustmentBody,
+  PriceAdjustmentPreview,
   PricingConfig,
   RefundResult,
   RegisterBody,
@@ -402,6 +405,38 @@ export function updateBookingPrice(id: string, priceHT: number): Promise<Booking
     method: "PUT",
     body: JSON.stringify({ price_ht: priceHT }),
   })
+}
+
+// ── Admin — ajustement du prix d'une course payée ─────────────────────────────
+
+// GET /admin/bookings/{id}/price-adjustments/preview — montants TTC débités ou remboursés (409/422 : refus)
+export function previewPriceAdjustment(
+  id: string,
+  newPriceHT: number,
+  signal?: AbortSignal,
+): Promise<PriceAdjustmentPreview> {
+  const params = new URLSearchParams({ new_price_ht: String(newPriceHT) })
+  return apiFetch<PriceAdjustmentPreview>(
+    `/admin/bookings/${id}/price-adjustments/preview?${params.toString()}`,
+    { signal },
+  )
+}
+
+// POST /admin/bookings/{id}/price-adjustments — 402 débit refusé (rien émis), 409/422 refus,
+// 503 résultat incertain : renvoyer le même request_id (l'API rend alors le même ajustement).
+export function createPriceAdjustment(
+  id: string,
+  body: PriceAdjustmentBody,
+): Promise<{ adjustment: PriceAdjustment }> {
+  return apiFetch<{ adjustment: PriceAdjustment }>(`/admin/bookings/${id}/price-adjustments`, {
+    method: "POST",
+    body: JSON.stringify(body),
+  })
+}
+
+// GET /admin/bookings/{id}/price-adjustments — historique des ajustements de la course
+export function getPriceAdjustments(id: string): Promise<{ adjustments: PriceAdjustment[] }> {
+  return apiFetch<{ adjustments: PriceAdjustment[] }>(`/admin/bookings/${id}/price-adjustments`)
 }
 
 // PUT /admin/bookings/{id}/confirm — 204 sans corps.
