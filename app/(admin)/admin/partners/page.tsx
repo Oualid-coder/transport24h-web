@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useRef, useState } from "react"
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 import {
   AlertCircle,
@@ -12,6 +12,7 @@ import {
   Loader2,
   Mail,
   Phone,
+  Send,
   Truck,
   User,
   XCircle,
@@ -20,8 +21,9 @@ import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { approvePartner, getAdminPartners, getPartnerDocumentUrl, rejectPartner, ApiError } from "@/lib/api"
+import { approvePartner, getAdminPartners, getPartnerDocumentUrl, rejectPartner, resendPartnerLink, ApiError } from "@/lib/api"
 import { errorMessage } from "@/lib/error-message"
+import { canResendPartnerLink, partnerLinkResentMessage, resendErrorMessage } from "@/lib/invitation-resend"
 import type { PartnerApplication, PartnerStatus } from "@/lib/types"
 import { BackButton } from "@/components/BackButton"
 
@@ -147,6 +149,21 @@ function PartnerCard({
     onSuccess: updateCache,
   })
 
+  // Renvoi du mail avec le lien d'envoi des documents (candidature en attente seulement).
+  // Garde synchrone : un double clic ne déclenche qu'un appel.
+  const resendInFlight = useRef(false)
+  const resendMutation = useMutation({
+    mutationFn: () => resendPartnerLink(partner.id),
+    onSettled: () => {
+      resendInFlight.current = false
+    },
+  })
+  const handleResend = () => {
+    if (resendInFlight.current) return
+    resendInFlight.current = true
+    resendMutation.mutate()
+  }
+
   const [copied, setCopied] = useState(false)
 
   const handleCopy = async () => {
@@ -248,6 +265,37 @@ function PartnerCard({
           )}
           {copied ? "Copié !" : "Copier le lien de reprise"}
         </Button>
+
+        {/* ── Renvoi du lien par mail (en attente seulement) ───────────── */}
+        {canResendPartnerLink(partner.status) && (
+          <div className="space-y-1">
+            <Button
+              size="sm"
+              variant="outline"
+              className="w-full"
+              disabled={resendMutation.isPending || busy}
+              aria-busy={resendMutation.isPending}
+              onClick={handleResend}
+            >
+              {resendMutation.isPending ? (
+                <Loader2 className="mr-1.5 size-3.5 animate-spin" />
+              ) : (
+                <Send className="mr-1.5 size-3.5" />
+              )}
+              {resendMutation.isPending ? "Envoi…" : "Renvoyer le lien"}
+            </Button>
+            {resendMutation.isSuccess && (
+              <p role="status" className="px-1 text-[11px] text-emerald-600">
+                {partnerLinkResentMessage(partner.email)}
+              </p>
+            )}
+            {resendMutation.isError && (
+              <p role="alert" className="px-1 text-[11px] text-destructive">
+                {resendErrorMessage(resendMutation.error, "Le lien n'a pas pu être renvoyé. Réessayez.")}
+              </p>
+            )}
+          </div>
+        )}
 
         {/* ── Actions (seulement si en attente) ───────────────────────── */}
         {partner.status === "pending" && (

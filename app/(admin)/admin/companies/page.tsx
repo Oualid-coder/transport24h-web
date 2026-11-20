@@ -1,12 +1,13 @@
 "use client"
 
-import { useState, useCallback } from "react"
+import { useState, useCallback, useRef } from "react"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { AlertCircle, Building2, Loader2, Mail, MailCheck, Plus, RefreshCw, Send } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { getAdminCompanies, inviteCompany, ApiError } from "@/lib/api"
+import { getAdminCompanies, inviteCompany, resendCompanyInvitation, ApiError } from "@/lib/api"
 import { errorMessage } from "@/lib/error-message"
+import { canResendInvitation, invitationResentMessage, resendErrorMessage } from "@/lib/invitation-resend"
 import type { Company, InvitationStatus } from "@/lib/types"
 import { BackButton } from "@/components/BackButton"
 import { CreateCompanyModal } from "@/components/admin/CreateCompanyModal"
@@ -18,7 +19,7 @@ const STATUS_CONFIG: Record<InvitationStatus, { label: string; className: string
     label: "Non invité",
     className: "border-border bg-transparent text-muted-foreground",
   },
-  sent: {
+  invited: {
     label: "Invitation envoyée",
     className: "border-amber-500/30 bg-amber-500/10 text-amber-500",
   },
@@ -61,16 +62,21 @@ function CompanyRow({
   company,
   inviting,
   onInvite,
+  resending,
+  resendDisabled,
+  onResend,
 }: {
   company: Company
   inviting: boolean
   onInvite: (id: string) => void
+  resending: boolean
+  resendDisabled: boolean
+  onResend: (company: Company) => void
 }) {
   const cfg = STATUS_CONFIG[company.invitation_status]
-  const canInvite =
-    company.invitation_status === "not_invited" ||
-    company.invitation_status === "expired"
-  const canResend = company.invitation_status === "sent"
+  const canInvite = company.invitation_status === "not_invited"
+  // Compte non activé (invitation en cours ou expirée) : nouveau lien, l'ancien ne fonctionne plus.
+  const canResend = canResendInvitation(company.invitation_status)
 
   return (
     <tr className="border-b border-border/50 transition-colors hover:bg-accent/30">
@@ -115,15 +121,16 @@ function CompanyRow({
             size="sm"
             variant="ghost"
             className="h-7 gap-1.5 px-2.5 text-xs text-muted-foreground hover:text-foreground"
-            disabled={inviting}
-            onClick={() => onInvite(company.id)}
+            disabled={resendDisabled}
+            aria-busy={resending}
+            onClick={() => onResend(company)}
           >
-            {inviting ? (
+            {resending ? (
               <Loader2 className="size-3 animate-spin" />
             ) : (
               <RefreshCw className="size-3" />
             )}
-            Renvoyer
+            {resending ? "Envoi…" : "Renvoyer l'invitation"}
           </Button>
         ) : null}
       </td>
@@ -170,6 +177,32 @@ export default function CompaniesPage() {
   const handleInvite = (id: string) => {
     setInvitingId(id)
     inviteMutation.mutate(id)
+  }
+
+  // Un seul renvoi à la fois : bouton désactivé pendant l'appel, second clic ignoré.
+  const [resendingId, setResendingId] = useState<string | null>(null)
+  const resendInFlight = useRef(false)
+  const resendMutation = useMutation({
+    mutationFn: (company: Company) => resendCompanyInvitation(company.id),
+    onSuccess: (_data, company) => {
+      pushToast("success", invitationResentMessage(company.contact_email))
+    },
+    onError: (err) => {
+      pushToast("error", resendErrorMessage(err, "L'invitation n'a pas pu être renvoyée."))
+    },
+    onSettled: () => {
+      resendInFlight.current = false
+      setResendingId(null)
+      // Statut (expirée → envoyée, ou activée entre-temps) relu dans tous les cas
+      queryClient.invalidateQueries({ queryKey: ["admin-companies"] })
+    },
+  })
+
+  const handleResend = (company: Company) => {
+    if (resendInFlight.current) return
+    resendInFlight.current = true
+    setResendingId(company.id)
+    resendMutation.mutate(company)
   }
 
   return (
@@ -239,6 +272,9 @@ export default function CompaniesPage() {
                   company={c}
                   inviting={invitingId === c.id}
                   onInvite={handleInvite}
+                  resending={resendingId === c.id}
+                  resendDisabled={resendingId !== null}
+                  onResend={handleResend}
                 />
               ))}
             </tbody>
