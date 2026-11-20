@@ -190,12 +190,10 @@ export default function PolitiqueConfidentialitePage() {
           <h2 className="text-lg font-semibold">5. Destinataires, sous-traitants et transferts hors de l&apos;Union européenne</h2>
           <p className="text-muted-foreground leading-relaxed">
             Vos données sont accessibles aux seules personnes habilitées de
-            TRANSPORT24H.FR. Le chauffeur affecté à votre course reçoit les informations
-            nécessaires à la prestation : adresses de départ et d&apos;arrivée, date et
-            heure, volume, nombre de manutentionnaires et votre numéro de téléphone.
-            Avant l&apos;affectation, les chauffeurs de la plateforme peuvent consulter
-            les courses à pourvoir (adresses, date et heure, volume, nombre de
-            manutentionnaires), sans votre nom ni votre numéro de téléphone.
+            TRANSPORT24H.FR. Le chauffeur affecté à votre course par TRANSPORT24H.FR
+            reçoit les informations nécessaires à la prestation : adresses de départ et
+            d&apos;arrivée, date et heure, volume, nombre de manutentionnaires et votre
+            numéro de téléphone.
           </p>
           <p className="text-muted-foreground leading-relaxed">
             Nous faisons appel aux prestataires suivants, qui traitent des données pour
