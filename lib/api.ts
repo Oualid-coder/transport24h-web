@@ -1,6 +1,5 @@
 import type {
   AdminStats,
-  AvailableBooking,
   Booking,
   BookingPhotos,
   BookingWithClient,
@@ -621,17 +620,6 @@ export async function getPartnerDocumentUrl(
 }
 
 // ── Chauffeur ─────────────────────────────────────────────────────────────────
-
-// GET /driver/bookings/available — courses non assignées visibles par tous les chauffeurs
-export function getAvailableBookings(): Promise<AvailableBooking[]> {
-  return apiFetch<AvailableBooking[]>("/driver/bookings/available")
-}
-
-// POST /driver/bookings/{id}/accept — le chauffeur s'assigne la course
-// Retourne 409 si un autre chauffeur vient de l'accepter en parallèle
-export function acceptBooking(id: string): Promise<Booking> {
-  return apiFetch<Booking>(`/driver/bookings/${id}/accept`, { method: "POST" })
-}
 
 // GET /driver/bookings/mine — courses assignées au chauffeur connecté
 export function getDriverMyBookings(): Promise<Booking[]> {
