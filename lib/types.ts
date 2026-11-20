@@ -163,6 +163,9 @@ export interface Booking {
   client_phone?: string
   created_at: string
   updated_at: string
+  // Course payée ou débit en cours (domain.IsPriceLocked de l'API, jamais pour une course B2B).
+  // Absent avec une API antérieure : traiter comme false.
+  price_locked?: boolean
 }
 
 export interface BookingPhotos {
