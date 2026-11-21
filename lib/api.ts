@@ -744,26 +744,37 @@ export function resendVerification(): Promise<{ status: string }> {
 // ── Partenaires ───────────────────────────────────────────────────────────────
 
 // POST /partners — public — retourne l'application créée (id nécessaire pour les uploads)
-export function registerPartner(body: PartnerApplyBody): Promise<PartnerApplication> {
-  return apiFetch<PartnerApplication>("/partners", {
+// et le jeton du lien d'envoi (upload_token, absent d'une API antérieure au jeton).
+export function registerPartner(body: PartnerApplyBody): Promise<PartnerApplication & { upload_token?: string }> {
+  return apiFetch<PartnerApplication & { upload_token?: string }>("/partners", {
     method: "POST",
     body: JSON.stringify(body),
   })
 }
 
+// En-têtes de l'upload : le jeton du lien seulement s'il est connu. Sans jeton, l'en-tête est
+// omis (une API antérieure au jeton accepte alors l'upload ; l'API actuelle répond 401).
+export function partnerUploadHeaders(contentType: string, uploadToken: string | null): Record<string, string> {
+  const headers: Record<string, string> = { "Content-Type": contentType }
+  if (uploadToken) headers["X-Upload-Token"] = uploadToken
+  return headers
+}
+
 // POST /partners/{id}/documents/{doc_type}
-// Appel direct (pas via proxy) — l'applicant n'est pas authentifié.
+// Appel direct (pas via proxy) — l'applicant n'est pas authentifié. Jeton du lien dans l'en-tête
+// X-Upload-Token (autorisé par le CORS de la gateway), jamais dans l'URL.
 // Le backend accepte le corps brut ; Content-Length est posé automatiquement par le navigateur.
 export async function uploadPartnerDocument(
   partnerId: string,
   docType: "kbis" | "licence_mere" | "rcp" | "urssaf",
   file: File,
+  uploadToken: string | null,
 ): Promise<void> {
   const res = await fetch(
     `${PUBLIC_API_URL}/partners/${partnerId}/documents/${docType}`,
     {
       method: "POST",
-      headers: { "Content-Type": file.type },
+      headers: partnerUploadHeaders(file.type, uploadToken),
       body: file,
     },
   )
