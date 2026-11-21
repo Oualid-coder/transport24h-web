@@ -6,6 +6,7 @@ import type {
   CancellationResult,
   Company,
   ConfirmSetupResult,
+  CreatedCompany,
   CreateBookingBody,
   CreditNoteRetry,
   CreditNoteRetryResult,
@@ -16,6 +17,7 @@ import type {
   EstimateResult,
   GeoPoint,
   HelpersSurcharge,
+  InviteCompanyBody,
   PartnerApplyBody,
   AcceptInvitationBody,
   PartnerApplication,
@@ -517,18 +519,23 @@ export function getAdminCompanies(): Promise<Company[]> {
   return apiFetch<Company[]>("/admin/companies")
 }
 
-// POST /admin/companies — crée une entreprise (name, contact_email)
-export function createCompany(body: { name: string; contact_email: string }): Promise<Company> {
-  return apiFetch<Company>("/admin/companies", {
+// POST /admin/companies — crée une entreprise. L'API ne lit que name (siret et contact_phone
+// optionnels, non utilisés ici) : l'email du contact est celui de l'invitation.
+export function createCompany(body: { name: string }): Promise<CreatedCompany> {
+  return apiFetch<CreatedCompany>("/admin/companies", {
     method: "POST",
     body: JSON.stringify(body),
   })
 }
 
-// POST /admin/companies/{id}/invite — envoie ou renvoie l'invitation B2B
-// 409 si le compte est déjà actif
-export function inviteCompany(id: string): Promise<void> {
-  return apiFetch<void>(`/admin/companies/${id}/invite`, { method: "POST" })
+// POST /admin/companies/{id}/invite — crée le compte du contact (inactif) et envoie le lien
+// /accept-invitation. 409 email déjà utilisé (compte actif, autre rôle ou autre entreprise),
+// 422 champ manquant ou trop long, 429 + Retry-After si ce même email non activé vient d'être invité.
+export function inviteCompany(id: string, body: InviteCompanyBody): Promise<void> {
+  return apiFetch<void>(`/admin/companies/${encodeURIComponent(id)}/invite`, {
+    method: "POST",
+    body: JSON.stringify(body),
+  })
 }
 
 // POST /admin/companies/{id}/resend-invitation — compte entreprise non activé : nouveau lien

@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useRef, useState } from "react"
 import { useMutation } from "@tanstack/react-query"
 import { Loader2, X } from "lucide-react"
 import { Button } from "@/components/ui/button"
@@ -11,8 +11,9 @@ import {
   DialogContent,
   DialogTitle,
 } from "@/components/ui/dialog"
-import { createCompany, ApiError } from "@/lib/api"
-import type { Company } from "@/lib/types"
+import { createCompany } from "@/lib/api"
+import { errorMessage } from "@/lib/error-message"
+import type { CreatedCompany } from "@/lib/types"
 
 export function CreateCompanyModal({
   open,
@@ -21,44 +22,45 @@ export function CreateCompanyModal({
 }: {
   open: boolean
   onClose: () => void
-  onCreated: (company: Company) => void
+  onCreated: (company: CreatedCompany) => void
 }) {
-  const [fields, setFields] = useState({ name: "", contact_email: "" })
-  const [fieldErrors, setFieldErrors] = useState<{ name?: string; contact_email?: string }>({})
+  // L'API ne stocke pas d'email sur l'entreprise : l'email du contact est saisi à l'invitation.
+  const [fields, setFields] = useState({ name: "" })
+  const [fieldErrors, setFieldErrors] = useState<{ name?: string }>({})
   const [serverError, setServerError] = useState<string | null>(null)
+  // Un seul envoi à la fois : un double clic ne crée pas deux entreprises.
+  const inFlight = useRef(false)
 
   const set =
     (k: keyof typeof fields) => (e: React.ChangeEvent<HTMLInputElement>) =>
       setFields((prev) => ({ ...prev, [k]: e.target.value }))
 
   const validate = (): boolean => {
-    const e: { name?: string; contact_email?: string } = {}
+    const e: { name?: string } = {}
     if (!fields.name.trim()) e.name = "Requis"
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(fields.contact_email.trim()))
-      e.contact_email = "Email invalide"
     setFieldErrors(e)
     return Object.keys(e).length === 0
   }
 
   const mutation = useMutation({
-    mutationFn: () =>
-      createCompany({ name: fields.name.trim(), contact_email: fields.contact_email.trim() }),
+    mutationFn: () => createCompany({ name: fields.name.trim() }),
     onSuccess: (company) => {
+      setFields({ name: "" })
       onCreated(company)
     },
     onError: (err) => {
-      if (err instanceof ApiError && err.status === 409) {
-        setServerError("Une entreprise avec cet email existe déjà.")
-      } else {
-        setServerError(err instanceof ApiError ? err.message : "Erreur lors de la création.")
-      }
+      setServerError(errorMessage(err, "Erreur lors de la création."))
+    },
+    onSettled: () => {
+      inFlight.current = false
     },
   })
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
-    if (!validate()) return
+    if (inFlight.current || !validate()) return
     setServerError(null)
+    inFlight.current = true
     mutation.mutate()
   }
 
@@ -106,22 +108,9 @@ export function CreateCompanyModal({
             )}
           </div>
 
-          <div className="space-y-1.5">
-            <label htmlFor="company-email" className="text-xs font-medium text-muted-foreground">
-              Email du contact
-            </label>
-            <Input
-              id="company-email"
-              type="email"
-              placeholder="contact@acme.fr"
-              value={fields.contact_email}
-              onChange={set("contact_email")}
-              aria-invalid={!!fieldErrors.contact_email}
-            />
-            {fieldErrors.contact_email && (
-              <p className="text-xs text-destructive">{fieldErrors.contact_email}</p>
-            )}
-          </div>
+          <p className="text-xs text-muted-foreground">
+            Vous saisirez ensuite l&apos;email, le prénom et le nom du contact à inviter.
+          </p>
 
           {serverError && (
             <div className="rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">
