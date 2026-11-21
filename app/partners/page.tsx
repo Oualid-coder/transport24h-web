@@ -1,6 +1,6 @@
 "use client"
 
-import { useRef, useState } from "react"
+import { useEffect, useRef, useState } from "react"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import * as z from "@/lib/zod"
@@ -33,8 +33,14 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { registerPartner, uploadPartnerDocument, ApiError } from "@/lib/api"
+import { registerPartner, uploadPartnerDocument } from "@/lib/api"
 import { errorMessage } from "@/lib/error-message"
+import {
+  isPartnerLinkInvalid,
+  partnerUploadErrorMessage,
+  PARTNER_LINK_INVALID_MESSAGE,
+} from "@/lib/partner-upload"
+import { hashParam, stripHashTokenFromAddressBar } from "@/lib/url-token"
 import { acceptTermsField, buildPartnerApplyBody } from "@/lib/register"
 import type { TruckType } from "@/lib/types"
 import { BackButton } from "@/components/BackButton"
@@ -168,6 +174,17 @@ export default function PartnersPage() {
       return new URLSearchParams(window.location.search).get("id")
     }
   )
+  // Jeton du lien d'envoi : fragment du lien reçu par e-mail (#token=…) ou réponse de la
+  // candidature. Figé au premier rendu puis retiré de la barre d'adresse.
+  const [uploadToken, setUploadToken] = useState<string | null>(() => {
+    if (typeof window === "undefined") return null
+    return hashParam(window.location.hash, "token")
+  })
+  useEffect(() => {
+    stripHashTokenFromAddressBar()
+  }, [])
+  // 401/403 à l'envoi : lien sans jeton, expiré ou remplacé par un renvoi
+  const [linkInvalid, setLinkInvalid] = useState(false)
   const [docStates, setDocStates] = useState<Record<DocType, DocState>>(INITIAL_DOC_STATES)
   const [success, setSuccess] = useState(false)
 
@@ -185,6 +202,8 @@ export default function PartnersPage() {
     try {
       // terms_accepted + terms_version (case cochée) ; jamais de date, posée par le serveur
       const application = await registerPartner(buildPartnerApplyBody(data))
+      // Jeton de la réponse : l'envoi des documents enchaîne sans repasser par le mail
+      setUploadToken(application.upload_token ?? null)
       setApplicationId(application.id)
     } catch (err) {
       // Messages métier lisibles de l'API (409, 422 CGV…) ; texte technique du validateur → repli
@@ -222,17 +241,14 @@ export default function PartnersPage() {
     }))
 
     try {
-      await uploadPartnerDocument(applicationId!, docType, file)
+      await uploadPartnerDocument(applicationId!, docType, file, uploadToken)
       setDocStates((prev) => ({
         ...prev,
         [docType]: { status: "done", filename: file.name, error: null },
       }))
     } catch (err) {
-      // 415 : contenu du fichier différent du type déclaré (message de l'API, lisible)
-      const message =
-        err instanceof ApiError && err.status === 415 && err.message
-          ? err.message.charAt(0).toUpperCase() + err.message.slice(1)
-          : errorMessage(err, "Erreur lors de l'envoi.")
+      if (isPartnerLinkInvalid(err)) setLinkInvalid(true)
+      const message = partnerUploadErrorMessage(err)
       setDocStates((prev) => ({
         ...prev,
         [docType]: { status: "error", filename: null, error: message },
@@ -481,6 +497,26 @@ export default function PartnersPage() {
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
+                {linkInvalid && (
+                  <div
+                    role="alert"
+                    className="rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive"
+                  >
+                    <p>{PARTNER_LINK_INVALID_MESSAGE}</p>
+                    <p className="mt-1">
+                      Contactez-nous via la{" "}
+                      <Link href="/contact" className="underline">
+                        page contact
+                      </Link>{" "}
+                      ou à{" "}
+                      <a href="mailto:contact@transport24h.fr" className="underline">
+                        contact@transport24h.fr
+                      </a>
+                      .
+                    </p>
+                  </div>
+                )}
+
                 <p className="text-sm text-muted-foreground">
                   {uploadedCount}/4 documents envoyés
                 </p>

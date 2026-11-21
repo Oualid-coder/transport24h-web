@@ -5,12 +5,14 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { AlertCircle, Building2, Loader2, Mail, MailCheck, Plus, RefreshCw, Send } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { getAdminCompanies, inviteCompany, resendCompanyInvitation, ApiError } from "@/lib/api"
+import { getAdminCompanies, resendCompanyInvitation } from "@/lib/api"
 import { errorMessage } from "@/lib/error-message"
 import { canResendInvitation, invitationResentMessage, resendErrorMessage } from "@/lib/invitation-resend"
 import type { Company, InvitationStatus } from "@/lib/types"
 import { BackButton } from "@/components/BackButton"
 import { CreateCompanyModal } from "@/components/admin/CreateCompanyModal"
+import { InviteCompanyModal } from "@/components/admin/InviteCompanyModal"
+import { invitationSentMessage } from "@/lib/company-invitation"
 
 // ── Statut d'invitation ───────────────────────────────────────────────────────
 
@@ -60,15 +62,13 @@ function useToast() {
 
 function CompanyRow({
   company,
-  inviting,
   onInvite,
   resending,
   resendDisabled,
   onResend,
 }: {
   company: Company
-  inviting: boolean
-  onInvite: (id: string) => void
+  onInvite: (company: Company) => void
   resending: boolean
   resendDisabled: boolean
   onResend: (company: Company) => void
@@ -106,14 +106,9 @@ function CompanyRow({
             size="sm"
             variant="outline"
             className="h-7 gap-1.5 px-2.5 text-xs"
-            disabled={inviting}
-            onClick={() => onInvite(company.id)}
+            onClick={() => onInvite(company)}
           >
-            {inviting ? (
-              <Loader2 className="size-3 animate-spin" />
-            ) : (
-              <Send className="size-3" />
-            )}
+            <Send className="size-3" />
             Inviter
           </Button>
         ) : canResend ? (
@@ -143,7 +138,8 @@ function CompanyRow({
 export default function CompaniesPage() {
   const queryClient = useQueryClient()
   const [createOpen, setCreateOpen] = useState(false)
-  const [invitingId, setInvitingId] = useState<string | null>(null)
+  // Entreprise dont on saisit le contact à inviter (bouton « Inviter » ou juste après la création)
+  const [inviteTarget, setInviteTarget] = useState<{ id: string; name: string } | null>(null)
   const { toasts, push: pushToast } = useToast()
 
   const { data: companies = [], isLoading, error } = useQuery({
@@ -152,32 +148,7 @@ export default function CompaniesPage() {
     staleTime: 30_000,
   })
 
-  const inviteMutation = useMutation({
-    mutationFn: (id: string) => inviteCompany(id),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["admin-companies"] })
-      pushToast("success", "Invitation envoyée.")
-      setInvitingId(null)
-    },
-    onError: (err) => {
-      setInvitingId(null)
-      if (err instanceof ApiError && err.status === 409) {
-        pushToast("error", "Ce compte est déjà actif — aucune invitation nécessaire.")
-      } else {
-        pushToast(
-          "error",
-          err instanceof ApiError ? err.message : "L'invitation n'a pas pu être envoyée.",
-        )
-      }
-      // Rafraîchit quand même : le statut a pu changer côté serveur
-      queryClient.invalidateQueries({ queryKey: ["admin-companies"] })
-    },
-  })
-
-  const handleInvite = (id: string) => {
-    setInvitingId(id)
-    inviteMutation.mutate(id)
-  }
+  const handleInvite = (company: Company) => setInviteTarget({ id: company.id, name: company.name })
 
   // Un seul renvoi à la fois : bouton désactivé pendant l'appel, second clic ignoré.
   const [resendingId, setResendingId] = useState<string | null>(null)
@@ -270,7 +241,6 @@ export default function CompaniesPage() {
                 <CompanyRow
                   key={c.id}
                   company={c}
-                  inviting={invitingId === c.id}
                   onInvite={handleInvite}
                   resending={resendingId === c.id}
                   resendDisabled={resendingId !== null}
@@ -285,9 +255,25 @@ export default function CompaniesPage() {
       <CreateCompanyModal
         open={createOpen}
         onClose={() => setCreateOpen(false)}
-        onCreated={() => {
+        onCreated={(company) => {
           queryClient.invalidateQueries({ queryKey: ["admin-companies"] })
           setCreateOpen(false)
+          // Dans la foulée : saisie du contact à inviter (« Plus tard » laisse l'entreprise « Non invité »)
+          setInviteTarget({ id: company.id, name: company.name })
+        }}
+      />
+
+      <InviteCompanyModal
+        company={inviteTarget}
+        onClose={() => {
+          setInviteTarget(null)
+          // Le statut a pu changer côté serveur même après une erreur
+          queryClient.invalidateQueries({ queryKey: ["admin-companies"] })
+        }}
+        onInvited={(email) => {
+          setInviteTarget(null)
+          pushToast("success", invitationSentMessage(email))
+          queryClient.invalidateQueries({ queryKey: ["admin-companies"] })
         }}
       />
 

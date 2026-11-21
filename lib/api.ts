@@ -6,6 +6,7 @@ import type {
   CancellationResult,
   Company,
   ConfirmSetupResult,
+  CreatedCompany,
   CreateBookingBody,
   CreditNoteRetry,
   CreditNoteRetryResult,
@@ -16,6 +17,7 @@ import type {
   EstimateResult,
   GeoPoint,
   HelpersSurcharge,
+  InviteCompanyBody,
   PartnerApplyBody,
   AcceptInvitationBody,
   PartnerApplication,
@@ -517,18 +519,23 @@ export function getAdminCompanies(): Promise<Company[]> {
   return apiFetch<Company[]>("/admin/companies")
 }
 
-// POST /admin/companies — crée une entreprise (name, contact_email)
-export function createCompany(body: { name: string; contact_email: string }): Promise<Company> {
-  return apiFetch<Company>("/admin/companies", {
+// POST /admin/companies — crée une entreprise. L'API ne lit que name (siret et contact_phone
+// optionnels, non utilisés ici) : l'email du contact est celui de l'invitation.
+export function createCompany(body: { name: string }): Promise<CreatedCompany> {
+  return apiFetch<CreatedCompany>("/admin/companies", {
     method: "POST",
     body: JSON.stringify(body),
   })
 }
 
-// POST /admin/companies/{id}/invite — envoie ou renvoie l'invitation B2B
-// 409 si le compte est déjà actif
-export function inviteCompany(id: string): Promise<void> {
-  return apiFetch<void>(`/admin/companies/${id}/invite`, { method: "POST" })
+// POST /admin/companies/{id}/invite — crée le compte du contact (inactif) et envoie le lien
+// /accept-invitation. 409 email déjà utilisé (compte actif, autre rôle ou autre entreprise),
+// 422 champ manquant ou trop long, 429 + Retry-After si ce même email non activé vient d'être invité.
+export function inviteCompany(id: string, body: InviteCompanyBody): Promise<void> {
+  return apiFetch<void>(`/admin/companies/${encodeURIComponent(id)}/invite`, {
+    method: "POST",
+    body: JSON.stringify(body),
+  })
 }
 
 // POST /admin/companies/{id}/resend-invitation — compte entreprise non activé : nouveau lien
@@ -750,26 +757,37 @@ export function resendVerification(): Promise<{ status: string }> {
 // ── Partenaires ───────────────────────────────────────────────────────────────
 
 // POST /partners — public — retourne l'application créée (id nécessaire pour les uploads)
-export function registerPartner(body: PartnerApplyBody): Promise<PartnerApplication> {
-  return apiFetch<PartnerApplication>("/partners", {
+// et le jeton du lien d'envoi (upload_token, absent d'une API antérieure au jeton).
+export function registerPartner(body: PartnerApplyBody): Promise<PartnerApplication & { upload_token?: string }> {
+  return apiFetch<PartnerApplication & { upload_token?: string }>("/partners", {
     method: "POST",
     body: JSON.stringify(body),
   })
 }
 
+// En-têtes de l'upload : le jeton du lien seulement s'il est connu. Sans jeton, l'en-tête est
+// omis (une API antérieure au jeton accepte alors l'upload ; l'API actuelle répond 401).
+export function partnerUploadHeaders(contentType: string, uploadToken: string | null): Record<string, string> {
+  const headers: Record<string, string> = { "Content-Type": contentType }
+  if (uploadToken) headers["X-Upload-Token"] = uploadToken
+  return headers
+}
+
 // POST /partners/{id}/documents/{doc_type}
-// Appel direct (pas via proxy) — l'applicant n'est pas authentifié.
+// Appel direct (pas via proxy) — l'applicant n'est pas authentifié. Jeton du lien dans l'en-tête
+// X-Upload-Token (autorisé par le CORS de la gateway), jamais dans l'URL.
 // Le backend accepte le corps brut ; Content-Length est posé automatiquement par le navigateur.
 export async function uploadPartnerDocument(
   partnerId: string,
   docType: "kbis" | "licence_mere" | "rcp" | "urssaf",
   file: File,
+  uploadToken: string | null,
 ): Promise<void> {
   const res = await fetch(
     `${PUBLIC_API_URL}/partners/${partnerId}/documents/${docType}`,
     {
       method: "POST",
-      headers: { "Content-Type": file.type },
+      headers: partnerUploadHeaders(file.type, uploadToken),
       body: file,
     },
   )

@@ -176,6 +176,20 @@ export interface Company {
   invited_at?: string
 }
 
+// Réponse de POST /admin/companies (createCompany côté API : id, name, created_at seulement)
+export interface CreatedCompany {
+  id: string
+  name: string
+  created_at: string
+}
+
+// Body vers POST /admin/companies/{id}/invite (inviteB2BUserRequest côté API)
+export interface InviteCompanyBody {
+  email: string
+  first_name: string
+  last_name: string
+}
+
 // Booking enrichi retourné par les endpoints admin — inclut les infos client
 // et le statut de paiement. Étend Booking en rendant client_phone requis.
 export interface BookingWithClient extends Omit<Booking, "client_phone"> {

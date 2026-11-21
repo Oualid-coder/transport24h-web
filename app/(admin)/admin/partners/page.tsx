@@ -4,9 +4,7 @@ import { useRef, useState } from "react"
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 import {
   AlertCircle,
-  Check,
   CheckCircle2,
-  Copy,
   ExternalLink,
   FileX,
   Loader2,
@@ -164,14 +162,6 @@ function PartnerCard({
     resendMutation.mutate()
   }
 
-  const [copied, setCopied] = useState(false)
-
-  const handleCopy = async () => {
-    await navigator.clipboard.writeText(`${window.location.origin}/partners?id=${partner.id}`)
-    setCopied(true)
-    setTimeout(() => setCopied(false), 2000)
-  }
-
   const date = new Date(partner.created_at)
   const statusCfg = STATUS_CONFIG[partner.status]
   const busy = approveMutation.isPending || rejectMutation.isPending
@@ -251,22 +241,9 @@ function PartnerCard({
           ))}
         </div>
 
-        {/* ── Lien de reprise ─────────────────────────────────────────── */}
-        <Button
-          size="sm"
-          variant="ghost"
-          className="w-full text-muted-foreground"
-          onClick={handleCopy}
-        >
-          {copied ? (
-            <Check className="mr-1.5 size-3.5 text-emerald-500" />
-          ) : (
-            <Copy className="mr-1.5 size-3.5" />
-          )}
-          {copied ? "Copié !" : "Copier le lien de reprise"}
-        </Button>
-
         {/* ── Renvoi du lien par mail (en attente seulement) ───────────── */}
+        {/* Pas de « copier le lien » : le lien porte un jeton que seul le candidat reçoit
+            (l'API n'en garde que le hash). « Renvoyer le lien » en émet un nouveau. */}
         {canResendPartnerLink(partner.status) && (
           <div className="space-y-1">
             <Button
