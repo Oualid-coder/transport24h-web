@@ -1,6 +1,7 @@
 "use client"
 
 import { useState } from "react"
+import Link from "next/link"
 import { useQuery, useQueryClient } from "@tanstack/react-query"
 import {
   Calendar,
@@ -16,6 +17,7 @@ import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { getDriverMyBookings } from "@/lib/api"
+import { DRIVER_WITHDRAWAL_MESSAGE } from "@/lib/driver-assignment"
 import type { Booking, BookingStatus } from "@/lib/types"
 import { BackButton } from "@/components/BackButton"
 import { BookingPhotoSection } from "@/components/BookingPhotoSection"
@@ -138,6 +140,23 @@ function MyMissionCard({ booking }: { booking: Booking }) {
               <Flag className="mr-2 size-3.5" />
               Terminer la course
             </Button>
+          )}
+          {/* Pas de désistement en ligne : seul l'admin désaffecte une course. */}
+          {booking.status === "assigned" && (
+            <p className="text-xs text-muted-foreground">
+              {DRIVER_WITHDRAWAL_MESSAGE}{" "}
+              <Link href="/contact" className="font-medium text-foreground underline underline-offset-2">
+                formulaire de contact
+              </Link>
+              {" ou "}
+              <a
+                href="mailto:contact@transport24h.fr"
+                className="font-medium text-foreground underline underline-offset-2"
+              >
+                contact@transport24h.fr
+              </a>
+              .
+            </p>
           )}
           <BookingPhotoSection
             bookingId={booking.id}

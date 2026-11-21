@@ -16,6 +16,7 @@ import {
   PencilLine,
   RotateCcw,
   Truck,
+  UserMinus,
   UserPlus,
   Users,
   X,
@@ -30,7 +31,9 @@ import {
   DialogClose,
 } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
-import { cancelUnpaidBooking, confirmBooking, rejectBooking, sendInvoice, updateBookingPrice, ApiError } from "@/lib/api"
+import { cancelUnpaidBooking, confirmBooking, rejectBooking, sendInvoice, unassignDriver, updateBookingPrice, ApiError } from "@/lib/api"
+import { errorMessage } from "@/lib/error-message"
+import { assignDriverLabel, canUnassignDriver, unassignConfirmText } from "@/lib/driver-assignment"
 import type { BookingStatus, BookingWithClient, PaginatedBookings } from "@/lib/types"
 import { paymentBadge } from "@/lib/payment-status"
 import { isChargeInProgress } from "@/lib/booking-status"
@@ -89,6 +92,8 @@ export function BookingCard({
   const [adjustOpen, setAdjustOpen] = useState(false)
   const [cancelOpen, setCancelOpen] = useState(false)
   const [rejectOpen, setRejectOpen] = useState(false)
+  const [unassignOpen, setUnassignOpen] = useState(false)
+  const [unassignError, setUnassignError] = useState<string | null>(null)
   const [invoiceMsg, setInvoiceMsg] = useState<{ type: "success" | "error"; text: string } | null>(null)
   const [cancelError, setCancelError] = useState<string | null>(null)
   const [rejectError, setRejectError] = useState<string | null>(null)
@@ -155,6 +160,21 @@ export function BookingCard({
       setRejectError(
         err instanceof ApiError ? err.message : "Erreur lors du refus de la réservation.",
       )
+      if (err instanceof ApiError && err.status === 409) queryClient.invalidateQueries({ queryKey })
+    },
+  })
+
+  // 204 sans corps : liste rechargée. 409 (course plus assignée entre-temps) : message de
+  // l'API affiché dans la confirmation et liste rechargée (l'état a changé).
+  const unassignMutation = useMutation({
+    mutationFn: () => unassignDriver(booking.id),
+    onMutate: () => setUnassignError(null),
+    onSuccess: () => {
+      setUnassignOpen(false)
+      queryClient.invalidateQueries({ queryKey })
+    },
+    onError: (err) => {
+      setUnassignError(errorMessage(err, "Le chauffeur n'a pas pu être retiré. Réessayez."))
       if (err instanceof ApiError && err.status === 409) queryClient.invalidateQueries({ queryKey })
     },
   })
@@ -414,8 +434,22 @@ export function BookingCard({
               onClick={() => setAssignOpen(true)}
             >
               <UserPlus className="mr-1.5 size-3.5" />
-              Assigner un chauffeur
+              {assignDriverLabel(booking.status)}
             </Button>
+            {canUnassignDriver(booking.status) && (
+              <Button
+                size="sm"
+                variant="outline"
+                className="flex-1 text-destructive hover:border-destructive/50 hover:bg-destructive/10 hover:text-destructive"
+                onClick={() => {
+                  setUnassignError(null)
+                  setUnassignOpen(true)
+                }}
+              >
+                <UserMinus className="mr-1.5 size-3.5" />
+                Retirer le chauffeur
+              </Button>
+            )}
             {booking.status !== "done" && booking.status !== "cancelled" && (
               <Button
                 size="sm"
@@ -676,9 +710,73 @@ export function BookingCard({
         </DialogContent>
       </Dialog>
 
+      <Dialog
+        open={unassignOpen}
+        onOpenChange={(isOpen) => {
+          if (!isOpen && !unassignMutation.isPending) setUnassignOpen(false)
+        }}
+      >
+        <DialogContent
+          showCloseButton={false}
+          className="max-w-md gap-0 overflow-hidden p-0 bg-background"
+        >
+          <div className="flex items-center justify-between border-b border-border px-5 py-4">
+            <DialogTitle className="font-semibold">
+              Retirer le chauffeur ?
+            </DialogTitle>
+            <DialogClose
+              render={
+                <button
+                  disabled={unassignMutation.isPending}
+                  className="rounded p-1 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground disabled:opacity-50"
+                  aria-label="Fermer"
+                />
+              }
+            >
+              <X className="size-4" />
+            </DialogClose>
+          </div>
+          <div className="space-y-4 p-5">
+            <div className="flex items-start gap-3 rounded-lg border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive">
+              <UserMinus className="mt-0.5 size-4 shrink-0" />
+              <p>{unassignConfirmText(booking.is_b2b)}</p>
+            </div>
+            {unassignError && (
+              <p role="alert" className="text-xs text-destructive">
+                {unassignError}
+              </p>
+            )}
+            <div className="flex gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                className="flex-1"
+                disabled={unassignMutation.isPending}
+                onClick={() => setUnassignOpen(false)}
+              >
+                Retour
+              </Button>
+              <Button
+                type="button"
+                variant="destructive"
+                className="flex-1"
+                disabled={unassignMutation.isPending}
+                onClick={() => unassignMutation.mutate()}
+              >
+                {unassignMutation.isPending && (
+                  <Loader2 className="mr-1.5 size-3.5 animate-spin" />
+                )}
+                Confirmer le retrait
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
       <AssignDriverModal
         open={assignOpen}
         bookingId={booking.id}
+        title={assignDriverLabel(booking.status)}
         queryKey={queryKey}
         onClose={() => setAssignOpen(false)}
       />
