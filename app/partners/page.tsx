@@ -291,8 +291,8 @@ export default function PartnersPage() {
             {[
               {
                 icon: <Truck className="size-5 text-primary" />,
-                title: "Missions flexibles",
-                desc: "Choisissez vos créneaux et votre zone d'intervention.",
+                title: "Missions affectées",
+                desc: "Notre équipe vous affecte les courses : vous les retrouvez dans votre espace chauffeur.",
               },
               {
                 icon: <Users className="size-5 text-primary" />,

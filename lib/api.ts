@@ -573,13 +573,19 @@ export function deactivateDriver(id: string): Promise<void> {
   return apiFetch<void>(`/admin/drivers/${id}`, { method: "DELETE" })
 }
 
-// PUT /admin/bookings/{id}/assign — assigne un chauffeur à une course
-// Retourne 409 si un chauffeur est déjà assigné
+// PUT /admin/bookings/{id}/assign — assigne un chauffeur à une course confirmée, ou change le
+// chauffeur d'une course assignée. Retourne 409 si la course n'est ni confirmée ni assignée.
 export function assignDriver(bookingId: string, driverId: string): Promise<BookingWithClient> {
   return apiFetch<BookingWithClient>(`/admin/bookings/${bookingId}/assign`, {
     method: "PUT",
     body: JSON.stringify({ driver_id: driverId }),
   })
+}
+
+// DELETE /admin/bookings/{id}/assign — retire le chauffeur d'une course assignée (204) : elle
+// redevient confirmée sans chauffeur. 409 si la course n'est pas assignée.
+export function unassignDriver(bookingId: string): Promise<void> {
+  return apiFetch<void>(`/admin/bookings/${bookingId}/assign`, { method: "DELETE" })
 }
 
 // GET /admin/partners?status=xxx — candidatures partenaires (status optionnel)

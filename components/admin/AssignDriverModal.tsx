@@ -19,11 +19,13 @@ import { CreateDriverModal } from "./CreateDriverModal"
 export function AssignDriverModal({
   open,
   bookingId,
+  title = "Assigner un chauffeur",
   queryKey,
   onClose,
 }: {
   open: boolean
   bookingId: string
+  title?: string // « Changer de chauffeur » sur une course déjà assignée
   queryKey: unknown[]
   onClose: () => void
 }) {
@@ -78,7 +80,7 @@ export function AssignDriverModal({
       >
         {/* En-tête */}
         <div className="flex items-center justify-between border-b border-border px-5 py-4">
-          <DialogTitle className="font-semibold">Assigner un chauffeur</DialogTitle>
+          <DialogTitle className="font-semibold">{title}</DialogTitle>
           <div className="flex items-center gap-2">
             <Button
               size="sm"
