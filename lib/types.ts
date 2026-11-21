@@ -202,6 +202,9 @@ export interface BookingWithClient extends Omit<Booking, "client_phone"> {
   is_b2b: boolean      // course d'un compte entreprise (facturée hors application)
   last4?: string       // 4 derniers chiffres CB — présent si payment_status === "paid"
   invoice_id?: string  // présent si une facture (FACT ou AVOIR) a été générée
+  // Chauffeur affecté : null sans chauffeur ; absents avec une API antérieure (traiter comme null).
+  driver_first_name?: string | null
+  driver_last_name?: string | null
 }
 
 // ── Admin — ajustement du prix d'une course payée ─────────────────────────────

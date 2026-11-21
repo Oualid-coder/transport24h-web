@@ -1,4 +1,5 @@
-import type { BookingStatus } from "@/lib/types"
+import type { QueryClient } from "@tanstack/react-query"
+import type { BookingStatus, BookingWithClient } from "@/lib/types"
 
 // Seul l'admin affecte, change et retire le chauffeur d'une course (PUT et DELETE
 // /admin/bookings/{id}/assign). Le chauffeur n'a aucun moyen de se désister en ligne.
@@ -26,3 +27,25 @@ export function unassignConfirmText(isB2B: boolean): string {
 // Espace chauffeur : affiché à la place d'un bouton de désistement, suivi du moyen de contact du site.
 // Espace insécable avant « : » (pas de « : » seul en début de ligne).
 export const DRIVER_WITHDRAWAL_MESSAGE = "Pour vous désister d'une course, contactez l'administrateur\u00a0:"
+
+// Nom du chauffeur affecté affiché sur la carte admin. null : aucun chauffeur, ou API
+// antérieure (champs absents) — la carte n'affiche alors rien de plus qu'avant.
+export function driverDisplayName(
+  b: Pick<BookingWithClient, "driver_first_name" | "driver_last_name">,
+): string | null {
+  const name = [b.driver_first_name, b.driver_last_name]
+    .map((s) => s?.trim())
+    .filter(Boolean)
+    .join(" ")
+  return name || null
+}
+
+// Après PUT …/assign : la réponse est la course seule (sans nom du client ni du chauffeur).
+// L'écrire dans le cache effaçait le client de la carte jusqu'au rechargement suivant :
+// on invalide la liste, qui est rechargée (requête active) avec toutes ses données.
+export function refreshAfterAssign(
+  queryClient: Pick<QueryClient, "invalidateQueries">,
+  queryKey: readonly unknown[],
+): Promise<void> {
+  return queryClient.invalidateQueries({ queryKey })
+}
