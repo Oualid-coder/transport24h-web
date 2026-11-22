@@ -13,7 +13,8 @@ import {
 } from "@/components/ui/dialog"
 import { assignDriver, getAdminDrivers, ApiError } from "@/lib/api"
 import { errorMessage } from "@/lib/error-message"
-import type { Driver, PaginatedBookings } from "@/lib/types"
+import { refreshAfterAssign } from "@/lib/driver-assignment"
+import type { Driver } from "@/lib/types"
 import { CreateDriverModal } from "./CreateDriverModal"
 
 export function AssignDriverModal({
@@ -42,10 +43,8 @@ export function AssignDriverModal({
 
   const mutation = useMutation({
     mutationFn: (driverId: string) => assignDriver(bookingId, driverId),
-    onSuccess: (updated) => {
-      queryClient.setQueryData<PaginatedBookings>(queryKey, (old) =>
-        old ? { ...old, bookings: old.bookings.map((b) => (b.id === updated.id ? updated : b)) } : old,
-      )
+    onSuccess: () => {
+      refreshAfterAssign(queryClient, queryKey)
       setMsg({ type: "success", text: "Chauffeur assigné avec succès." })
       setTimeout(onClose, 1500)
     },
