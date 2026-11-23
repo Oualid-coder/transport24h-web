@@ -17,7 +17,8 @@ import type { Booking, BookingStatus } from "@/lib/types"
 import { EditAddressModal } from "@/components/EditAddressModal"
 import { CancelBookingModal } from "@/components/CancelBookingModal"
 import { useRole } from "@/components/RoleProvider"
-import { ADDRESS_PAID_MESSAGE, addressEditAction, isChargeInProgress } from "@/lib/booking-status"
+import { addressEditAction, isChargeInProgress } from "@/lib/booking-status"
+import { AddressPaidNotice } from "@/components/AddressPaidNotice"
 
 export const STATUS_LABEL: Record<BookingStatus, string> = {
   awaiting_payment: "En attente de paiement",
@@ -153,19 +154,7 @@ export function BookingCardClient({ booking }: { booking: Booking }) {
         )}
 
         {addressAction === "paid" && (
-          <p className="rounded-lg border border-border bg-muted/40 px-3 py-2 text-xs text-muted-foreground">
-            {ADDRESS_PAID_MESSAGE}{" "}
-            <Link href="/contact" className="font-medium text-foreground underline underline-offset-2">
-              Formulaire de contact
-            </Link>
-            {" ou "}
-            <a
-              href="mailto:contact@transport24h.fr"
-              className="font-medium text-foreground underline underline-offset-2"
-            >
-              contact@transport24h.fr
-            </a>
-          </p>
+          <AddressPaidNotice className="rounded-lg border border-border bg-muted/40 px-3 py-2 text-xs text-muted-foreground" />
         )}
 
         {addressAction === "edit" && (
@@ -202,6 +191,7 @@ export function BookingCardClient({ booking }: { booking: Booking }) {
           setEditOpen(false)
           router.refresh()
         }}
+        onPaidConflict={() => router.refresh()}
       />
 
       <CancelBookingModal
