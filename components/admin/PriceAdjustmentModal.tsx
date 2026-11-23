@@ -7,9 +7,10 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { Dialog, DialogClose, DialogContent, DialogTitle } from "@/components/ui/dialog"
-import { createPriceAdjustment, getPriceAdjustments, previewPriceAdjustment } from "@/lib/api"
+import { closePriceAdjustment, createPriceAdjustment, getPriceAdjustments, previewPriceAdjustment } from "@/lib/api"
 import { priceChanged } from "@/lib/price"
 import {
+  CLOSE_OUTCOME_LABEL,
   REASON_MAX_LENGTH,
   STATUS_LABEL,
   adjustmentFailure,
@@ -18,6 +19,14 @@ import {
   attemptAfterFailure,
   attemptOnOpen,
   buildAdjustmentBody,
+  buildCloseBody,
+  canClose,
+  canResume,
+  closeConfirmationQuestion,
+  closeErrorMessage,
+  closeFormError,
+  closureSummary,
+  isCloseFinish,
   confirmationQuestion,
   formatCents,
   parseFrenchPrice,
@@ -26,7 +35,13 @@ import {
   resumeBody,
   type AttemptState,
 } from "@/lib/price-adjustment"
-import type { PriceAdjustment, PriceAdjustmentBody, PriceAdjustmentPreview } from "@/lib/types"
+import type {
+  PriceAdjustment,
+  PriceAdjustmentBody,
+  PriceAdjustmentCloseBody,
+  PriceAdjustmentCloseOutcome,
+  PriceAdjustmentPreview,
+} from "@/lib/types"
 
 const PREVIEW_DEBOUNCE_MS = 400
 
@@ -66,11 +81,17 @@ export function PriceAdjustmentModal({
   const [priceInput, setPriceInput] = useState("")
   const [reason, setReason] = useState("")
   const [clientAgreed, setClientAgreed] = useState(false)
-  const [step, setStep] = useState<"form" | "confirm" | "done" | "stopped">("form")
+  const [step, setStep] = useState<"form" | "confirm" | "done" | "stopped" | "close" | "closeConfirm">("form")
   const [confirmed, setConfirmed] = useState<Confirmed | null>(null)
   const [result, setResult] = useState<PriceAdjustment | null>(null)
   const [error, setError] = useState<string | null>(null)
   const sending = useRef(false)
+  // Clôture d'une ligne bloquée : deux étapes (saisie de l'issue constatée, puis confirmation).
+  const [closing, setClosing] = useState<PriceAdjustment | null>(null)
+  const [closeOutcome, setCloseOutcome] = useState<PriceAdjustmentCloseOutcome | null>(null)
+  const [closeReason, setCloseReason] = useState("")
+  const [closeIds, setCloseIds] = useState("")
+  const [closeParts, setCloseParts] = useState<string[]>([])
 
   // Ouverture : nouvelle opération (champs vides, nouvel request_id) sauf reprise d'un résultat incertain.
   if (open !== prevOpen) {
@@ -86,6 +107,7 @@ export function PriceAdjustmentModal({
         setConfirmed(null)
         setResult(null)
         setError(null)
+        setClosing(null)
       }
     }
   }
@@ -145,6 +167,70 @@ export function PriceAdjustmentModal({
       queryClient.invalidateQueries({ queryKey: ["admin-price-adjustments", bookingId] })
     },
   })
+
+  const closeMutation = useMutation({
+    mutationFn: ({ adjustmentId, body }: { adjustmentId: string; body: PriceAdjustmentCloseBody }) =>
+      closePriceAdjustment(bookingId, adjustmentId, body),
+    onSuccess: ({ adjustment }) => {
+      setResult(adjustment)
+      setClosing(null)
+      setError(null)
+      setStep("done")
+    },
+    onError: (err) => {
+      // Jamais de nouvel essai automatique : retour à la saisie avec le message de l'API.
+      setError(closeErrorMessage(err))
+      setStep("close")
+    },
+    onSettled: () => {
+      sending.current = false
+      queryClient.invalidateQueries({ queryKey })
+      queryClient.invalidateQueries({ queryKey: ["admin-price-adjustments", bookingId] })
+    },
+  })
+  const busy = mutation.isPending || closeMutation.isPending
+
+  // Étape 1 de la clôture : saisie de l'issue constatée dans Stripe.
+  const startClose = (a: PriceAdjustment) => {
+    if (busy) return
+    setClosing(a)
+    setCloseOutcome(null)
+    setCloseReason("")
+    setCloseIds("")
+    setCloseParts((a.refund_parts ?? []).map(() => ""))
+    // Clôture « opération effectuée » déjà enregistrée : seule issue possible, la terminer.
+    setCloseOutcome(isCloseFinish(a) ? "executed" : null)
+    setError(null)
+    setStep("close")
+  }
+
+  // Étape 2 : confirmation explicite, après contrôle de la saisie.
+  const goToCloseConfirm = (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!closing) return
+    const formError = closeFormError(closing, {
+      outcome: closeOutcome,
+      reason: closeReason,
+      stripeIds: closeIds,
+      partIds: closeParts,
+    })
+    if (formError) {
+      setError(formError)
+      return
+    }
+    setError(null)
+    setStep("closeConfirm")
+  }
+
+  const sendClose = () => {
+    if (!closing || !closeOutcome || sending.current || busy) return
+    sending.current = true
+    setError(null)
+    closeMutation.mutate({
+      adjustmentId: closing.id,
+      body: buildCloseBody({ outcome: closeOutcome, reason: closeReason, stripeIds: closeIds, partIds: closeParts }),
+    })
+  }
 
   const goToConfirm = (e: React.FormEvent) => {
     e.preventDefault()
@@ -207,7 +293,7 @@ export function PriceAdjustmentModal({
   }
 
   const close = () => {
-    if (!mutation.isPending) onClose()
+    if (!busy) onClose()
   }
 
   return (
@@ -229,12 +315,14 @@ export function PriceAdjustmentModal({
                 ]
               : step === "stopped"
                 ? "Ajustement interrompu"
-                : "Ajuster le prix"}
+                : step === "close" || step === "closeConfirm"
+                  ? "Clore l'ajustement bloqué"
+                  : "Ajuster le prix"}
           </DialogTitle>
           <DialogClose
             render={
               <button
-                disabled={mutation.isPending}
+                disabled={busy}
                 className="rounded p-1 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground disabled:opacity-50"
                 aria-label="Fermer"
               />
@@ -424,6 +512,7 @@ export function PriceAdjustmentModal({
                     nouvelle demande.
                   </p>
                   {result.failure_reason && <p>Cause : {result.failure_reason}</p>}
+                  {closureSummary(result) && <p>{closureSummary(result)}</p>}
                 </div>
               </div>
             ) : (
@@ -456,7 +545,167 @@ export function PriceAdjustmentModal({
           </div>
         )}
 
-        {step !== "confirm" && (history.data?.adjustments.length ?? 0) > 0 && (
+        {step === "close" && closing && (
+          <form onSubmit={goToCloseConfirm} className="space-y-4 p-5">
+            <div className="flex items-start gap-3 rounded-lg border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-500">
+              <AlertTriangle className="mt-0.5 size-4 shrink-0" />
+              <p>
+                {closing.delta_cents < 0 ? "Baisse" : "Hausse"} de{" "}
+                <strong>{formatCents(Math.abs(closing.delta_cents))}</strong> interrompue : la reprise
+                automatique n&apos;est plus possible. Vérifiez dans Stripe (métadonnée{" "}
+                <code>price_adjustment_id</code> = {closing.id}) puis indiquez ce que vous avez constaté.
+                Aucun débit ni remboursement ne sera fait.
+              </p>
+            </div>
+
+            <fieldset className="space-y-2">
+              <legend className="text-sm font-medium">Constaté dans Stripe</legend>
+              {(closing.closable_outcomes ?? []).map((o) => (
+                <label key={o} className="flex items-start gap-2.5 text-sm">
+                  <input
+                    type="radio"
+                    name="close-outcome"
+                    className="mt-0.5 size-4 shrink-0 accent-primary"
+                    checked={closeOutcome === o}
+                    onChange={() => setCloseOutcome(o)}
+                  />
+                  {CLOSE_OUTCOME_LABEL[o]}
+                </label>
+              ))}
+              {isCloseFinish(closing) && (
+                <p className="text-xs text-muted-foreground">
+                  Clôture déjà enregistrée, mise à jour du prix ou des documents restée en échec : terminez-la.
+                </p>
+              )}
+            </fieldset>
+
+            {closeOutcome === "partial" && (
+              <fieldset className="space-y-2">
+                <legend className="text-sm font-medium">Parts du remboursement</legend>
+                <p className="text-xs text-muted-foreground">
+                  Pour chaque part, indiquez le remboursement constaté (re_…) ou laissez vide si elle n&apos;a pas eu lieu.
+                </p>
+                {(closing.refund_parts ?? []).map((p, i) => (
+                  <div key={i} className="space-y-1">
+                    <label htmlFor={`close-part-${i}`} className="text-xs">
+                      Part {i + 1} : <strong>{formatCents(p.amount_cents)}</strong> sur{" "}
+                      <span className="font-mono">{p.payment_intent}</span>
+                    </label>
+                    <Input
+                      id={`close-part-${i}`}
+                      type="text"
+                      autoComplete="off"
+                      value={closeParts[i] ?? ""}
+                      onChange={(e) => setCloseParts((prev) => prev.map((v, j) => (j === i ? e.target.value : v)))}
+                      placeholder="re_… ou vide : non exécutée"
+                      className="font-mono"
+                    />
+                  </div>
+                ))}
+              </fieldset>
+            )}
+
+            {closeOutcome === "executed" && !isCloseFinish(closing) && (
+              <div className="space-y-1.5">
+                <label htmlFor="close-ids" className="text-sm font-medium">
+                  {closing.delta_cents < 0 ? "Identifiant(s) du remboursement (re_…)" : "Identifiant du paiement (pi_…)"}
+                </label>
+                <Input
+                  id="close-ids"
+                  type="text"
+                  autoComplete="off"
+                  value={closeIds}
+                  onChange={(e) => setCloseIds(e.target.value)}
+                  className="font-mono"
+                />
+              </div>
+            )}
+
+            <div className="space-y-1.5">
+              <label htmlFor="close-reason" className="text-sm font-medium">
+                Motif
+              </label>
+              <Textarea
+                id="close-reason"
+                value={closeReason}
+                onChange={(e) => setCloseReason(e.target.value)}
+                rows={2}
+                maxLength={REASON_MAX_LENGTH}
+                placeholder="Ex : vérifié dans le tableau de bord Stripe le …"
+              />
+            </div>
+
+            {error && (
+              <p role="alert" className="text-xs text-destructive">
+                {error}
+              </p>
+            )}
+
+            <div className="flex gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                className="flex-1"
+                onClick={() => {
+                  setClosing(null)
+                  setError(null)
+                  setStep("form")
+                }}
+              >
+                Annuler
+              </Button>
+              <Button type="submit" className="flex-1">
+                Continuer
+              </Button>
+            </div>
+          </form>
+        )}
+
+        {step === "closeConfirm" && closing && closeOutcome && (
+          <div className="space-y-4 p-5">
+            <p className="text-base font-semibold">{closeConfirmationQuestion(closing, closeOutcome, closeParts)}</p>
+            <div className="space-y-1 rounded-lg bg-accent/40 px-3 py-2.5 text-sm text-muted-foreground">
+              <p>{CLOSE_OUTCOME_LABEL[closeOutcome]}</p>
+              {closeOutcome === "executed" && !isCloseFinish(closing) && (
+                <p className="break-all font-mono">{closeIds.replace(/\s+/g, "")}</p>
+              )}
+              {closeOutcome === "partial" &&
+                (closing.refund_parts ?? []).map((p, i) => (
+                  <p key={i} className="break-all">
+                    Part {i + 1} ({formatCents(p.amount_cents)}) :{" "}
+                    {closeParts[i]?.trim() ? <span className="font-mono">{closeParts[i].trim()}</span> : "non exécutée"}
+                  </p>
+                ))}
+              <p className="break-words">Motif : {closeReason.trim()}</p>
+              <p>Action définitive, enregistrée à votre nom.</p>
+            </div>
+            {error && (
+              <p role="alert" className="text-xs text-destructive">
+                {error}
+              </p>
+            )}
+            <div className="flex gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                className="flex-1"
+                disabled={busy}
+                onClick={() => {
+                  setError(null)
+                  setStep("close")
+                }}
+              >
+                Modifier
+              </Button>
+              <Button type="button" variant="destructive" className="flex-1" disabled={busy} onClick={sendClose}>
+                {closeMutation.isPending && <Loader2 className="mr-1.5 size-3.5 animate-spin" />}
+                {isCloseFinish(closing) ? "Terminer la clôture" : "Clore définitivement"}
+              </Button>
+            </div>
+          </div>
+        )}
+
+        {step !== "confirm" && step !== "close" && step !== "closeConfirm" && (history.data?.adjustments.length ?? 0) > 0 && (
           <div className="space-y-2 border-t border-border px-5 py-4">
             <p className="text-sm font-medium">Ajustements précédents</p>
             <ul className="space-y-2 text-xs text-muted-foreground">
@@ -478,18 +727,35 @@ export function PriceAdjustmentModal({
                   {a.status === "failed" && a.failure_reason && (
                     <p className="break-words text-destructive">Cause : {a.failure_reason}</p>
                   )}
+                  {closureSummary(a) && <p className="break-words">{closureSummary(a)}</p>}
                   {a.status === "pending" && (
                     <div className="mt-1.5 flex items-center justify-between gap-2">
                       <span className="font-medium text-amber-500">Opération interrompue</span>
                       {step === "form" && (
-                        <Button size="sm" variant="outline" className="h-7" onClick={() => resume(a)}>
-                          Reprendre
-                        </Button>
+                        <div className="flex gap-1.5">
+                          {canResume(a) && (
+                            <Button size="sm" variant="outline" className="h-7" onClick={() => resume(a)}>
+                              Reprendre
+                            </Button>
+                          )}
+                          {canClose(a) && (
+                            <Button size="sm" variant="outline" className="h-7" onClick={() => startClose(a)}>
+                              {isCloseFinish(a) ? "Terminer la clôture" : "Clore"}
+                            </Button>
+                          )}
+                        </div>
                       )}
                     </div>
                   )}
-                  {a.status === "pending" && step === "form" && (
+                  {a.status === "pending" && step === "form" && canResume(a) && (
                     <p className="mt-1">Seul l&apos;admin qui a lancé l&apos;opération peut la reprendre.</p>
+                  )}
+                  {a.status === "pending" && step === "form" && canClose(a) && (
+                    <p className="mt-1">
+                      {isCloseFinish(a)
+                        ? "Clôture enregistrée, suite en échec : « Terminer la clôture » (tout admin)."
+                        : "Reprise automatique expirée : vérifiez dans Stripe, puis « Clore »."}
+                    </p>
                   )}
                 </li>
               ))}

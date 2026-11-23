@@ -2,7 +2,14 @@ import { ApiError } from "@/lib/api"
 import { errorMessage, looksTechnical, transientErrorMessage } from "@/lib/error-message"
 import { isChargeInProgress } from "@/lib/booking-status"
 import { priceChanged } from "@/lib/price"
-import type { BookingWithClient, PriceAdjustment, PriceAdjustmentBody, PriceAdjustmentPreview } from "@/lib/types"
+import type {
+  BookingWithClient,
+  PriceAdjustment,
+  PriceAdjustmentBody,
+  PriceAdjustmentCloseBody,
+  PriceAdjustmentCloseOutcome,
+  PriceAdjustmentPreview,
+} from "@/lib/types"
 
 // Ajustement du prix d'une course payée (admin) : hausse débitée sur la carte enregistrée du client,
 // baisse remboursée avec émission d'un avoir. Contrat : POST /admin/bookings/{id}/price-adjustments.
@@ -172,4 +179,129 @@ export function previewBlocker(
 // Message d'erreur de l'aperçu (409/422 : refus métier de l'API).
 export function previewErrorMessage(err: unknown): string {
   return errorMessage(err, "Aperçu indisponible pour ce prix.")
+}
+
+// ── Clôture d'une ligne bloquée (reprise automatique expirée) ───────────────────────────────
+
+// Bouton « Clore » : ligne en cours dont l'API annonce au moins une issue de clôture (champ absent :
+// ancienne API, pas de bouton).
+export function canClose(a: Pick<PriceAdjustment, "status" | "closable_outcomes">): boolean {
+  return a.status === "pending" && (a.closable_outcomes?.length ?? 0) > 0
+}
+
+// « Reprendre » reste proposé sauf si la reprise est refusée par l'API (appel Stripe de plus de 23 h :
+// la clôture « opération effectuée » n'est proposée que dans ce cas).
+export function canResume(a: Pick<PriceAdjustment, "status" | "closable_outcomes">): boolean {
+  return a.status === "pending" && !(a.closable_outcomes ?? []).includes("executed")
+}
+
+export const CLOSE_OUTCOME_LABEL: Record<PriceAdjustmentCloseOutcome, string> = {
+  not_executed: "Aucun débit ni remboursement n'a eu lieu dans Stripe",
+  executed: "L'opération a eu lieu dans Stripe",
+  partial: "Le remboursement n'a eu lieu qu'en partie (certaines parts seulement)",
+}
+
+export interface CloseForm {
+  outcome: PriceAdjustmentCloseOutcome | null
+  reason: string
+  stripeIds: string
+  // Issue « partial » : une entrée par part (ordre de refund_parts), re_… ou "" (non exécutée)
+  partIds?: string[]
+}
+
+// Clôture « opération effectuée » déjà enregistrée dont la suite (prix, documents) a échoué :
+// n'importe quel admin la termine, sans nouvelle saisie d'identifiant.
+export function isCloseFinish(a: Pick<PriceAdjustment, "closure_outcome">): boolean {
+  return a.closure_outcome === "executed"
+}
+
+const reRefund = /^re_[A-Za-z0-9]{8,250}$/
+
+// Montant remboursé déclaré dans une clôture partielle (parts avec un re_…).
+export function partialRefundedCents(parts: PriceAdjustment["refund_parts"], partIds: string[] = []): number {
+  return (parts ?? []).reduce((sum, p, i) => sum + (compactIds(partIds[i] ?? "") ? p.amount_cents : 0), 0)
+}
+
+const reIntent = /^pi_[A-Za-z0-9]{8,250}$/
+const reRefunds = /^re_[A-Za-z0-9]{8,250}(,re_[A-Za-z0-9]{8,250})*$/
+
+function compactIds(ids: string): string {
+  return ids.replace(/\s+/g, "")
+}
+
+// Premier problème de saisie de la clôture, null si l'étape de confirmation peut s'afficher.
+export function closeFormError(
+  a: Pick<PriceAdjustment, "delta_cents" | "closable_outcomes" | "closure_outcome" | "refund_parts">,
+  f: CloseForm,
+): string | null {
+  if (!f.outcome || !(a.closable_outcomes ?? []).includes(f.outcome)) return "Choisissez ce que vous avez constaté dans Stripe."
+  if (f.outcome === "executed" && !isCloseFinish(a)) {
+    const ids = compactIds(f.stripeIds)
+    if (a.delta_cents > 0 && !reIntent.test(ids))
+      return "Indiquez l'identifiant du paiement du complément dans Stripe (pi_…)."
+    if (a.delta_cents < 0 && !reRefunds.test(ids))
+      return "Indiquez l'identifiant du remboursement dans Stripe (re_…, plusieurs séparés par des virgules)."
+    if (a.delta_cents < 0 && new Set(ids.split(",")).size !== ids.split(",").length)
+      return "Le même remboursement est indiqué deux fois."
+  }
+  if (f.outcome === "partial") {
+    const parts = a.refund_parts ?? []
+    const ids = parts.map((_, i) => compactIds(f.partIds?.[i] ?? ""))
+    const done = ids.filter((id) => id !== "")
+    if (done.some((id) => !reRefund.test(id))) return "Identifiant de remboursement invalide (re_…)."
+    if (done.length === 0 || done.length === parts.length)
+      return "Issue partielle : au moins une part remboursée (re_…) et une part laissée vide (non exécutée)."
+    if (new Set(done).size !== done.length) return "Le même remboursement est indiqué pour deux parts."
+  }
+  if (reasonLength(f.reason) === 0) return "Le motif est requis."
+  if (reasonLength(f.reason) > REASON_MAX_LENGTH) return `Le motif ne doit pas dépasser ${REASON_MAX_LENGTH} caractères.`
+  return null
+}
+
+// Corps envoyé après la seconde confirmation : stripe_ids seulement pour « opération effectuée ».
+export function buildCloseBody(f: CloseForm & { outcome: PriceAdjustmentCloseOutcome }): PriceAdjustmentCloseBody {
+  const body: PriceAdjustmentCloseBody = { outcome: f.outcome, reason: f.reason.trim(), confirmed_in_stripe: true }
+  if (f.outcome === "executed") body.stripe_ids = compactIds(f.stripeIds)
+  if (f.outcome === "partial") body.refund_parts = (f.partIds ?? []).map(compactIds)
+  return body
+}
+
+// Question de la seconde étape : ce qui va se passer, sans ambiguïté.
+export function closeConfirmationQuestion(
+  a: Pick<PriceAdjustment, "delta_cents" | "refund_parts">,
+  outcome: PriceAdjustmentCloseOutcome,
+  partIds: string[] = [],
+): string {
+  const amount = formatCents(Math.abs(a.delta_cents))
+  if (outcome === "partial")
+    return `Confirmer que seuls ${formatCents(partialRefundedCents(a.refund_parts, partIds))} sur ${amount} ont été remboursés dans Stripe ? Un avoir de ce montant sera émis, le reste n'est pas remboursé et le prix reste inchangé.`
+  if (outcome === "not_executed")
+    return a.delta_cents > 0
+      ? `Confirmer qu'aucun débit de ${amount} n'apparaît dans Stripe ? L'ajustement sera marqué échoué, le prix reste inchangé.`
+      : `Confirmer qu'aucun remboursement de ${amount} n'apparaît dans Stripe ? L'ajustement sera marqué échoué, le prix reste inchangé.`
+  return a.delta_cents > 0
+    ? `Confirmer que le débit de ${amount} a eu lieu dans Stripe ? Le prix et les documents seront mis à jour, sans nouveau débit.`
+    : `Confirmer que le remboursement de ${amount} a eu lieu dans Stripe ? Le prix et l'avoir seront mis à jour, sans nouveau remboursement.`
+}
+
+// Erreur de la clôture : 409/422 de l'API (phrase française) sinon repli. Rien n'est jamais retenté seul.
+export function closeErrorMessage(err: unknown): string {
+  return errorMessage(err, "La clôture n'a pas pu être enregistrée : rechargez l'historique avant de réessayer.")
+}
+
+// Trace d'une ligne close à la main (historique).
+export function closureSummary(
+  a: Pick<PriceAdjustment, "closure_outcome" | "closed_at" | "closure_reason">,
+): string | null {
+  if (!a.closure_outcome) return null
+  const when = a.closed_at
+    ? new Date(a.closed_at).toLocaleString("fr-FR", { dateStyle: "short", timeStyle: "short" })
+    : ""
+  const what =
+    a.closure_outcome === "executed"
+      ? "opération constatée dans Stripe"
+      : a.closure_outcome === "partial"
+        ? "remboursement partiel constaté dans Stripe"
+        : "aucune opération dans Stripe"
+  return `Clos à la main${when ? ` le ${when}` : ""} : ${what}${a.closure_reason ? ` · Motif : ${a.closure_reason}` : ""}`
 }

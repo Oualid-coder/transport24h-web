@@ -25,6 +25,7 @@ import type {
   PaginatedBookings,
   PriceAdjustment,
   PriceAdjustmentBody,
+  PriceAdjustmentCloseBody,
   PriceAdjustmentPreview,
   PricingConfig,
   RefundResult,
@@ -438,6 +439,19 @@ export function createPriceAdjustment(
 // GET /admin/bookings/{id}/price-adjustments — historique des ajustements de la course
 export function getPriceAdjustments(id: string): Promise<{ adjustments: PriceAdjustment[] }> {
   return apiFetch<{ adjustments: PriceAdjustment[] }>(`/admin/bookings/${id}/price-adjustments`)
+}
+
+// POST /admin/bookings/{id}/price-adjustments/{adjustment_id}/close — clôture d'une ligne bloquée après
+// vérification dans Stripe (aucun appel Stripe côté API). 409 non clôturable, 422 saisie invalide.
+export function closePriceAdjustment(
+  bookingId: string,
+  adjustmentId: string,
+  body: PriceAdjustmentCloseBody,
+): Promise<{ adjustment: PriceAdjustment }> {
+  return apiFetch<{ adjustment: PriceAdjustment }>(
+    `/admin/bookings/${bookingId}/price-adjustments/${adjustmentId}/close`,
+    { method: "POST", body: JSON.stringify(body) },
+  )
 }
 
 // PUT /admin/bookings/{id}/confirm — 204 sans corps.
