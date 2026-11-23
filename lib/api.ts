@@ -596,8 +596,10 @@ export function deactivateDriver(id: string): Promise<void> {
 
 // PUT /admin/bookings/{id}/assign — assigne un chauffeur à une course confirmée, ou change le
 // chauffeur d'une course assignée. Retourne 409 si la course n'est ni confirmée ni assignée.
-export function assignDriver(bookingId: string, driverId: string): Promise<BookingWithClient> {
-  return apiFetch<BookingWithClient>(`/admin/bookings/${bookingId}/assign`, {
+// Réponse : la course seule (sans client, paiement ni chauffeur) — ne pas l'écrire dans le
+// cache de la liste admin, la recharger (refreshAfterAssign).
+export function assignDriver(bookingId: string, driverId: string): Promise<Booking> {
+  return apiFetch<Booking>(`/admin/bookings/${bookingId}/assign`, {
     method: "PUT",
     body: JSON.stringify({ driver_id: driverId }),
   })

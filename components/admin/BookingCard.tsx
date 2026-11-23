@@ -16,6 +16,7 @@ import {
   PencilLine,
   RotateCcw,
   Truck,
+  UserCheck,
   UserMinus,
   UserPlus,
   Users,
@@ -33,7 +34,7 @@ import {
 import { Input } from "@/components/ui/input"
 import { cancelUnpaidBooking, confirmBooking, rejectBooking, sendInvoice, unassignDriver, updateBookingPrice, ApiError } from "@/lib/api"
 import { errorMessage } from "@/lib/error-message"
-import { assignDriverLabel, canUnassignDriver, unassignConfirmText } from "@/lib/driver-assignment"
+import { assignDriverLabel, canUnassignDriver, driverDisplayName, unassignConfirmText } from "@/lib/driver-assignment"
 import type { BookingStatus, BookingWithClient, PaginatedBookings } from "@/lib/types"
 import { paymentBadge } from "@/lib/payment-status"
 import { isChargeInProgress } from "@/lib/booking-status"
@@ -101,6 +102,7 @@ export function BookingCard({
   const [priceError, setPriceError] = useState<string | null>(null)
 
   const priceTVA = booking.price_ttc - booking.price_ht
+  const driverName = driverDisplayName(booking)
   const chargeInProgress = isChargeInProgress(booking.status)
   // price_locked est la règle de l'API (domain.IsPriceLocked) ; le débit en cours bloque aussi.
   const priceEditable = !booking.price_locked && !chargeInProgress
@@ -259,6 +261,17 @@ export function BookingCard({
               </p>
             </div>
           </div>
+
+          {/* ── Chauffeur affecté (absent sans chauffeur ou avec une API antérieure) ── */}
+          {driverName && (
+            <div className="flex items-center gap-3 px-3 text-sm">
+              <UserCheck className="size-4 shrink-0 text-muted-foreground" />
+              <p className="min-w-0 truncate">
+                <span className="text-muted-foreground">Chauffeur : </span>
+                <span className="font-medium">{driverName}</span>
+              </p>
+            </div>
+          )}
 
           {/* ── Adresses ────────────────────────────────────────────────── */}
           <div className="space-y-1.5 text-sm">
