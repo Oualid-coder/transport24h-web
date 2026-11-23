@@ -248,6 +248,32 @@ export interface PriceAdjustment {
   request_id: string              // pour reprendre une ligne « pending » avec le même identifiant
   step?: string                   // étape atteinte (texte de l'API)
   failure_reason?: string | null  // cause d'un « failed »
+  // Clôture par l'admin d'une ligne bloquée : issues acceptées maintenant ([] ou absent : pas de bouton)
+  closable_outcomes?: PriceAdjustmentCloseOutcome[]
+  closed_by?: string | null
+  closed_at?: string | null
+  closure_outcome?: PriceAdjustmentCloseOutcome | null
+  closure_reason?: string | null
+  // Baisse réservée : parts du remboursement réparti (ordre de saisie de l'issue « partial »)
+  refund_parts?: PriceAdjustmentRefundPart[]
+}
+
+export interface PriceAdjustmentRefundPart {
+  payment_intent: string
+  amount_cents: number
+}
+
+// not_executed : aucun débit / remboursement constaté dans Stripe ; executed : opération constatée ;
+// partial : baisse répartie remboursée en partie seulement.
+export type PriceAdjustmentCloseOutcome = "not_executed" | "executed" | "partial"
+
+// Corps de POST /admin/bookings/{id}/price-adjustments/{adjustment_id}/close
+export interface PriceAdjustmentCloseBody {
+  outcome: PriceAdjustmentCloseOutcome
+  reason: string
+  stripe_ids?: string // executed : pi_… (hausse) ou re_…[,re_…] (baisse)
+  refund_parts?: string[] // partial : re_… ou "" (non exécutée), une entrée par part
+  confirmed_in_stripe: true
 }
 
 export interface PaginatedBookings {

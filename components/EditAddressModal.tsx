@@ -11,7 +11,9 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog"
 import { AddressInput } from "@/components/AddressInput"
-import { updateBookingAddress, ApiError } from "@/lib/api"
+import { updateBookingAddress } from "@/lib/api"
+import { addressEditErrorMessage } from "@/lib/booking-status"
+import { AddressPaidNotice } from "@/components/AddressPaidNotice"
 import type { Booking, GeoPoint } from "@/lib/types"
 import { useRole } from "@/components/RoleProvider"
 import { priceChanged } from "@/lib/price"
@@ -21,17 +23,21 @@ export function EditAddressModal({
   booking,
   onClose,
   onUpdated,
+  onPaidConflict,
 }: {
   open: boolean
   booking: Booking
   onClose: () => void
   onUpdated: () => void
+  // Course payée entre l'affichage et l'envoi (409) : la carte est rafraîchie, la modale reste ouverte.
+  onPaidConflict: () => void
 }) {
   const isB2b = useRole() === "b2b"
   const [newPickup, setNewPickup] = useState<GeoPoint | null>(null)
   const [newDelivery, setNewDelivery] = useState<GeoPoint | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [updatedBooking, setUpdatedBooking] = useState<Booking | null>(null)
+  const [paidConflict, setPaidConflict] = useState(false)
 
   const mutation = useMutation({
     mutationFn: () => {
@@ -50,11 +56,14 @@ export function EditAddressModal({
     },
     onSuccess: (updated) => setUpdatedBooking(updated),
     onError: (err) => {
-      setError(
-        err instanceof ApiError
-          ? err.message
-          : "Une erreur est survenue. Veuillez réessayer.",
-      )
+      const { message, paid } = addressEditErrorMessage(err)
+      if (paid) {
+        setError(null)
+        setPaidConflict(true)
+        onPaidConflict()
+        return
+      }
+      setError(message)
     },
   })
 
@@ -127,6 +136,14 @@ export function EditAddressModal({
               )}
             </div>
             <Button className="w-full" onClick={onUpdated}>
+              Fermer
+            </Button>
+          </div>
+        ) : paidConflict ? (
+          /* ── Course payée entre-temps (409) ── */
+          <div className="space-y-4 p-5">
+            <AddressPaidNotice className="rounded-lg border border-border bg-muted/40 px-4 py-3 text-sm text-muted-foreground" />
+            <Button className="w-full" onClick={onClose}>
               Fermer
             </Button>
           </div>
