@@ -16,23 +16,27 @@ jobs:
     permissions:
       packages: write
       contents: read
+    env:
+      # build-push-action >= v6 : pas de résumé ni d'artefact « build record »
+      # (comportement de la v5 conservé).
+      DOCKER_BUILD_SUMMARY: "false"
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Lowercase owner
-        run: echo "OWNER=${GITHUB_REPOSITORY_OWNER,,}" >> $GITHUB_ENV
+        run: echo "OWNER=${GITHUB_REPOSITORY_OWNER,,}" >> "$GITHUB_ENV"
 
-      - uses: docker/login-action@v3
+      - uses: docker/login-action@8aa5831fb8d48d8f76594c7ddde61ae58019f550 # v4.8.0
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - uses: docker/setup-buildx-action@v3
+      - uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
 
       - name: Build and push web
-        uses: docker/build-push-action@v5
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
         with:
           context: .
           file: Dockerfile
@@ -50,13 +54,27 @@ jobs:
 
     steps:
       - name: Lowercase owner
-        run: echo "OWNER=${GITHUB_REPOSITORY_OWNER,,}" >> $GITHUB_ENV
+        run: echo "OWNER=${GITHUB_REPOSITORY_OWNER,,}" >> "$GITHUB_ENV"
 
-      - uses: appleboy/ssh-action@v1
-        with:
-          host: ${{ secrets.HETZNER_HOST }}
-          username: ${{ secrets.HETZNER_USER }}
-          key: ${{ secrets.HETZNER_SSH_KEY }}
-          script: |
+      # Client ssh du runner à la place d'appleboy/ssh-action (qui télécharge drone-ssh
+      # sans vérification d'intégrité). Même script, exécuté tel quel par le shell distant ;
+      # connexion 30 s et durée 10 min comme avant ; clé en mémoire (ssh-agent) ; empreinte
+      # de l'hôte acceptée au premier contact (l'action ne la vérifiait pas non plus).
+      - name: Deploy via SSH
+        run: |
+          eval "$(ssh-agent -s)" > /dev/null
+          trap 'ssh-agent -k > /dev/null' EXIT
+          printf '%s\n' "$SSH_KEY" | ssh-add -q -
+          # L'ancienne action tolérait des espaces ou retours à la ligne autour de l'hôte.
+          SSH_HOST="${SSH_HOST//[[:space:]]/}"
+          timeout 10m ssh -n -o BatchMode=yes -o ConnectTimeout=30 \
+            -o StrictHostKeyChecking=accept-new \
+            -o UserKnownHostsFile="$RUNNER_TEMP/known_hosts" \
+            -l "$SSH_USER" "$SSH_HOST" "$SCRIPT"
+        env:
+          SSH_HOST: ${{ secrets.HETZNER_HOST }}
+          SSH_USER: ${{ secrets.HETZNER_USER }}
+          SSH_KEY: ${{ secrets.HETZNER_SSH_KEY }}
+          SCRIPT: |
             kubectl set image deployment/web web=ghcr.io/${{ env.OWNER }}/t24h-web:${{ github.sha }} -n transport24h
             kubectl rollout status deployment/web -n transport24h --timeout=120s
