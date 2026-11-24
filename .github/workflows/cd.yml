@@ -2,6 +2,7 @@
 # HETZNER_HOST     — IP publique du VPS
 # HETZNER_USER     — utilisateur SSH (ex: root)
 # HETZNER_SSH_KEY  — clé privée SSH (contenu du fichier ~/.ssh/id_rsa)
+# HETZNER_KNOWN_HOSTS — lignes known_hosts du VPS (nom = valeur exacte de HETZNER_HOST, port 22)
 
 name: CD
 
@@ -59,7 +60,8 @@ jobs:
       # Client ssh du runner à la place d'appleboy/ssh-action (qui télécharge drone-ssh
       # sans vérification d'intégrité). Même script, exécuté tel quel par le shell distant ;
       # connexion 30 s et durée 10 min comme avant ; clé en mémoire (ssh-agent) ; empreinte
-      # de l'hôte acceptée au premier contact (l'action ne la vérifiait pas non plus).
+      # de l'hôte vérifiée strictement contre le secret HETZNER_KNOWN_HOSTS (aucune
+      # acceptation au premier contact : un serveur inconnu fait échouer l'étape).
       - name: Deploy via SSH
         run: |
           eval "$(ssh-agent -s)" > /dev/null
@@ -67,14 +69,21 @@ jobs:
           printf '%s\n' "$SSH_KEY" | ssh-add -q -
           # L'ancienne action tolérait des espaces ou retours à la ligne autour de l'hôte.
           SSH_HOST="${SSH_HOST//[[:space:]]/}"
+          if [ -z "$KNOWN_HOSTS" ]; then
+            echo "::error::secret HETZNER_KNOWN_HOSTS vide : déploiement refusé"
+            exit 1
+          fi
+          printf '%s\n' "$KNOWN_HOSTS" > "$RUNNER_TEMP/known_hosts"
           timeout 10m ssh -n -o BatchMode=yes -o ConnectTimeout=30 \
-            -o StrictHostKeyChecking=accept-new \
+            -o StrictHostKeyChecking=yes \
             -o UserKnownHostsFile="$RUNNER_TEMP/known_hosts" \
+            -o GlobalKnownHostsFile=/dev/null \
             -l "$SSH_USER" "$SSH_HOST" "$SCRIPT"
         env:
           SSH_HOST: ${{ secrets.HETZNER_HOST }}
           SSH_USER: ${{ secrets.HETZNER_USER }}
           SSH_KEY: ${{ secrets.HETZNER_SSH_KEY }}
+          KNOWN_HOSTS: ${{ secrets.HETZNER_KNOWN_HOSTS }}
           SCRIPT: |
             kubectl set image deployment/web web=ghcr.io/${{ env.OWNER }}/t24h-web:${{ github.sha }} -n transport24h
             kubectl rollout status deployment/web -n transport24h --timeout=120s
