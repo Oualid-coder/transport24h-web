@@ -247,7 +247,7 @@ Lire le guide pertinent dans `node_modules/next/dist/docs/` — les APIs, conven
 ## CI, CD et npm audit (2026-11-24, en prod)
 
 - CI : actions par SHA node24 (checkout v7.0.1, setup-node v7.1.0), Node 22.23.4 exact ; étapes `npm ci`, lint, `npm test`, build.
-- CD : actions par SHA (checkout v7.0.1, login-action v4.8.0, setup-buildx-action v4.4.1, build-push-action v7.4.0 + `DOCKER_BUILD_SUMMARY=false`, qui évite un artefact contenant les build-args) ; appleboy/ssh-action remplacée par l'étape « Deploy via SSH » (`ssh` du runner, `ssh-agent`).
+- CD : actions par SHA (checkout v7.0.1, login-action v4.8.0, setup-buildx-action v4.4.1, build-push-action v7.4.0 + `DOCKER_BUILD_SUMMARY=false`, qui évite un artefact contenant les build-args) ; appleboy/ssh-action remplacée par l'étape « Deploy via SSH » (`ssh` du runner, `ssh-agent`). Clé d'hôte vérifiée strictement (`StrictHostKeyChecking=yes`, seul known_hosts = secret `HETZNER_KNOWN_HOSTS`) : ne jamais contourner un « Host key verification failed. ».
 - `package.json` : `overrides` exacts `source-map-js` 1.2.2 et `baseline-browser-mapping` 2.11.35 (avis npm de dépendances de next servant au build) ; `npm audit --omit=dev` doit rester à 0 ; relire ou retirer ces overrides à chaque montée de next ou de browserslist. Jamais `npm audit fix --force`.
 - Image finale : npm, npx, corepack et yarn retirés (`Dockerfile`) ; le serveur ne lance que `node server.js`. Pas de `kubectl exec … npm` possible.
 - `npm audit` ne voit pas les paquets vendus par Next (`next/dist/compiled` : compression, send, cookie, nanoid, picomatch, image-size, semver, ws…) : les recontrôler à chaque montée de Next. Avis de dev restants (shadcn, eslint) : voir le rapport du 24/11.
