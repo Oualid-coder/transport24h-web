@@ -231,4 +231,15 @@ Lire le guide pertinent dans `node_modules/next/dist/docs/` — les APIs, conven
 ## Lot 4 (2026-11-24, en prod)
 
 - **Relevé des courses par entreprise** : `components/BookingsReport.tsx` partagé entre `/admin/companies/[id]` (vue admin) et `/dashboard` d'un compte `b2b` (vue company, cookie `user_role` pour l'affichage seulement, l'API protège). Logique pure `lib/bookings-report.ts` : `recentMonths`/`monthRange` en dates civiles (mois courant à Paris), `reportPath` (vue company : jamais d'identifiant d'entreprise), `reportColumns`/`reportTotalsLines`/`sanitizeReport` (aucun prix, lien photos admin ni nom de famille du chauffeur en vue company, même si l'API les renvoyait), `photosApiPath` (`/admin/bookings/{id}/photos` seulement, appelé via `getReportPhotos`, jamais en lien), `cancelNoticeLabel`, `filenameFromDisposition`, `totalsNote` (« hors courses annulées »). Exports via `downloadBookingsReport` (blob) ; `/api/proxy` relaie `Content-Disposition`. 404/405 → « pas encore disponible ». Tests : `tests/bookings-report.test.ts`.
-- La mise en page admin déborde déjà à 390 px (barre latérale fixe `ml-60`) : chantier séparé.
+- Mise en page mobile de l'admin : traitée au lot 5.
+
+## Lot 5 (2026-11-24, en prod)
+
+- **Mobile (sujet 18)**, tout est limité à < 1024 px (`max-lg:`/`max-md:`/`max-sm:` ou `@media (width < 64rem)`) : l'ordinateur doit rester identique au pixel ; toute modification à ≥ 1024 px se fait hors de ces préfixes et se vérifie par comparaison de captures.
+  - Admin : barre du haut + tiroir dans `components/admin-sidebar.tsx` (`aria-expanded`, `aria-controls`, Échap, fond, lien → `closeMenu` qui rend le focus au bouton, contenu `inert`, `body` en `overflow: hidden` tant que le tiroir est ouvert, fermeture au passage ≥ 1024 px). « Réduire » : ordinateur seulement.
+  - Cibles 44 px par `max-lg:min-h-11` (et `min-w-11` pour les icônes) dans les primitives `components/ui/*` ; champs à 16 px par une règle globale hors `@layer` dans `app/globals.css` (pas de zoom iOS).
+  - Modales : ancrées en haut, `max-h-[calc(100dvh-2rem)]`, `overflow-y-auto` ; `viewport` exporté par `app/layout.tsx` (`interactiveWidget: "resizes-content"`, pas de `maximumScale`).
+  - Tableaux larges : cadre `overflow-x-auto` + `max-lg:min-w-*` ; le contenu admin porte `min-w-0` (sinon un tableau élargit la page).
+  - Téléchargements : `saveBlob` (`lib/download.ts`), lien inséré avant le clic, URL révoquée après 60 s (Safari iOS). Tests : `tests/download.test.ts`.
+  - Captures et banc Playwright : `~/work/review/captures-lot5/` (index `INDEX.md`). Bancs Playwright sur macOS : tout confiner (HOME, TMPDIR, cache npm, `PLAYWRIGHT_BROWSERS_PATH`, `downloadsPath`), aucune permission, garde-fou sur `input[type=file]`.
+- Entreprise sur la course (sujet 19) : côté API uniquement ; un compte b2b sans entreprise reçoit un 403 à la réservation, affiché tel quel.
