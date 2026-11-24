@@ -10,6 +10,7 @@ import { AlertCircle, Camera, ChevronDown, ChevronRight, FileSpreadsheet, FileTe
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { downloadBookingsReport, getBookingsReport, getReportPhotos } from "@/lib/api"
+import { saveBlob } from "@/lib/download"
 import {
   NOT_RECORDED,
   REFERENCE_PRICE_NOTE,
@@ -43,18 +44,7 @@ import {
 import type { ReportBooking, ReportStatusFilter, ReportView } from "@/lib/types"
 
 const SELECT_CLASS =
-  "h-8 rounded-lg border border-input bg-background px-2.5 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
-
-function saveBlob(blob: Blob, filename: string) {
-  const url = URL.createObjectURL(blob)
-  const a = document.createElement("a")
-  a.href = url
-  a.download = filename
-  document.body.appendChild(a)
-  a.click()
-  a.remove()
-  setTimeout(() => URL.revokeObjectURL(url), 10_000)
-}
+  "h-8 rounded-lg border border-input bg-background px-2.5 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 max-lg:h-11"
 
 function Cell({ column, booking, view }: { column: ReportColumnKey; booking: ReportBooking; view: ReportView }) {
   const b = booking
@@ -384,7 +374,7 @@ export function BookingsReport({ target, title }: { target: ReportTarget; title:
             </div>
           ) : (
             <div className="overflow-x-auto rounded-lg border border-border">
-              <table className="w-full text-sm">
+              <table className="w-full text-sm max-lg:min-w-[56rem]">
                 <thead>
                   <tr className="border-b border-border bg-accent/40 text-left text-xs uppercase tracking-wide text-muted-foreground">
                     <th className="w-8 px-2 py-2.5"><span className="sr-only">Détail</span></th>
@@ -405,7 +395,7 @@ export function BookingsReport({ target, title }: { target: ReportTarget; title:
                               onClick={() => toggle(b.id)}
                               aria-expanded={open}
                               aria-controls={`${idPrefix}-detail-${b.id}`}
-                              className="rounded p-0.5 text-muted-foreground hover:bg-accent hover:text-foreground"
+                              className="rounded p-0.5 text-muted-foreground hover:bg-accent hover:text-foreground max-lg:p-3.5"
                               title={open ? "Masquer le détail" : "Voir le détail"}
                             >
                               {open ? <ChevronDown className="size-4" /> : <ChevronRight className="size-4" />}
