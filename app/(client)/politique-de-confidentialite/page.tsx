@@ -508,7 +508,7 @@ function InfoRow({
     <div className="flex flex-col gap-0.5 sm:flex-row sm:gap-4">
       <span className="w-40 shrink-0 text-muted-foreground">{label}</span>
       {link ? (
-        <a href={link} className="font-medium text-primary hover:underline">
+        <a href={link} className="font-medium text-primary hover:underline max-lg:inline-block max-lg:py-3">
           {value}
         </a>
       ) : (

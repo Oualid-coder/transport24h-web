@@ -190,8 +190,8 @@ export default function DriversPage() {
           <p className="text-muted-foreground">Aucun chauffeur enregistré.</p>
         </div>
       ) : (
-        <div className="overflow-hidden rounded-lg border border-border">
-          <table className="w-full">
+        <div className="overflow-hidden rounded-lg border border-border max-lg:overflow-x-auto">
+          <table className="w-full max-lg:min-w-[40rem]">
             <thead>
               <tr className="border-b border-border bg-accent/40">
                 <th className="py-2.5 pr-4 text-left text-xs font-medium uppercase tracking-wide text-muted-foreground">

@@ -20,7 +20,7 @@ export default function DriverLayout({
               height={28}
               className="h-7 w-auto object-contain"
             />
-            <span className="text-sm font-semibold">Transport24h</span>
+            <span className="hidden text-sm font-semibold sm:inline">Transport24h</span>
             <span className="rounded bg-primary/20 px-1.5 py-0.5 text-[10px] font-medium text-primary">
               Chauffeur
             </span>
@@ -29,12 +29,12 @@ export default function DriverLayout({
           <nav className="flex items-center gap-1 text-sm text-muted-foreground">
             <Link
               href="/driver/dashboard"
-              className="flex items-center gap-1.5 rounded-lg px-3 py-2 transition-colors hover:bg-accent hover:text-foreground"
+              className="flex items-center gap-1.5 rounded-lg px-3 py-2 transition-colors hover:bg-accent hover:text-foreground max-lg:min-h-11 max-sm:min-w-11 max-sm:justify-center"
             >
               <Home className="size-4" />
-              Mes missions
+              <span className="max-sm:sr-only">Mes missions</span>
             </Link>
-            <LogoutButton className="w-auto px-3 py-2" />
+            <LogoutButton className="w-auto px-3 py-2 max-lg:min-h-11 max-sm:min-w-11 max-sm:justify-center" labelClassName="max-sm:sr-only" />
           </nav>
         </div>
       </header>

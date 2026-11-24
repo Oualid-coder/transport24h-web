@@ -84,7 +84,7 @@ function CompanyRow({
       <td className="py-3 pr-4">
         <Link
           href={`/admin/companies/${encodeURIComponent(company.id)}`}
-          className="text-sm font-medium underline-offset-4 hover:text-primary hover:underline"
+          className="text-sm font-medium underline-offset-4 hover:text-primary hover:underline max-lg:inline-flex max-lg:min-h-11 max-lg:items-center"
         >
           {company.name}
         </Link>
@@ -186,7 +186,7 @@ export default function CompaniesPage() {
     <div className="space-y-6">
       <BackButton href="/admin/dashboard" />
 
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between max-sm:flex-wrap max-sm:gap-3">
         <div>
           <h1 className="text-3xl font-bold">Entreprises</h1>
           <p className="mt-1 text-muted-foreground">
@@ -221,8 +221,8 @@ export default function CompaniesPage() {
           <p className="text-muted-foreground">Aucune entreprise enregistrée.</p>
         </div>
       ) : (
-        <div className="overflow-hidden rounded-lg border border-border">
-          <table className="w-full">
+        <div className="overflow-hidden rounded-lg border border-border max-lg:overflow-x-auto">
+          <table className="w-full max-lg:min-w-[40rem]">
             <thead>
               <tr className="border-b border-border bg-accent/40">
                 <th className="py-2.5 pr-4 text-left text-xs font-medium uppercase tracking-wide text-muted-foreground">

@@ -69,7 +69,7 @@ export function BookingList({ status, date }: { status?: string; date?: string }
             type="button"
             onClick={() => setPage((p) => Math.max(1, p - 1))}
             disabled={page === 1}
-            className="rounded-md p-1.5 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground disabled:pointer-events-none disabled:opacity-40"
+            className="rounded-md p-1.5 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground disabled:pointer-events-none disabled:opacity-40 max-lg:p-3.5"
           >
             <ChevronLeft className="size-4" />
           </button>
@@ -85,7 +85,7 @@ export function BookingList({ status, date }: { status?: string; date?: string }
             type="button"
             onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
             disabled={page === totalPages}
-            className="rounded-md p-1.5 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground disabled:pointer-events-none disabled:opacity-40"
+            className="rounded-md p-1.5 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground disabled:pointer-events-none disabled:opacity-40 max-lg:p-3.5"
           >
             <ChevronRight className="size-4" />
           </button>

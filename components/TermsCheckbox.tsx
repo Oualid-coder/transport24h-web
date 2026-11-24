@@ -21,7 +21,7 @@ export function TermsCheckbox({
           aria-describedby={error ? `${id}-error` : undefined}
           {...inputProps}
         />
-        <label htmlFor={id} className="text-xs leading-relaxed text-muted-foreground">
+        <label htmlFor={id} className="text-xs leading-relaxed text-muted-foreground max-lg:min-h-11">
           Je certifie avoir 18 ans ou plus et j&apos;accepte les{" "}
           <Link
             href="/cgv"

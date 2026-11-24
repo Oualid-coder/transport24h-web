@@ -110,7 +110,7 @@ function MyMissionCard({ booking }: { booking: Booking }) {
           {booking.client_phone && (
             <a
               href={`tel:${booking.client_phone}`}
-              className="flex items-center gap-1.5 text-sm font-medium text-primary hover:underline"
+              className="flex items-center gap-1.5 text-sm font-medium text-primary hover:underline max-lg:min-h-11"
             >
               <Phone className="size-3.5 shrink-0" />
               {booking.client_phone}

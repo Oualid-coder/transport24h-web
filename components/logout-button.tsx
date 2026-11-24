@@ -7,9 +7,11 @@ import { logout } from "@/lib/api"
 
 interface LogoutButtonProps {
   className?: string
+  // Libellé masqué visuellement sur petit écran (reste lu par les lecteurs d'écran)
+  labelClassName?: string
 }
 
-export function LogoutButton({ className }: LogoutButtonProps) {
+export function LogoutButton({ className, labelClassName }: LogoutButtonProps) {
   const router = useRouter()
 
   const handleLogout = async () => {
@@ -26,7 +28,7 @@ export function LogoutButton({ className }: LogoutButtonProps) {
       )}
     >
       <LogOut className="size-4" />
-      Déconnexion
+      <span className={labelClassName}>Déconnexion</span>
     </button>
   )
 }

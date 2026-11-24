@@ -20,7 +20,7 @@ export default async function ClientLayout({
     <div className="flex min-h-screen flex-col">
       <header className="sticky top-0 z-50 border-b border-border/50 bg-background/80 backdrop-blur-md">
         <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6">
-          <Link href="/" className="flex items-center gap-2.5">
+          <Link href="/" className="flex items-center gap-2.5 max-lg:min-h-11">
             <Image
               src="/logo-transport24h.png"
               alt="Transport24h"
@@ -83,7 +83,7 @@ export default async function ClientLayout({
             </div>
 
             {/* Liens */}
-            <div className="flex flex-wrap justify-center gap-x-4 gap-y-2 text-xs text-muted-foreground sm:justify-end">
+            <div className="flex flex-wrap justify-center gap-x-4 gap-y-2 text-xs text-muted-foreground sm:justify-end max-lg:gap-y-0 max-lg:*:min-w-11 max-lg:*:py-3.5 max-lg:*:text-center">
               <Link href="/mentions-legales" className="hover:text-foreground transition-colors">
                 Mentions légales
               </Link>

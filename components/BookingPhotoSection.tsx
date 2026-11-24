@@ -155,7 +155,7 @@ export function BookingPhotoSection({
       <button
         type="button"
         aria-expanded={open}
-        className="flex w-full items-center justify-between text-sm text-muted-foreground transition-colors hover:text-foreground"
+        className="flex w-full items-center justify-between text-sm text-muted-foreground transition-colors hover:text-foreground max-lg:min-h-11"
         onClick={() => setOpen((v) => !v)}
       >
         <span className="flex items-center gap-1.5">

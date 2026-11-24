@@ -146,7 +146,7 @@ export function EditDateModal({
           <DialogClose
             render={
               <button
-                className="rounded p-1 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground disabled:opacity-50"
+                className="rounded p-1 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground disabled:opacity-50 max-lg:-m-2.5 max-lg:p-3.5"
                 aria-label="Fermer"
               />
             }
