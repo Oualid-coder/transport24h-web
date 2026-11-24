@@ -244,14 +244,14 @@ export function BookingCard({
               <p className="font-medium">
                 {booking.client_first_name} {booking.client_last_name}
               </p>
-              <p className="mt-0.5 truncate text-xs text-muted-foreground">
+              <p className="mt-0.5 truncate text-xs text-muted-foreground max-lg:whitespace-normal max-lg:break-words">
                 {booking.client_email}
                 {booking.client_phone && (
                   <>
                     {" · "}
                     <a
                       href={`tel:${booking.client_phone}`}
-                      className="hover:underline"
+                      className="hover:underline max-lg:inline-block max-lg:py-3.5"
                       onClick={(e) => e.stopPropagation()}
                     >
                       {booking.client_phone}
@@ -357,8 +357,8 @@ export function BookingCard({
                 </Button>
               </div>
             ) : (
-              <div className="flex items-center justify-between">
-                <div className="flex items-baseline gap-4 text-sm">
+              <div className="flex items-center justify-between max-lg:flex-wrap max-lg:gap-2">
+                <div className="flex items-baseline gap-4 text-sm max-lg:flex-wrap max-lg:gap-x-3">
                   <span className="text-muted-foreground">
                     HT{" "}
                     <span className="font-medium text-foreground">
@@ -607,7 +607,7 @@ export function BookingCard({
               render={
                 <button
                   disabled={cancelMutation.isPending}
-                  className="rounded p-1 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground disabled:opacity-50"
+                  className="rounded p-1 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground disabled:opacity-50 max-lg:-m-2.5 max-lg:p-3.5"
                   aria-label="Fermer"
                 />
               }
@@ -674,7 +674,7 @@ export function BookingCard({
               render={
                 <button
                   disabled={rejectMutation.isPending}
-                  className="rounded p-1 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground disabled:opacity-50"
+                  className="rounded p-1 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground disabled:opacity-50 max-lg:-m-2.5 max-lg:p-3.5"
                   aria-label="Fermer"
                 />
               }
@@ -741,7 +741,7 @@ export function BookingCard({
               render={
                 <button
                   disabled={unassignMutation.isPending}
-                  className="rounded p-1 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground disabled:opacity-50"
+                  className="rounded p-1 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground disabled:opacity-50 max-lg:-m-2.5 max-lg:p-3.5"
                   aria-label="Fermer"
                 />
               }

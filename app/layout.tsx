@@ -1,4 +1,4 @@
-import type { Metadata } from "next"
+import type { Metadata, Viewport } from "next"
 import { headers } from "next/headers"
 import { CSPProvider } from "@base-ui/react/csp-provider"
 import { Geist, Geist_Mono } from "next/font/google"
@@ -21,6 +21,14 @@ export const metadata: Metadata = {
   description:
     "Réservez un camion avec chauffeur en quelques clics. Déménagement, livraison encombrants, transport professionnel.",
   keywords: ["déménagement", "transport", "camion", "livraison express"],
+}
+
+// Android (Chrome) : le clavier réduit la zone de mise en page, donc 100dvh (modales) reste au-dessus
+// du clavier. Safari iOS ignore cette clé (le clavier recouvre la page, la modale défile).
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  interactiveWidget: "resizes-content",
 }
 
 export default async function RootLayout({

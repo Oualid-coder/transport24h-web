@@ -119,7 +119,7 @@ function RetryRow({
       <td className="min-w-52 py-3">
         <div className="space-y-2">
           {needsStripeCheck && (
-            <label htmlFor={checkboxId} className="flex cursor-pointer items-start gap-2 text-xs">
+            <label htmlFor={checkboxId} className="flex cursor-pointer items-start gap-2 text-xs max-lg:min-h-11">
               <input
                 id={checkboxId}
                 type="checkbox"

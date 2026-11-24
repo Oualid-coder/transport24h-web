@@ -158,3 +158,20 @@
     @apply font-sans;
   }
 }
+
+/* Téléphone et tablette (< 1024 px) : champs de saisie à 16 px, sinon Safari iOS zoome au focus.
+   Hors couche (@layer) exprès : l'emporte sur les utilitaires text-sm / text-xs des champs. */
+@media (width < 64rem) {
+  input:not([type="checkbox"], [type="radio"], [type="range"], [type="file"], [type="hidden"]),
+  select,
+  textarea {
+    font-size: 1rem;
+  }
+
+  /* Boutons de zoom de la carte Leaflet (30 px par défaut) : 44 px au toucher */
+  .leaflet-container.leaflet-touch .leaflet-bar a {
+    width: 44px;
+    height: 44px;
+    line-height: 44px;
+  }
+}

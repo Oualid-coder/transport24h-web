@@ -323,7 +323,7 @@ export function PriceAdjustmentModal({
             render={
               <button
                 disabled={busy}
-                className="rounded p-1 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground disabled:opacity-50"
+                className="rounded p-1 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground disabled:opacity-50 max-lg:-m-2.5 max-lg:p-3.5"
                 aria-label="Fermer"
               />
             }
@@ -401,7 +401,7 @@ export function PriceAdjustmentModal({
                 onChange={(e) => setClientAgreed(e.target.checked)}
                 aria-required="true"
               />
-              <label htmlFor="adjust-agreed" className="text-sm leading-relaxed">
+              <label htmlFor="adjust-agreed" className="text-sm leading-relaxed max-lg:min-h-11">
                 Le client a donné son accord
               </label>
             </div>
@@ -561,7 +561,7 @@ export function PriceAdjustmentModal({
             <fieldset className="space-y-2">
               <legend className="text-sm font-medium">Constaté dans Stripe</legend>
               {(closing.closable_outcomes ?? []).map((o) => (
-                <label key={o} className="flex items-start gap-2.5 text-sm">
+                <label key={o} className="flex items-start gap-2.5 text-sm max-lg:min-h-11">
                   <input
                     type="radio"
                     name="close-outcome"

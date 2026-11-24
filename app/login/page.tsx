@@ -150,7 +150,7 @@ function LoginContent() {
               <p>
                 <Link
                   href="/partners"
-                  className="text-primary underline-offset-4 hover:underline"
+                  className="text-primary underline-offset-4 hover:underline max-lg:inline-block max-lg:py-3.5"
                 >
                   Devenir chauffeur partenaire
                 </Link>
