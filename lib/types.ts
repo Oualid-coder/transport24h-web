@@ -429,3 +429,69 @@ export interface PricingConfig {
   price_per_km: number | null
   is_fixed_price: boolean
 }
+
+// ── Relevé des courses d'une entreprise (contrat du sujet 17) ─────────────────
+
+// GET /admin/companies/{id}
+export interface CompanyDetail {
+  id: string
+  name: string
+  siret: string | null
+  contact_phone: string | null
+  created_at: string
+}
+
+export type ReportView = "admin" | "company"
+export type ReportStatusFilter = "all" | "done" | "cancelled" | "upcoming"
+export type ReportHistoryType =
+  | "address"
+  | "schedule"
+  | "driver_assigned"
+  | "driver_changed"
+  | "driver_unassigned"
+
+export interface ReportBooking {
+  id: string
+  reference: string
+  created_at: string
+  created_by: { first_name: string; last_name: string; email: string } | null
+  scheduled_at: string
+  completed_at: string | null
+  completed_at_recorded: boolean   // false : course antérieure à l'enregistrement (« non enregistré »)
+  pickup_address: string
+  delivery_address: string
+  distance_km: number
+  volume_m3: number
+  truck_type: string | null
+  helpers_count: number
+  client_comment: string | null
+  driver: { first_name: string; last_name: string | null } | null   // vue company : last_name null
+  status: string
+  cancelled_at: string | null
+  cancel_notice_minutes: number | null   // délai restant avant la course au moment de l'annulation
+  history_recorded: boolean
+  history: { at: string; type: ReportHistoryType | string; detail: string }[]
+  photos: { before: boolean; after: boolean; admin_url: string | null }
+  // Vue admin seulement : clé absente en vue company
+  reference_price?: { ht: number; vat_rate: number; ttc: number; indicative: true }
+}
+
+export interface ReportTotals {
+  count: number
+  by_status: { done: number; cancelled: number; upcoming: number; other: number }
+  distance_km: number
+  volume_m3: number
+  // Vue admin seulement : clés absentes en vue company
+  reference_price_ht?: number
+  reference_price_ttc?: number
+}
+
+// GET /admin/companies/{id}/bookings-report et GET /b2b/bookings-report
+export interface BookingsReport {
+  view: ReportView
+  company: { id: string; name: string }
+  period: { from: string; to: string; timezone: string }
+  generated_at: string
+  bookings: ReportBooking[]
+  totals: ReportTotals
+}
