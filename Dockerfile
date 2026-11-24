@@ -28,6 +28,13 @@ ENV NODE_ENV=production
 RUN addgroup --system --gid 1001 nodejs \
  && adduser  --system --uid 1001 nextjs
 
+# Le serveur ne lance que `node server.js` : npm, npx, corepack et yarn livrés par
+# l'image de base ne servent pas en prod, et leurs dépendances embarquées sont
+# visées par des avis de sécurité. On les retire de l'image finale.
+RUN rm -rf /usr/local/lib/node_modules/npm /usr/local/lib/node_modules/corepack \
+           /usr/local/bin/npm /usr/local/bin/npx /usr/local/bin/corepack \
+           /opt/yarn-* /usr/local/bin/yarn /usr/local/bin/yarnpkg
+
 # Le mode standalone produit un server.js autonome avec ses node_modules.
 # .next/static et public/ doivent être copiés à part (non inclus dans standalone).
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
