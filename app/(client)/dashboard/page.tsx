@@ -5,6 +5,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import type { Booking } from "@/lib/types"
 import { BookingCardClient } from "@/components/BookingCardClient"
 import { clientIpHeaders } from "@/lib/client-ip"
+import { BookingsReport } from "@/components/BookingsReport"
 
 async function getMyBookings(): Promise<Booking[]> {
   const cookieStore = await cookies()
@@ -26,6 +27,9 @@ async function getMyBookings(): Promise<Booking[]> {
 
 export default async function DashboardPage() {
   const bookings = await getMyBookings()
+  // Compte entreprise (cookie user_role posé au login) : relevé des courses de l'entreprise.
+  // L'API refuse /b2b/* à tout autre rôle : le cookie ne sert qu'à l'affichage.
+  const isB2b = (await cookies()).get("user_role")?.value === "b2b"
 
   const upcoming = bookings.filter((b) =>
     ["awaiting_payment", "payment_processing", "payment_failed", "pending_review", "confirmed", "assigned"].includes(b.status),
@@ -35,6 +39,7 @@ export default async function DashboardPage() {
   )
 
   return (
+    <>
     <div className="mx-auto max-w-3xl px-4 py-10">
       <h1 className="mb-2 text-3xl font-bold">Mon espace</h1>
       <p className="mb-8 text-muted-foreground">
@@ -84,5 +89,13 @@ export default async function DashboardPage() {
         </TabsContent>
       </Tabs>
     </div>
+
+    {/* Tableau large : conteneur plus large que la liste des courses */}
+    {isB2b && (
+      <div className="mx-auto max-w-6xl px-4 pb-10">
+        <BookingsReport target={{ view: "company" }} title="Mes courses et historique" />
+      </div>
+    )}
+    </>
   )
 }

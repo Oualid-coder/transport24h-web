@@ -63,6 +63,9 @@ async function proxyRequest(
   // Délai d'attente des 429 (renvoi du mail de vérification, limites de la gateway)
   const retryAfter = upstream.headers.get("retry-after")
   if (retryAfter) response.headers.set("retry-after", retryAfter)
+  // Exports xlsx/pdf (relevé des courses) : nom du fichier et téléchargement
+  const disposition = upstream.headers.get("content-disposition")
+  if (disposition) response.headers.set("content-disposition", disposition)
 
   return response
 }

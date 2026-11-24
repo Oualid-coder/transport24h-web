@@ -4,7 +4,9 @@ import type {
   BookingPhotos,
   BookingWithClient,
   CancellationResult,
+  BookingsReport,
   Company,
+  CompanyDetail,
   ConfirmSetupResult,
   CreatedCompany,
   CreateBookingBody,
@@ -36,6 +38,7 @@ import type {
   TruckType,
 } from "@/lib/types"
 import { safeRedirectPath } from "@/lib/safe-redirect"
+import { reportFilename, reportPath, type ReportFilters, type ReportTarget } from "@/lib/bookings-report"
 
 // Toutes les requêtes authentifiées passent par le proxy Next.js (/api/proxy).
 // Le Route Handler lit le cookie httpOnly access_token côté serveur et injecte
@@ -533,6 +536,41 @@ export function getAdminCompanies(): Promise<Company[]> {
   return apiFetch<Company[]>("/admin/companies")
 }
 
+// GET /admin/companies/{id} — fiche de l'entreprise (page /admin/companies/[id])
+export function getAdminCompany(id: string): Promise<CompanyDetail> {
+  return apiFetch<CompanyDetail>(`/admin/companies/${encodeURIComponent(id)}`)
+}
+
+// Relevé des courses : GET /admin/companies/{id}/bookings-report (vue admin) ou /b2b/bookings-report
+// (vue company, entreprise déduite du compte connecté). 404 entreprise inconnue, 403 compte sans
+// entreprise, 422 période invalide ou de plus de 366 jours.
+export function getBookingsReport(target: ReportTarget, filters: ReportFilters): Promise<BookingsReport> {
+  return apiFetch<BookingsReport>(reportPath(target, "json", filters))
+}
+
+// Export xlsx ou pdf du relevé : fichier binaire relayé par /api/proxy (Content-Disposition compris).
+// Bypass apiFetch : pas de Content-Type JSON imposé, corps lu en Blob. Nom repris de l'en-tête.
+export async function downloadBookingsReport(
+  target: ReportTarget,
+  filters: ReportFilters,
+  format: "xlsx" | "pdf",
+): Promise<{ blob: Blob; filename: string }> {
+  const res = await fetchWithRefresh(`${PROXY_BASE}${reportPath(target, format, filters)}`, {}, undefined)
+  if (!res.ok) {
+    let message = res.statusText
+    try {
+      const body = (await res.json()) as { error?: string; message?: string }
+      if (body.error) message = body.error
+      else if (body.message) message = body.message
+    } catch { /* ignore */ }
+    throw new ApiError(res.status, message, parseRetryAfter(res.headers.get("retry-after")))
+  }
+  return {
+    blob: await res.blob(),
+    filename: reportFilename(res.headers.get("content-disposition"), filters, format),
+  }
+}
+
 // POST /admin/companies — crée une entreprise. L'API ne lit que name (siret et contact_phone
 // optionnels, non utilisés ici) : l'email du contact est celui de l'invitation.
 export function createCompany(body: { name: string }): Promise<CreatedCompany> {
@@ -708,6 +746,12 @@ export function completeBooking(id: string): Promise<void> {
 // GET /admin/bookings/{id}/photos — URLs signées 15 min
 export async function getAdminBookingPhotos(bookingId: string): Promise<BookingPhotos> {
   return toBookingPhotos(await apiFetch<BookingPhotosDTO>(`/admin/bookings/${bookingId}/photos`))
+}
+
+// Photos d'une course du relevé : `photos.admin_url` (chemin de l'API admin, ex. /admin/bookings/{id}/photos,
+// validé par photosApiPath). Même réponse que GET /admin/bookings/{id}/photos : URLs signées 15 min.
+export async function getReportPhotos(adminPath: string): Promise<BookingPhotos> {
+  return toBookingPhotos(await apiFetch<BookingPhotosDTO>(adminPath))
 }
 
 // ── Auth (via Route Handler Next.js) ─────────────────────────────────────────

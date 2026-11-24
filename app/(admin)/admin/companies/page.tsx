@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useCallback, useRef } from "react"
+import Link from "next/link"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { AlertCircle, Building2, Loader2, Mail, MailCheck, Plus, RefreshCw, Send } from "lucide-react"
 import { Button } from "@/components/ui/button"
@@ -81,7 +82,12 @@ function CompanyRow({
   return (
     <tr className="border-b border-border/50 transition-colors hover:bg-accent/30">
       <td className="py-3 pr-4">
-        <p className="text-sm font-medium">{company.name}</p>
+        <Link
+          href={`/admin/companies/${encodeURIComponent(company.id)}`}
+          className="text-sm font-medium underline-offset-4 hover:text-primary hover:underline"
+        >
+          {company.name}
+        </Link>
       </td>
       <td className="py-3 pr-4">
         <span className="flex items-center gap-1.5 text-sm text-muted-foreground">
