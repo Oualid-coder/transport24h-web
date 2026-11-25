@@ -2,8 +2,8 @@
 
 ## Stack
 
-- **Runtime** : Node 22 LTS, version exacte `22.23.4` (image `node:22.23.4-alpine` dans les deux étages du
-  `Dockerfile`, `node-version: "22.23.4"` en CI). Monter en version exacte publiée depuis au moins deux semaines.
+- **Runtime** : Node 22 LTS, version exacte `22.23.5` (image `node:22.23.5-alpine@sha256:1314fb30ec37592d5845e5a160d522c0e680972aa534549940b8d73bde88481a` dans les deux étages du
+  `Dockerfile`, `node-version: "22.23.5"` en CI). Monter en version exacte publiée depuis au moins deux semaines.
 - **Dépendances figées** : `next` 16.4.5, `react`/`react-dom` 19.2.4, `zod` 4.6.6, `shadcn` 4.2.0 (CLI, en
   `devDependencies` : seul `app/globals.css` l'importe, à la compilation). Toute montée : version exacte
   (`--save-exact`) après audit.
@@ -189,7 +189,7 @@ Lire le guide pertinent dans `node_modules/next/dist/docs/` — les APIs, conven
   s'affiche en clair entre crochets (`ToComplete` dans la politique, encadré orange dans les CGV), jamais inventée.
   Les annulations des CGV suivent `computeRefund` de l'API (bornes : 24 h pile → 50 %, 2 h pile → 0 %).
 - Cookies : Google Ads uniquement via `lib/consent.ts` (`sendAdsEvent`), jamais de `<Script>` Google direct.
-- Tests : `npm test` (Node 22.23.4 ou plus, vérifié dans l'image Docker ; lancé en CI ; `node --test`, sans dépendance ; résolution des imports `@/` par
+- Tests : `npm test` (Node 22.23.5 ou plus, vérifié dans l'image Docker ; lancé en CI ; `node --test`, sans dépendance ; résolution des imports `@/` par
   `tests/ts-hooks.mjs`). Fichiers dans `tests/*.test.ts`.
 
 ## Vérification d'email (contrat API `feat/email-verification-v2`)
@@ -246,8 +246,14 @@ Lire le guide pertinent dans `node_modules/next/dist/docs/` — les APIs, conven
 
 ## CI, CD et npm audit (2026-11-24, en prod)
 
-- CI : actions par SHA node24 (checkout v7.0.1, setup-node v7.1.0), Node 22.23.4 exact ; étapes `npm ci`, lint, `npm test`, build.
+- CI : actions par SHA node24 (checkout v7.0.1, setup-node v7.1.0), Node 22.23.5 exact ; étapes `npm ci`, lint, `npm test`, build.
 - CD : actions par SHA (checkout v7.0.1, login-action v4.8.0, setup-buildx-action v4.4.1, build-push-action v7.4.0 + `DOCKER_BUILD_SUMMARY=false`, qui évite un artefact contenant les build-args) ; appleboy/ssh-action remplacée par l'étape « Deploy via SSH » (`ssh` du runner, `ssh-agent`). Clé d'hôte vérifiée strictement (`StrictHostKeyChecking=yes`, seul known_hosts = secret `HETZNER_KNOWN_HOSTS`) : ne jamais contourner un « Host key verification failed. ».
 - `package.json` : `overrides` exacts `source-map-js` 1.2.2 et `baseline-browser-mapping` 2.11.35 (avis npm de dépendances de next servant au build) ; `npm audit --omit=dev` doit rester à 0 ; relire ou retirer ces overrides à chaque montée de next ou de browserslist. Jamais `npm audit fix --force`.
 - Image finale : npm, npx, corepack et yarn retirés (`Dockerfile`) ; le serveur ne lance que `node server.js`. Pas de `kubectl exec … npm` possible.
 - `npm audit` ne voit pas les paquets vendus par Next (`next/dist/compiled` : compression, send, cookie, nanoid, picomatch, image-size, semver, ws…) : les recontrôler à chaque montée de Next. Avis de dev restants (shadcn, eslint) : voir le rapport du 24/11.
+
+## Lot 6 (2026-11-25)
+
+- **Node 22.23.5** en prod (digest d'index `1314fb30…`, manifeste amd64 inchangé depuis la publication). Les apk libssl3/libcrypto3 3.5.9-r0 et zlib 1.3.2-r1 de l'image officielle restent en retard sur la secdb Alpine : ils ne sont chargés que par `apk` et `ssl_client`, jamais par le serveur (Node embarque OpenSSL et zlib). Ne pas figer un apk en version exacte (Alpine ne garde que la dernière révision). À revoir le 02/12 ; option possible : `apk del apk-tools ssl_client` dans l'étage final (sujet dédié).
+- **Politique de confidentialité** : branche `docs/politique-journaux` (journaux conservés 30 jours, `TERMS_VERSION = "2026-11-25"`) poussée, **non mergée** : à merger le jour de l'installation de l'observabilité, après Loki et avant Alloy, avec `TERMS_VERSION` à la date réelle (`lib/legal.ts` et `tests/register.test.ts`).
+- Vérification du consentement : la bannière n'apparaît qu'après hydratation ; navigateur confiné en conteneur Playwright, réseau interne, requêtes Google interceptées.
