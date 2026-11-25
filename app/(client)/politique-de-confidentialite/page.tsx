@@ -159,12 +159,7 @@ export default function PolitiqueConfidentialitePage() {
               ],
               [
                 "Journaux techniques",
-                <>
-                  Écrits sur la sortie des services de notre serveur
-                  d&apos;application, sans base de journaux dédiée ; leur durée de
-                  conservation dépend de la configuration de l&apos;hébergement :{" "}
-                  <ToComplete>durée à compléter</ToComplete>
-                </>,
+                "Conservés 30 jours dans un outil de journalisation hébergé sur le même serveur (Hetzner), puis supprimés automatiquement. Ils contiennent des adresses IP, des identifiants techniques de compte et de course et, selon les opérations, une adresse e-mail partiellement masquée. Finalité : sécurité de la plateforme et diagnostic des incidents ; base légale : intérêt légitime.",
               ],
               [
                 "Sauvegardes de la base de données",
