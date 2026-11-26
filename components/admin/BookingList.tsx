@@ -2,9 +2,10 @@
 
 import { useState } from "react"
 import { useQuery } from "@tanstack/react-query"
-import { AlertCircle, ChevronLeft, ChevronRight, CheckCircle2, Loader2 } from "lucide-react"
+import { ChevronLeft, ChevronRight, CheckCircle2, Loader2 } from "lucide-react"
 import { getAdminBookings } from "@/lib/api"
-import { errorMessage } from "@/lib/error-message"
+import { canRetryLoad, loadErrorMessage } from "@/lib/list-load"
+import { LoadError } from "@/components/LoadError"
 import { BookingCard } from "./BookingCard"
 
 const LIMIT = 20
@@ -13,7 +14,7 @@ export function BookingList({ status, date }: { status?: string; date?: string }
   const [page, setPage] = useState(1)
   const queryKey = ["admin-bookings", status ?? "all", date ?? "all", page]
 
-  const { data, isLoading, error } = useQuery({
+  const { data, isLoading, error, refetch, isFetching } = useQuery({
     queryKey,
     queryFn: () => getAdminBookings(status, date, page, LIMIT),
     refetchInterval: 30_000,
@@ -36,13 +37,12 @@ export function BookingList({ status, date }: { status?: string; date?: string }
 
   if (error && sorted.length === 0) {
     return (
-      <div
-        role="alert"
-        className="flex items-start gap-2 rounded-lg border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive"
-      >
-        <AlertCircle className="mt-0.5 size-4 shrink-0" />
-        {errorMessage(error, "Impossible de charger les réservations.")}
-      </div>
+      <LoadError
+        title="Liste indisponible"
+        message={loadErrorMessage(error, "Impossible de charger les réservations.")}
+        onRetry={canRetryLoad(error) ? () => void refetch() : undefined}
+        retrying={isFetching}
+      />
     )
   }
 

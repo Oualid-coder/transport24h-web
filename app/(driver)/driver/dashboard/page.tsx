@@ -22,6 +22,8 @@ import type { Booking, BookingStatus } from "@/lib/types"
 import { BackButton } from "@/components/BackButton"
 import { BookingPhotoSection } from "@/components/BookingPhotoSection"
 import { CompleteBookingModal } from "@/components/CompleteBookingModal"
+import { LoadError } from "@/components/LoadError"
+import { canRetryLoad, loadErrorMessage } from "@/lib/list-load"
 
 // ── Constantes ───────────────────────────────────────────────────────────────
 
@@ -182,7 +184,13 @@ function MyMissionCard({ booking }: { booking: Booking }) {
 // ── Page ──────────────────────────────────────────────────────────────────────
 
 export default function DriverDashboardPage() {
-  const { data: myBookings = [], isLoading: loadingMine } = useQuery({
+  const {
+    data: myBookings = [],
+    isLoading: loadingMine,
+    error: mineError,
+    refetch: refetchMine,
+    isFetching: fetchingMine,
+  } = useQuery({
     queryKey: MY_KEY,
     queryFn: getDriverMyBookings,
     refetchInterval: 60_000,
@@ -233,6 +241,13 @@ export default function DriverDashboardPage() {
           <div className="flex justify-center py-10">
             <Loader2 className="size-5 animate-spin text-muted-foreground" />
           </div>
+        ) : mineError && myBookings.length === 0 ? (
+          <LoadError
+            title="Liste indisponible"
+            message={loadErrorMessage(mineError, "Impossible de charger vos missions.")}
+            onRetry={canRetryLoad(mineError) ? () => void refetchMine() : undefined}
+            retrying={fetchingMine}
+          />
         ) : upcoming.length === 0 ? (
           <div className="rounded-lg border border-dashed border-border py-12 text-center">
             <CheckCircle2 className="mx-auto mb-2 size-8 text-muted-foreground/30" />
