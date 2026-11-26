@@ -14,8 +14,10 @@ import {
 import { assignDriver, getAdminDrivers, ApiError } from "@/lib/api"
 import { errorMessage } from "@/lib/error-message"
 import { refreshAfterAssign } from "@/lib/driver-assignment"
+import { canRetryLoad, loadErrorMessage } from "@/lib/list-load"
 import type { Driver } from "@/lib/types"
 import { CreateDriverModal } from "./CreateDriverModal"
+import { LoadError } from "@/components/LoadError"
 
 export function AssignDriverModal({
   open,
@@ -34,7 +36,7 @@ export function AssignDriverModal({
   const [msg, setMsg] = useState<{ type: "success" | "error"; text: string } | null>(null)
   const [showCreate, setShowCreate] = useState(false)
 
-  const { data: drivers = [], isLoading } = useQuery({
+  const { data: drivers = [], isLoading, error, refetch, isFetching } = useQuery({
     queryKey: ["admin-drivers"],
     queryFn: getAdminDrivers,
     staleTime: 30_000,
@@ -108,6 +110,14 @@ export function AssignDriverModal({
           {isLoading ? (
             <div className="flex justify-center py-10">
               <Loader2 className="size-5 animate-spin text-muted-foreground" />
+            </div>
+          ) : error && drivers.length === 0 ? (
+            <div className="px-5 py-4">
+              <LoadError
+                message={loadErrorMessage(error, "Impossible de charger les chauffeurs.")}
+                onRetry={canRetryLoad(error) ? () => void refetch() : undefined}
+                retrying={isFetching}
+              />
             </div>
           ) : drivers.length === 0 ? (
             <p className="py-10 text-center text-sm text-muted-foreground">

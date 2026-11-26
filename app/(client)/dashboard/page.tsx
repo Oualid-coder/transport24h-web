@@ -7,27 +7,31 @@ import type { Booking } from "@/lib/types"
 import { BookingCardClient } from "@/components/BookingCardClient"
 import { clientIpHeaders } from "@/lib/client-ip"
 import { BookingsReport } from "@/components/BookingsReport"
+import { RefreshLoadError } from "@/components/LoadError"
+import { loadServerList, sessionRedirectUrl, type ListLoad } from "@/lib/list-load"
 
-async function getMyBookings(): Promise<Booking[]> {
+const DASHBOARD_PATH = "/dashboard"
+
+// 401 (jeton expiré ou session révoquée) → /session, qui renouvelle puis revient ici ;
+// 403, 404, 5xx, réseau, délai → encadré d'erreur (jamais une liste vide trompeuse).
+async function getMyBookings(): Promise<ListLoad<Booking>> {
   const cookieStore = await cookies()
   const token = cookieStore.get("access_token")?.value
-  if (!token) redirect("/login?redirect=/dashboard")
+  if (!token) redirect(sessionRedirectUrl(DASHBOARD_PATH))
 
-  const res = await fetch(
+  return loadServerList<Booking>(
     `${process.env.API_URL ?? process.env.NEXT_PUBLIC_API_URL}/bookings/me`,
-    {
-      // Go auth middleware lit Authorization: Bearer, pas Cookie ; IP du visiteur pour la gateway
-      headers: { Authorization: `Bearer ${token}`, ...clientIpHeaders(await headers()) },
-      cache: "no-store",
-    },
+    // Go auth middleware lit Authorization: Bearer, pas Cookie ; IP du visiteur pour la gateway
+    { Authorization: `Bearer ${token}`, ...clientIpHeaders(await headers()) },
+    "Impossible de charger vos courses.",
   )
-  if (!res.ok) return []
-  return res.json() as Promise<Booking[]>
 }
 
 
 export default async function DashboardPage() {
-  const bookings = await getMyBookings()
+  const load = await getMyBookings()
+  if (load.kind === "session") redirect(sessionRedirectUrl(DASHBOARD_PATH))
+  const bookings = load.kind === "ok" ? load.items : []
   // Compte entreprise (cookie user_role posé au login) : relevé des courses de l'entreprise.
   // L'API refuse /b2b/* à tout autre rôle : le cookie ne sert qu'à l'affichage.
   const isB2b = (await cookies()).get("user_role")?.value === "b2b"
@@ -50,6 +54,9 @@ export default async function DashboardPage() {
         </Link>
       </p>
 
+      {load.kind === "error" ? (
+        <RefreshLoadError title="Liste indisponible" message={load.message} retryable={load.retryable} />
+      ) : (
       <Tabs defaultValue="upcoming">
         <TabsList className="mb-6">
           <TabsTrigger value="upcoming">
@@ -92,6 +99,7 @@ export default async function DashboardPage() {
           )}
         </TabsContent>
       </Tabs>
+      )}
     </div>
 
     {/* Tableau large : conteneur plus large que la liste des courses */}

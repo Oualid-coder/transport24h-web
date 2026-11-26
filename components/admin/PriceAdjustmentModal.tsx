@@ -9,6 +9,8 @@ import { Textarea } from "@/components/ui/textarea"
 import { Dialog, DialogClose, DialogContent, DialogTitle } from "@/components/ui/dialog"
 import { closePriceAdjustment, createPriceAdjustment, getPriceAdjustments, previewPriceAdjustment } from "@/lib/api"
 import { priceChanged } from "@/lib/price"
+import { canRetryLoad, loadErrorMessage } from "@/lib/list-load"
+import { LoadError } from "@/components/LoadError"
 import {
   CLOSE_OUTCOME_LABEL,
   REASON_MAX_LENGTH,
@@ -760,6 +762,17 @@ export function PriceAdjustmentModal({
                 </li>
               ))}
             </ul>
+          </div>
+        )}
+        {/* Historique non chargé : le dire (une opération interrompue à reprendre peut s'y trouver) */}
+        {step !== "confirm" && step !== "close" && step !== "closeConfirm" && history.error && !history.data && (
+          <div className="border-t border-border px-5 py-4">
+            <LoadError
+              title="Ajustements précédents indisponibles"
+              message={loadErrorMessage(history.error, "Impossible de charger les ajustements précédents.")}
+              onRetry={canRetryLoad(history.error) ? () => void history.refetch() : undefined}
+              retrying={history.isFetching}
+            />
           </div>
         )}
       </DialogContent>
