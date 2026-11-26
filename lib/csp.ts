@@ -43,8 +43,9 @@ export function buildCsp(nonce: string, isDev = false): string {
     `img-src 'self' data: blob: https://*.tile.openstreetmap.org ${r2Images} ${googleAds.img}`,
     // Fonts servies localement par next/font — pas besoin de fonts.googleapis.com
     "font-src 'self'",
-    // API backend + Stripe (paiement + fraud detection)
-    `connect-src 'self' ${apiOrigin} https://api.stripe.com https://hooks.stripe.com https://nominatim.openstreetmap.org ${googleAds.connect}`,
+    // API backend + Stripe (paiement + fraud detection). Recherche d'adresse : par l'API
+    // (/geocode/*), jamais d'appel direct du navigateur à un géocodeur tiers.
+    `connect-src 'self' ${apiOrigin} https://api.stripe.com https://hooks.stripe.com ${googleAds.connect}`,
     // Stripe Elements s'affiche dans un iframe
     // hooks.stripe.com : pages d'authentification forte (3D Secure) recommandées par Stripe
     `frame-src https://js.stripe.com https://hooks.stripe.com ${googleAds.frame}`,
