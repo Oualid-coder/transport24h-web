@@ -22,6 +22,13 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { approvePartner, getAdminPartners, getPartnerDocumentUrl, rejectPartner, resendPartnerLink, ApiError } from "@/lib/api"
 import { errorMessage } from "@/lib/error-message"
 import { canResendPartnerLink, partnerLinkResentMessage, resendErrorMessage } from "@/lib/invitation-resend"
+import {
+  REJECT_APPROVED_CONSEQUENCES,
+  REJECT_APPROVED_TITLE,
+  decisionErrorNeedsRefresh,
+  rejectErrorMessage,
+  rejectNeedsConfirmation,
+} from "@/lib/partner-reject"
 import type { PartnerApplication, PartnerStatus } from "@/lib/types"
 import { BackButton } from "@/components/BackButton"
 
@@ -127,25 +134,61 @@ function PartnerCard({
 }) {
   const queryClient = useQueryClient()
 
-  const updateCache = (updated: PartnerApplication) => {
-    queryClient.setQueryData<PartnerApplication[]>(queryKey, (old) =>
-      old?.map((p) => (p.id === updated.id ? updated : p)),
-    )
+  const refreshList = () =>
     queryClient.invalidateQueries({
       queryKey: ["admin-partners"],
       exact: false,
     })
+
+  const updateCache = (updated: PartnerApplication) => {
+    queryClient.setQueryData<PartnerApplication[]>(queryKey, (old) =>
+      old?.map((p) => (p.id === updated.id ? updated : p)),
+    )
+    refreshList()
   }
 
+  // 409 / 404 : la candidature a changé ou disparu entre-temps (refusée pendant l'approbation,
+  // traitée par un autre admin) : la liste est relue pour ne pas laisser une carte périmée.
+  const refreshAfterError = (err: Error) => {
+    if (decisionErrorNeedsRefresh(err)) refreshList()
+  }
+
+  // Approbation et refus : garde synchrone commune (comme handleResend) ; un double clic,
+  // ou un clic sur l'autre bouton avant le nouveau rendu, ne déclenche qu'un appel.
+  const decisionInFlight = useRef(false)
+  const releaseDecision = () => {
+    decisionInFlight.current = false
+  }
   const approveMutation = useMutation({
     mutationFn: () => approvePartner(partner.id),
     onSuccess: updateCache,
+    onError: refreshAfterError,
+    onSettled: releaseDecision,
   })
 
+  // Candidature approuvée : refus seulement après confirmation (compte désactivé, sessions coupées).
+  const [confirmingReject, setConfirmingReject] = useState(false)
   const rejectMutation = useMutation({
     mutationFn: () => rejectPartner(partner.id),
-    onSuccess: updateCache,
+    onSuccess: (updated: PartnerApplication) => {
+      setConfirmingReject(false)
+      updateCache(updated)
+    },
+    onError: refreshAfterError,
+    onSettled: releaseDecision,
   })
+  const handleApprove = () => {
+    if (decisionInFlight.current) return
+    decisionInFlight.current = true
+    rejectMutation.reset()
+    approveMutation.mutate()
+  }
+  const handleReject = () => {
+    if (decisionInFlight.current) return
+    decisionInFlight.current = true
+    approveMutation.reset()
+    rejectMutation.mutate()
+  }
 
   // Renvoi du mail avec le lien d'envoi des documents (candidature en attente seulement).
   // Garde synchrone : un double clic ne déclenche qu'un appel.
@@ -281,10 +324,7 @@ function PartnerCard({
               size="sm"
               className="flex-1"
               disabled={busy}
-              onClick={() => {
-                rejectMutation.reset()
-                approveMutation.mutate()
-              }}
+              onClick={handleApprove}
             >
               {approveMutation.isPending ? (
                 <Loader2 className="mr-1.5 size-3.5 animate-spin" />
@@ -298,10 +338,7 @@ function PartnerCard({
               variant="destructive"
               className="flex-1"
               disabled={busy}
-              onClick={() => {
-                approveMutation.reset()
-                rejectMutation.mutate()
-              }}
+              onClick={handleReject}
             >
               {rejectMutation.isPending ? (
                 <Loader2 className="mr-1.5 size-3.5 animate-spin" />
@@ -312,6 +349,69 @@ function PartnerCard({
             </Button>
           </div>
         )}
+        {/* ── Refus d'une candidature approuvée : deux étapes ─────────────── */}
+        {rejectNeedsConfirmation(partner.status) && (
+          confirmingReject ? (
+            <div
+              role="group"
+              aria-labelledby={`reject-title-${partner.id}`}
+              className="space-y-3 rounded-lg border border-destructive/40 bg-destructive/5 px-3 py-3 text-xs"
+            >
+              <p id={`reject-title-${partner.id}`} className="text-sm font-medium text-destructive">
+                {REJECT_APPROVED_TITLE}
+              </p>
+              <ul className="list-disc space-y-1 pl-4 text-muted-foreground">
+                {REJECT_APPROVED_CONSEQUENCES.map((line) => (
+                  <li key={line} className="break-words">{line}</li>
+                ))}
+              </ul>
+              <div className="flex flex-col gap-2 sm:flex-row">
+                <Button
+                  size="sm"
+                  variant="destructive"
+                  className="sm:flex-1"
+                  disabled={busy}
+                  aria-busy={rejectMutation.isPending}
+                  onClick={handleReject}
+                >
+                  {rejectMutation.isPending ? (
+                    <Loader2 className="mr-1.5 size-3.5 animate-spin" />
+                  ) : (
+                    <XCircle className="mr-1.5 size-3.5" />
+                  )}
+                  Confirmer le refus
+                </Button>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="sm:flex-1"
+                  disabled={rejectMutation.isPending}
+                  onClick={() => {
+                    rejectMutation.reset()
+                    setConfirmingReject(false)
+                  }}
+                >
+                  Annuler
+                </Button>
+              </div>
+            </div>
+          ) : (
+            <Button
+              size="sm"
+              variant="outline"
+              className="w-full border-destructive/40 text-destructive hover:bg-destructive/10"
+              disabled={busy}
+              onClick={() => {
+                approveMutation.reset()
+                rejectMutation.reset()
+                setConfirmingReject(true)
+              }}
+            >
+              <XCircle className="mr-1.5 size-3.5" />
+              Refuser et désactiver le compte
+            </Button>
+          )
+        )}
         {(approveMutation.error || rejectMutation.error) && (
           <div
             role="alert"
@@ -320,7 +420,7 @@ function PartnerCard({
             <AlertCircle className="mt-0.5 size-3.5 shrink-0" />
             {approveMutation.error
               ? errorMessage(approveMutation.error, "La candidature n'a pas pu être approuvée. Réessayez.")
-              : errorMessage(rejectMutation.error, "La candidature n'a pas pu être rejetée. Réessayez.")}
+              : rejectErrorMessage(rejectMutation.error)}
           </div>
         )}
       </CardContent>
