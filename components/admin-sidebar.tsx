@@ -5,6 +5,7 @@ import Image from "next/image"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import {
+  ArrowLeftRight,
   Building2,
   ChevronLeft,
   ChevronRight,
@@ -27,6 +28,7 @@ const NAV_ITEMS = [
   { href: "/admin/drivers",    icon: Truck,           label: "Chauffeurs" },
   { href: "/admin/companies",  icon: Building2,       label: "Entreprises" },
   { href: "/admin/credit-notes", icon: Receipt,       label: "Avoirs à émettre" },
+  { href: "/admin/stripe-reconciliation", icon: ArrowLeftRight, label: "Rapprochement Stripe" },
   { href: "/admin/password",   icon: KeyRound,        label: "Mot de passe" },
 ]
 
