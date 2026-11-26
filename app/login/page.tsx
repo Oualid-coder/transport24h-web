@@ -16,6 +16,7 @@ import { Card, CardContent, CardHeader } from "@/components/ui/card"
 import { login, ApiError } from "@/lib/api"
 import { safeRedirectPath } from "@/lib/safe-redirect"
 import { BackButton } from "@/components/BackButton"
+import { PASSWORD_CHANGED_LOGIN_MESSAGE } from "@/lib/password"
 
 const loginSchema = z.object({
   email: z.email({ error: "Adresse e-mail invalide" }),
@@ -30,6 +31,7 @@ function LoginContent() {
   const redirectParam = safeRedirectPath(sp.get("redirect"))
   const registered = sp.get("registered") === "1"
   const verificationSent = sp.get("verify") === "sent"
+  const passwordChanged = sp.get("password") === "changed"
 
   const router = useRouter()
   const [serverError, setServerError] = useState<string | null>(null)
@@ -71,6 +73,13 @@ function LoginContent() {
           <h1 className="text-xl font-bold">Transport24h</h1>
         </div>
 
+        {passwordChanged && (
+          <div role="status" className="mb-4 flex items-center gap-2 rounded-lg border border-primary/30 bg-primary/10 px-4 py-3 text-sm text-primary">
+            <CheckCircle2 className="size-4 shrink-0" />
+            {PASSWORD_CHANGED_LOGIN_MESSAGE}
+          </div>
+        )}
+
         {/* Bannière inscription réussie */}
         {registered && (
           <div className="mb-4 flex items-center gap-2 rounded-lg border border-primary/30 bg-primary/10 px-4 py-3 text-sm text-primary">
@@ -108,7 +117,15 @@ function LoginContent() {
               </div>
 
               <div className="space-y-1.5">
-                <Label htmlFor="password">Mot de passe</Label>
+                <div className="flex items-center justify-between">
+                  <Label htmlFor="password">Mot de passe</Label>
+                  <Link
+                    href="/forgot-password"
+                    className="text-xs text-primary underline-offset-4 hover:underline max-lg:py-3"
+                  >
+                    Mot de passe oublié ?
+                  </Link>
+                </div>
                 <PasswordInput
                   id="password"
                   placeholder="••••••••"

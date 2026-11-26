@@ -1,6 +1,6 @@
 import Image from "next/image"
 import Link from "next/link"
-import { Home } from "lucide-react"
+import { Home, KeyRound } from "lucide-react"
 import { LogoutButton } from "@/components/logout-button"
 
 export default function DriverLayout({
@@ -33,6 +33,13 @@ export default function DriverLayout({
             >
               <Home className="size-4" />
               <span className="max-sm:sr-only">Mes missions</span>
+            </Link>
+            <Link
+              href="/driver/password"
+              className="flex items-center gap-1.5 rounded-lg px-3 py-2 transition-colors hover:bg-accent hover:text-foreground max-lg:min-h-11 max-sm:min-w-11 max-sm:justify-center"
+            >
+              <KeyRound className="size-4" />
+              <span className="max-sm:sr-only">Mot de passe</span>
             </Link>
             <LogoutButton className="w-auto px-3 py-2 max-lg:min-h-11 max-sm:min-w-11 max-sm:justify-center" labelClassName="max-sm:sr-only" />
           </nav>

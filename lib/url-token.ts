@@ -40,3 +40,34 @@ export function stripHashTokenFromAddressBar(name = "token"): void {
   const next = withoutHashParam(current, name)
   if (next !== current) window.history.replaceState(null, "", next)
 }
+
+// Lecteur à usage unique : le premier appel lit (et retire) le jeton, les suivants renvoient la
+// même valeur. React Strict Mode (next dev) rejoue les effets : sans cela, le second
+// passage relirait un fragment déjà vidé et perdrait le jeton.
+export function onceReader(read: () => string | null): () => string | null {
+  let value: string | null | undefined
+  return () => {
+    if (value === undefined) value = read()
+    return value
+  }
+}
+
+type LocationLike = Pick<Location, "pathname" | "search" | "hash">
+type HistoryLike = Pick<History, "replaceState">
+
+// Lit le jeton du fragment (#token=…) PUIS le retire aussitôt de la barre d'adresse
+// (history.replaceState, sans nouvelle entrée d'historique). Lien de réinitialisation du mot de
+// passe : le jeton ne doit rester ni dans l'URL affichée, ni dans l'historique, ni dans l'URL de
+// page lue par un traceur accepté. null si absent. Côté serveur : null, rien n'est touché.
+export function takeHashToken(
+  name = "token",
+  loc: LocationLike | undefined = typeof window === "undefined" ? undefined : window.location,
+  hist: HistoryLike | undefined = typeof window === "undefined" ? undefined : window.history,
+): string | null {
+  if (!loc || !hist) return null
+  const token = hashParam(loc.hash, name)
+  const current = `${loc.pathname}${loc.search}${loc.hash}`
+  const next = withoutHashParam(current, name)
+  if (next !== current) hist.replaceState(null, "", next)
+  return token
+}
