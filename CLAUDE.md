@@ -118,7 +118,7 @@ Les route groups `(client)`, `(admin)`, `(driver)` n'apparaissent pas dans les U
   doit contenir `user_role=` (posé avec `access_token`), sinon `/login` ; en complément
   `sessionStorage["session-resume-at"]` (15 s, ignoré si le stockage lève).
 - Non couverts : `window.open` de la facture PDF admin (`/api/proxy/.../pdf`), Server Component `dashboard`
-  (rend `[]` sur 401 dans la fenêtre où le cookie survit au jeton), navbar des pages publiques (`isLoggedIn` lit
+  (corrigé au lot 11 : 401 → `/session`), navbar des pages publiques (`isLoggedIn` lit
   `access_token`, faux après 15 min d'inactivité jusqu'à la prochaine page protégée ou requête API).
 - Sessions ouvertes avant ce correctif (refresh en `Path=/auth`) : non renouvelables ni révocables par le web ;
   reconnexion à l'expiration de l'access token, comme avant.
@@ -264,12 +264,19 @@ Lire le guide pertinent dans `node_modules/next/dist/docs/` — les APIs, conven
 - Politique : IGN destinataire du texte de l'adresse (via nos serveurs, pas l'IP), cache 24 h / 3 jours / 1 h ; `TERMS_VERSION = "2026-11-26"`. La branche non mergée `docs/politique-journaux` devra prendre une nouvelle version à son merge (conflit trivial sur `lib/legal.ts` et `tests/register.test.ts`).
 - Dans un conteneur sans TTY, `npm test` affiche `# pass N` (TAP) et non `ℹ pass N`.
 
+## Lot 11 (2026-11-26, en prod)
+
+- **Tableaux de bord sans liste vide trompeuse (sujet 44)** : `lib/list-load.ts` (`loadServerList` pour les Server Components : 401 → `session`, sinon `error`, délai de 10 s ; `loadErrorMessage` : 502/503/504, réseau et délai → « Service momentanément indisponible » avec Retry-After, 404 → « Liste introuvable… », 403 → `errorMessage` ; `canRetryLoad` (pas sur 403) ; `sessionRedirectUrl` passé par `safeRedirectPath`). `components/LoadError.tsx` (`role="alert"`, « Réessayer » ; `RefreshLoadError` → `router.refresh()`). `/dashboard` (client et entreprise) : 401 → `/session?redirect=/dashboard` → retour ou `/login`. Chauffeur, admin (statistiques, `BookingList`), modale d'affectation, historique des ajustements : encadré d'erreur avant l'état vide. 200 [] inchangé.
+- **Refus d'une candidature approuvée (sujet 43)** : `/admin/partners`, bouton « Refuser et désactiver le compte » avec confirmation en deux étapes (`lib/partner-reject.ts`) ; 409 affiché par `errorMessage`, liste relue sur 409/404 ; garde `useRef` contre le double envoi (Approuver, Rejeter, Confirmer). Déployé après l'API.
+- API (sans changement web) : déconnexion d'un appareil (sujet 45) → jeton d'accès refusé aussitôt ; refresh en 503 (cookie gardé) pendant une panne Redis ou base ; montants des mails client (sujet 42) ; refus admin d'une course en 409 pendant un ajustement de prix (affiché par `BookingCard`).
+- Ouverts : boucle `/dashboard` ↔ `/session` possible si `sessionStorage` est bloqué et que l'API refuse un jeton fraîchement renouvelé ; liste périmée sans avertissement après un rechargement raté (chauffeur, admin).
+
 ## Lot 10 (2026-11-26, en prod)
 
 - **Rapprochement Stripe (sujet 27)** : page admin `/admin/stripe-reconciliation` (entrée « Rapprochement Stripe » de la barre latérale, `lib/stripe-reconciliation.ts`). Liste les remboursements Stripe sans avoir (lecture seule, API `GET /admin/stripe-reconciliation`) ; émission d'un avoir par ligne en deux étapes (case « vérifié dans Stripe », puis confirmation qui affiche le montant compté), verrou synchrone contre le double clic ; bouton « Activer les avoirs automatiques » en deux étapes, posé une seule fois (à faire seulement après l'ajout des événements Stripe). Erreurs via `errorMessage`.
 - API (sans changement web) : annulation après un remboursement partiel (sujet 28) → `refund_message` déjà affiché par `CancelBookingModal` (« déjà intégralement remboursée », « montant restant », « en cours de vérification ») ; compte désactivé (sujet 41) → 401 « session révoquée », puis refresh 403/401 et retour à `/login` (pas de boucle) ; 503 + `Retry-After` si la base est indisponible (pas de déconnexion).
 - Branche **non mergée** `docs/politique-sauvegardes-hors-serveur` (sujet 29) : copie chiffrée des sauvegardes chez Cloudflare R2 (UE), conservation 30 à 31 jours ; à merger le jour de l'activation de `pg-backup-offsite`, avec `TERMS_VERSION` à la date réelle (conflit trivial avec `docs/politique-journaux`).
-- Ouvert : les pages rendues côté serveur (`app/(client)/dashboard/page.tsx`) affichent une liste vide sur 401/503 jusqu'au premier appel côté client.
+- (Pages rendues côté serveur vides sur 401/503 : corrigé au lot 11, sujet 44.)
 
 ## Lot 9 (2026-11-26, en prod)
 
