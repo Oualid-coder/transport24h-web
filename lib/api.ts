@@ -33,6 +33,9 @@ import type {
   RegisterBody,
   SavedQuote,
   SetupIntentResponse,
+  StripeActivationResult,
+  StripeReconciliation,
+  StripeRefundCreditNoteResult,
   TruckSurcharge,
   TruckType,
 } from "@/lib/types"
@@ -492,6 +495,31 @@ export function retryCreditNote(
       body: JSON.stringify({ confirmed_in_stripe: confirmedInStripe }),
     },
   )
+}
+
+// ── Admin — rapprochement Stripe ──────────────────────────────────────────────
+
+// GET /admin/stripe-reconciliation?days=N — remboursements Stripe sans avoir (lecture seule de Stripe).
+export function getStripeReconciliation(days: number): Promise<StripeReconciliation> {
+  return apiFetch<StripeReconciliation>(`/admin/stripe-reconciliation?days=${encodeURIComponent(String(days))}`)
+}
+
+// POST /admin/stripe-reconciliation/{re_…}/credit-note — envoyé après la seconde confirmation.
+// 201 → avoir émis et envoyé (created: true), 200 → déjà émis (created: false, rien renvoyé).
+export function issueStripeRefundCreditNote(refundId: string): Promise<StripeRefundCreditNoteResult> {
+  return apiFetch<StripeRefundCreditNoteResult>(
+    `/admin/stripe-reconciliation/${encodeURIComponent(refundId)}/credit-note`,
+    { method: "POST", body: JSON.stringify({ confirmed_in_stripe: true }) },
+  )
+}
+
+// POST /admin/stripe-reconciliation/activate — envoyé après la seconde confirmation. Pose la date
+// de mise en service une seule fois (201) ; déjà posée → 200, jamais déplacée.
+export function activateStripeAutoCreditNotes(): Promise<StripeActivationResult> {
+  return apiFetch<StripeActivationResult>("/admin/stripe-reconciliation/activate", {
+    method: "POST",
+    body: JSON.stringify({ confirmed: true }),
+  })
 }
 
 // ── Admin — entreprises B2B ───────────────────────────────────────────────────

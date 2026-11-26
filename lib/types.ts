@@ -331,6 +331,56 @@ export interface CreditNoteRetryResult {
   created: boolean // true = avoir émis et envoyé (201), false = déjà émis (200)
 }
 
+// ── Rapprochement Stripe (remboursements faits hors de l'application) ─────────
+
+// Origine d'un remboursement : "app" créé par l'application, "external" hors application,
+// "" jamais vu par le webhook et sans marque de l'application.
+export type StripeRefundOrigin = "app" | "external" | ""
+
+// Ligne de GET /admin/stripe-reconciliation — mirrors Go stripeReconciliationRowResponse
+export interface StripeReconciliationRow {
+  stripe_refund_id: string
+  amount_cents: number
+  currency: string
+  status: string
+  created: string
+  payment_intent_id: string
+  booking_id: string | null
+  booking_reference: string
+  origin: StripeRefundOrigin
+  before_cutoff: boolean
+  can_issue: boolean
+  blocker?: string
+  notice?: string
+  // Montant ajouté au total remboursé de la course si l'avoir est émis (le reste y figure déjà).
+  count_cents: number
+}
+
+// Mise en service des avoirs automatiques : cutoff_at null = pas encore activés.
+export interface StripeRefundSettings {
+  cutoff_at: string | null
+  activated_by: string | null
+  activated_at: string | null
+}
+
+export interface StripeReconciliation {
+  since: string
+  settings: StripeRefundSettings
+  truncated: boolean
+  refunds: StripeReconciliationRow[]
+}
+
+// Réponse 201 / 200 de POST /admin/stripe-reconciliation/{re_…}/credit-note
+export interface StripeRefundCreditNoteResult extends CreditNoteRetryResult {
+  counted_cents: number
+}
+
+// Réponse 201 (activés) / 200 (déjà actifs) de POST /admin/stripe-reconciliation/activate
+export interface StripeActivationResult {
+  settings: StripeRefundSettings
+  activated: boolean
+}
+
 export interface AdminStats {
   revenue_today: number   // CA du jour en € HT
   bookings_today: number  // nombre total de courses du jour
