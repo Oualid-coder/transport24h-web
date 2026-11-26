@@ -23,6 +23,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { AddressInput } from "@/components/AddressInput"
 import { DecorativeBlobs } from "@/components/DecorativeBlobs"
 import { getQuoteEstimate } from "@/lib/api"
+import { isQuotablePoint } from "@/lib/address-search"
 import { TRUCK_VOLUME } from "@/lib/types"
 import type { GeoPoint, TruckType } from "@/lib/types"
 import { useRole } from "@/components/RoleProvider"
@@ -50,8 +51,9 @@ export default function HomePage() {
   const [comment, setComment] = useState("")
   const [hazmatAcknowledged, setHazmatAcknowledged] = useState(false)
 
-  // Devis en temps réel dès que les deux points sont géocodés
-  const quoteReady = origin !== null && destination !== null
+  // Devis en temps réel dès que les deux adresses sont choisies dans la liste de suggestions ;
+  // AddressInput remet le point à null dès que le texte change.
+  const quoteReady = isQuotablePoint(origin) && isQuotablePoint(destination)
 
   const { data: quote, isFetching: quoteFetching } = useQuery({
     queryKey: ["quote", origin, destination, truckType, handlers],

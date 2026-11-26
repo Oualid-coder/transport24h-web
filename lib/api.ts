@@ -17,7 +17,6 @@ import type {
   DriverCreated,
   EstimateBody,
   EstimateResult,
-  GeoPoint,
   HelpersSurcharge,
   InviteCompanyBody,
   PartnerApplyBody,
@@ -38,6 +37,7 @@ import type {
   TruckType,
 } from "@/lib/types"
 import { safeRedirectPath } from "@/lib/safe-redirect"
+import { ADDRESS_UNAVAILABLE_MESSAGE, addressQuery, parseGeocodeResponse, type AddressResult } from "@/lib/address-search"
 import { reportFilename, reportPath, type ReportFilters, type ReportTarget } from "@/lib/bookings-report"
 
 // Toutes les requêtes authentifiées passent par le proxy Next.js (/api/proxy).
@@ -236,77 +236,41 @@ async function apiFetch<T>(
   return res.json() as Promise<T>
 }
 
-// ── Geocoding Nominatim ───────────────────────────────────────────────────────
+// ── Recherche d'adresse (BAN, par l'API) ──────────────────────────────────────
 
-type NominatimResult = { lat: string; lon: string; display_name: string }
-
-// Nominatim encode certains caractères dans display_name (&#39; pour l'apostrophe,
-// &amp; pour &). React affiche le texte brut sans décoder les entités HTML —
-// on décode ici, à la source, avant de stocker dans GeoPoint.address.
-function decodeHtmlEntities(str: string): string {
-  return str
-    .replace(/&amp;/g, "&")
-    .replace(/&#39;/g, "'")
-    .replace(/&apos;/g, "'")
-    .replace(/&quot;/g, '"')
-    .replace(/&lt;/g, "<")
-    .replace(/&gt;/g, ">")
+// POST /geocode/completion — public, appel direct à la gateway comme
+// /quotes/estimate (IP du visiteur pour sa limite). Texte dans le corps, jamais dans l'URL.
+// Erreurs : ApiError 422 (texte refusé), 429 (limite, retryAfter), 503 (API ou Géoplateforme
+// indisponible, réseau, réponse hors contrat). Annulation (signal) : AbortError propagée.
+async function geocodeRequest(kind: "completion", text: string, signal?: AbortSignal): Promise<AddressResult[]> {
+  let res: Response
+  try {
+    res = await fetch(`${PUBLIC_API_URL}/geocode/${kind}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ text }),
+      credentials: "omit",
+      signal,
+    })
+  } catch (err) {
+    if (err instanceof DOMException && err.name === "AbortError") throw err
+    throw new ApiError(503, ADDRESS_UNAVAILABLE_MESSAGE)
+  }
+  if (!res.ok) {
+    const data = (await res.json().catch(() => ({}))) as { error?: string }
+    const status = res.status === 422 || res.status === 429 ? res.status : 503
+    throw new ApiError(status, data.error ?? res.statusText, parseRetryAfter(res.headers.get("retry-after")))
+  }
+  const results = parseGeocodeResponse(await res.json().catch(() => null))
+  if (!results) throw new ApiError(503, ADDRESS_UNAVAILABLE_MESSAGE)
+  return results
 }
 
-// Retourne jusqu'à 5 suggestions pour l'autocomplete
-export async function searchAddresses(query: string): Promise<GeoPoint[]> {
-  if (query.trim().length < 3) return []
-  const qs = new URLSearchParams({
-    q: query,
-    format: "json",
-    limit: "5",
-    countrycodes: "fr",
-  })
-  try {
-    const res = await fetch(
-      `https://nominatim.openstreetmap.org/search?${qs.toString()}`,
-      { headers: { "Accept-Language": "fr" } },
-    )
-    if (!res.ok) return []
-    const data = (await res.json()) as NominatimResult[]
-    return data.map((item) => ({
-      lat: parseFloat(item.lat),
-      lng: parseFloat(item.lon),
-      address: decodeHtmlEntities(item.display_name),
-    }))
-  } catch {
-    return []
-  }
-}
-
-export async function geocodeAddress(address: string): Promise<GeoPoint | null> {
-  if (address.trim().length < 5) return null
-  const qs = new URLSearchParams({
-    q: address,
-    format: "json",
-    limit: "1",
-    countrycodes: "fr",
-  })
-  try {
-    const res = await fetch(
-      `https://nominatim.openstreetmap.org/search?${qs.toString()}`,
-      { headers: { "Accept-Language": "fr" } },
-    )
-    if (!res.ok) return null
-    const data = (await res.json()) as Array<{
-      lat: string
-      lon: string
-      display_name: string
-    }>
-    if (!data[0]) return null
-    return {
-      lat: parseFloat(data[0].lat),
-      lng: parseFloat(data[0].lon),
-      address: decodeHtmlEntities(data[0].display_name),
-    }
-  } catch {
-    return null
-  }
+// Jusqu'à 5 suggestions pour l'autocomplétion ; [] si le texte est hors bornes (aucune requête).
+export function searchAddresses(query: string, signal?: AbortSignal): Promise<AddressResult[]> {
+  const q = addressQuery(query)
+  if (!q) return Promise.resolve([])
+  return geocodeRequest("completion", q, signal)
 }
 
 // ── Devis ─────────────────────────────────────────────────────────────────────
