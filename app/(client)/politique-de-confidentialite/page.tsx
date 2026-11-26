@@ -118,6 +118,10 @@ export default function PolitiqueConfidentialitePage() {
               ],
               ["Paiement de la prestation", "Exécution du contrat"],
               [
+                "Recherche et autocomplétion des adresses saisies (devis, réservation, modification d'adresse)",
+                "Mesures précontractuelles prises à votre demande et exécution du contrat",
+              ],
+              [
                 "Facturation, avoirs et conservation des pièces comptables",
                 "Obligation légale",
               ],
@@ -169,6 +173,10 @@ export default function PolitiqueConfidentialitePage() {
               [
                 "Sauvegardes de la base de données",
                 "Sauvegarde quotidienne, chaque sauvegarde étant supprimée automatiquement au bout de 8 à 9 jours",
+              ],
+              [
+                "Cache de la recherche d'adresses (adresses de la Base Adresse Nationale et leurs coordonnées, sans lien avec votre compte)",
+                "24 heures pour l'autocomplétion, 3 jours pour la recherche, 1 heure quand aucune adresse n'est trouvée, puis supprimé automatiquement",
               ],
               [
                 "Candidature de chauffeur partenaire et justificatifs",
@@ -243,11 +251,27 @@ export default function PolitiqueConfidentialitePage() {
             contractuelles types adoptées par la Commission européenne.
           </p>
           <p className="text-muted-foreground leading-relaxed">
-            Les tuiles de carte et la recherche d&apos;adresses sont fournies par des
-            services d&apos;OpenStreetMap que votre navigateur contacte directement. Ce
-            sont des services tiers et non nos sous-traitants : ils reçoivent votre
-            adresse IP (et, pour la recherche, le texte de l&apos;adresse saisie) et les
-            traitent selon leurs propres conditions (voir « Cookies et traceurs »).
+            Les tuiles de la carte du devis sont fournies par OpenStreetMap, service
+            tiers et non sous-traitant que votre navigateur contacte directement : il
+            reçoit votre adresse IP et la traite selon ses propres conditions (voir
+            « Cookies et traceurs »).
+          </p>
+          <p className="text-muted-foreground leading-relaxed">
+            La recherche et l&apos;autocomplétion des adresses utilisent le service de
+            géocodage de la Géoplateforme de l&apos;Institut national de
+            l&apos;information géographique et forestière (IGN, établissement public
+            français), qui s&apos;appuie sur la Base Adresse Nationale. Nos serveurs lui
+            transmettent le texte de l&apos;adresse que vous saisissez, au fil de la
+            frappe ; votre navigateur ne le contacte pas, et l&apos;IGN ne reçoit ni
+            votre adresse IP ni aucune autre information vous concernant. Finalité :
+            vous proposer des adresses existantes et obtenir leurs coordonnées pour
+            calculer la distance et le prix. Base légale : mesures précontractuelles
+            prises à votre demande (devis) et exécution du contrat (réservation,
+            modification d&apos;adresse). Les résultats (adresses de la Base Adresse
+            Nationale et leurs coordonnées) sont gardés en cache sur nos serveurs
+            24 heures pour l&apos;autocomplétion et 3 jours pour la recherche
+            (1 heure quand aucune adresse n&apos;est trouvée), sans lien avec votre
+            compte.
           </p>
         </section>
 
@@ -402,13 +426,6 @@ export default function PolitiqueConfidentialitePage() {
             <li>
               <span className="font-medium text-foreground">OpenStreetMap</span> —
               affichage des tuiles de la carte du devis (tile.openstreetmap.org).
-            </li>
-            <li>
-              <span className="font-medium text-foreground">
-                Nominatim (OpenStreetMap)
-              </span>{" "}
-              — recherche et autocomplétion des adresses saisies
-              (nominatim.openstreetmap.org), qui reçoit le texte de l&apos;adresse tapée.
             </li>
           </ul>
         </section>
