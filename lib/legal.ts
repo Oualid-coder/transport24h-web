@@ -4,8 +4,8 @@
 // pages. À changer à chaque modification des textes.
 // Format imposé par l'API : ^[A-Za-z0-9][A-Za-z0-9._-]{0,31}$
 // AAAA-MM-JJ, suivi de ".N" pour une nouvelle version publiée le même jour
-// ("2026-11-17", "2026-11-17.2", "2026-11-19" et "2026-11-20" ont déjà été déployées avec les textes précédents).
-export const TERMS_VERSION = "2026-11-26"
+// ("2026-11-17", "2026-11-17.2", "2026-11-19", "2026-11-20" et "2026-11-26" ont déjà été déployées avec les textes précédents).
+export const TERMS_VERSION = "2026-11-26.2"
 
 // Message unique de la case « 18 ans + CGV + politique de confidentialité » (tous les formulaires)
 export const TERMS_REQUIRED_MESSAGE =

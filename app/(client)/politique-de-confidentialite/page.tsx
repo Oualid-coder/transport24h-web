@@ -172,7 +172,7 @@ export default function PolitiqueConfidentialitePage() {
               ],
               [
                 "Sauvegardes de la base de données",
-                "Sauvegarde quotidienne, chaque sauvegarde étant supprimée automatiquement au bout de 8 à 9 jours",
+                "Sauvegarde quotidienne. Sur notre serveur, chaque sauvegarde est supprimée automatiquement au bout de 8 à 9 jours ; sa copie chiffrée conservée hors de notre serveur (Cloudflare R2, Union européenne) est supprimée automatiquement au bout de 30 à 31 jours",
               ],
               [
                 "Cache de la recherche d'adresses (adresses de la Base Adresse Nationale et leurs coordonnées, sans lien avec votre compte)",
@@ -226,7 +226,10 @@ export default function PolitiqueConfidentialitePage() {
             <li>
               <span className="font-medium text-foreground">Cloudflare</span> (service de
               stockage R2) — stockage des justificatifs des candidatures de chauffeurs
-              partenaires et des photos d&apos;état des lieux.{" "}
+              partenaires et des photos d&apos;état des lieux, ainsi que conservation
+              d&apos;une copie de secours quotidienne de la base de données, chiffrée sur
+              notre serveur avant son envoi (Cloudflare ne détient pas la clé permettant de
+              la lire) et stockée dans l&apos;Union européenne.{" "}
               <ToComplete>entité contractante et localisation du stockage à confirmer</ToComplete>
             </li>
             <li>
@@ -248,7 +251,8 @@ export default function PolitiqueConfidentialitePage() {
             transférer des données à leurs sociétés liées aux États-Unis (Stripe, Inc. et
             Google LLC). Ces transferts sont encadrés par le cadre de protection des
             données UE–États-Unis (Data Privacy Framework) et/ou par les clauses
-            contractuelles types adoptées par la Commission européenne.
+            contractuelles types adoptées par la Commission européenne.{" "}
+            <ToComplete>transferts éventuels vers Cloudflare, Inc. (États-Unis) et leur encadrement à confirmer</ToComplete>
           </p>
           <p className="text-muted-foreground leading-relaxed">
             Les tuiles de la carte du devis sont fournies par OpenStreetMap, service
