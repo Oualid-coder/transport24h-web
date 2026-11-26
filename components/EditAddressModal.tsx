@@ -17,6 +17,7 @@ import { AddressPaidNotice } from "@/components/AddressPaidNotice"
 import type { Booking, GeoPoint } from "@/lib/types"
 import { useRole } from "@/components/RoleProvider"
 import { priceChanged } from "@/lib/price"
+import { isUnconfirmedAddress } from "@/lib/address-search"
 
 export function EditAddressModal({
   open,
@@ -35,6 +36,9 @@ export function EditAddressModal({
   const isB2b = useRole() === "b2b"
   const [newPickup, setNewPickup] = useState<GeoPoint | null>(null)
   const [newDelivery, setNewDelivery] = useState<GeoPoint | null>(null)
+  // Texte affiché par chaque champ : un texte tapé sans adresse choisie bloque l'envoi
+  const [pickupText, setPickupText] = useState("")
+  const [deliveryText, setDeliveryText] = useState("")
   const [error, setError] = useState<string | null>(null)
   const [updatedBooking, setUpdatedBooking] = useState<Booking | null>(null)
   const [paidConflict, setPaidConflict] = useState(false)
@@ -69,6 +73,10 @@ export function EditAddressModal({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
+    if (isUnconfirmedAddress(pickupText, newPickup) || isUnconfirmedAddress(deliveryText, newDelivery)) {
+      setError("Choisissez chaque nouvelle adresse dans la liste des suggestions.")
+      return
+    }
     if (!newPickup && !newDelivery) {
       setError("Veuillez sélectionner au moins une nouvelle adresse.")
       return
@@ -167,6 +175,7 @@ export function EditAddressModal({
               <AddressInput
                 placeholder="Nouvelle adresse de départ…"
                 onSelect={setNewPickup}
+                onTextChange={setPickupText}
               />
               <p className="flex items-center gap-1 text-xs text-muted-foreground">
                 <MapPin className="size-3 shrink-0" />
@@ -184,6 +193,7 @@ export function EditAddressModal({
               <AddressInput
                 placeholder="Nouvelle adresse de destination…"
                 onSelect={setNewDelivery}
+                onTextChange={setDeliveryText}
               />
               <p className="flex items-center gap-1 text-xs text-muted-foreground">
                 <MapPin className="size-3 shrink-0" />

@@ -34,8 +34,12 @@ test("CSP : autres directives inchangées", () => {
   assert.ok(directive(csp, "frame-src").includes("https://hooks.stripe.com"))
   assert.ok(directive(csp, "img-src").includes("https://*.tile.openstreetmap.org"))
   const connect = directive(csp, "connect-src")
-  for (const host of ["https://api.stripe.com", "https://hooks.stripe.com", "https://nominatim.openstreetmap.org"]) {
+  for (const host of ["https://api.stripe.com", "https://hooks.stripe.com"]) {
     assert.ok(connect.includes(host), host)
+  }
+  // Recherche d'adresse par l'API : aucun géocodeur tiers joint par le navigateur.
+  for (const host of ["https://nominatim.openstreetmap.org", "https://data.geopf.fr"]) {
+    assert.ok(!connect.includes(host), host)
   }
 })
 
