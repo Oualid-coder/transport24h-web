@@ -39,6 +39,7 @@ import type {
 import { safeRedirectPath } from "@/lib/safe-redirect"
 import { ADDRESS_UNAVAILABLE_MESSAGE, addressQuery, parseGeocodeResponse, type AddressResult } from "@/lib/address-search"
 import { reportFilename, reportPath, type ReportFilters, type ReportTarget } from "@/lib/bookings-report"
+import type { ChangePasswordBody, ResetPasswordBody } from "@/lib/password"
 
 // Toutes les requêtes authentifiées passent par le proxy Next.js (/api/proxy).
 // Le Route Handler lit le cookie httpOnly access_token côté serveur et injecte
@@ -776,6 +777,51 @@ export function resendVerification(): Promise<{ status: string }> {
   return apiFetch<{ status: string }>("/auth/resend-verification", {
     method: "POST",
   })
+}
+
+// ── Mot de passe ──────────────────────────────────────────────────────────────
+
+// POST /auth/forgot-password — public, via le proxy (IP du visiteur pour la limite de la gateway).
+// 202 que le compte existe ou non ; 422 email mal formé ; 429 limite (Retry-After).
+export async function requestPasswordReset(email: string): Promise<void> {
+  // Réponse 202 sans contenu utile : non lue
+  await apiResponse("/auth/forgot-password", {
+    method: "POST",
+    body: JSON.stringify({ email }),
+    cache: "no-store",
+  })
+}
+
+// POST /auth/reset-password — public, via le proxy. Jeton dans le corps, jamais dans l'URL.
+// 200 ; 422 jeton invalide, expiré ou déjà utilisé, ou mot de passe hors règles ; 429.
+export async function resetPassword(body: ResetPasswordBody): Promise<void> {
+  await apiResponse("/auth/reset-password", {
+    method: "POST",
+    body: JSON.stringify(body),
+    cache: "no-store",
+  })
+}
+
+// POST /api/auth/change-password (Route Handler : il repose les cookies de la nouvelle session,
+// les autres sessions du compte étant révoquées). 401 → un renouvellement puis un rejeu, comme
+// les autres appels ; 403 ancien mot de passe faux ; 409 ; 422 ; 429.
+// Résultat : relogin = true si le mot de passe est changé mais qu'aucune nouvelle session n'a été
+// ouverte (cookies effacés) : renvoyer vers la connexion.
+export async function changePassword(body: ChangePasswordBody): Promise<{ relogin: boolean }> {
+  const init: RequestInit = {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+    credentials: "same-origin",
+    cache: "no-store",
+  }
+  const res = await fetchWithRefresh("/api/auth/change-password", init, init.body)
+  if (!res.ok) {
+    const data = (await res.json().catch(() => ({}))) as { error?: string }
+    throw new ApiError(res.status, data.error ?? res.statusText, parseRetryAfter(res.headers.get("retry-after")))
+  }
+  const data = (await res.json().catch(() => null)) as { relogin?: unknown } | null
+  return { relogin: data?.relogin === true }
 }
 
 // ── Partenaires ───────────────────────────────────────────────────────────────

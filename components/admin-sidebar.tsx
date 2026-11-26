@@ -8,6 +8,7 @@ import {
   Building2,
   ChevronLeft,
   ChevronRight,
+  KeyRound,
   LayoutDashboard,
   LogOut,
   Menu,
@@ -26,6 +27,7 @@ const NAV_ITEMS = [
   { href: "/admin/drivers",    icon: Truck,           label: "Chauffeurs" },
   { href: "/admin/companies",  icon: Building2,       label: "Entreprises" },
   { href: "/admin/credit-notes", icon: Receipt,       label: "Avoirs à émettre" },
+  { href: "/admin/password",   icon: KeyRound,        label: "Mot de passe" },
 ]
 
 export function AdminSidebar({ children }: { children: React.ReactNode }) {

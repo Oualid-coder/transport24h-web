@@ -1,5 +1,6 @@
 import { cookies, headers } from "next/headers"
 import { redirect } from "next/navigation"
+import Link from "next/link"
 import { Package } from "lucide-react"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import type { Booking } from "@/lib/types"
@@ -43,7 +44,10 @@ export default async function DashboardPage() {
     <div className="mx-auto max-w-3xl px-4 py-10">
       <h1 className="mb-2 text-3xl font-bold">Mon espace</h1>
       <p className="mb-8 text-muted-foreground">
-        Retrouvez vos courses à venir et votre historique.
+        Retrouvez vos courses à venir et votre historique.{" "}
+        <Link href="/dashboard/password" className="text-primary underline-offset-4 hover:underline max-lg:inline-block max-lg:py-3">
+          Changer mon mot de passe
+        </Link>
       </p>
 
       <Tabs defaultValue="upcoming">
