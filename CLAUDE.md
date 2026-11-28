@@ -116,7 +116,9 @@ Les route groups `(client)`, `(admin)`, `(driver)` n'apparaissent pas dans les U
   accueil du rôle (`user_role`). 429 / indisponible : message, bouton « Réessayer », lien « Se reconnecter », un seul
   nouvel essai automatique si `Retry-After` ≤ 60 s. Gardes anti-boucle : après un refresh réussi, `document.cookie`
   doit contenir `user_role=` (posé avec `access_token`), sinon `/login` ; en complément
-  `sessionStorage["session-resume-at"]` (15 s, ignoré si le stockage lève).
+  `sessionStorage["session-resume-at"]` (15 s) ; si le stockage est bloqué (lot 12, sujet 54), cookie compteur
+  `session_resume` (`Path=/session`, 60 s, `SameSite=Strict`, jamais écrit quand le stockage marche) : au-delà de
+  3 reprises, page d'arrêt « Reprise de session interrompue » (focus sur le titre, « Se connecter », « Réessayer »).
 - Non couverts : `window.open` de la facture PDF admin (`/api/proxy/.../pdf`), Server Component `dashboard`
   (corrigé au lot 11 : 401 → `/session`), navbar des pages publiques (`isLoggedIn` lit
   `access_token`, faux après 15 min d'inactivité jusqu'à la prochaine page protégée ou requête API).
@@ -184,7 +186,8 @@ Lire le guide pertinent dans `node_modules/next/dist/docs/` — les APIs, conven
 - Même case (composant `components/TermsCheckbox.tsx`, champ zod `acceptTermsField`, message `TERMS_REQUIRED_MESSAGE`)
   sur l'activation d'un compte entreprise (`buildAcceptInvitationBody` → POST /auth/accept-invitation) et la
   candidature partenaire (`buildPartnerApplyBody` → POST /partners). Champs construits par `termsAcceptanceFields`
-  (`lib/legal.ts`). Pas de case pour les comptes créés par l'admin (chauffeurs salariés).
+  (`lib/legal.ts`). Depuis le lot 12 (sujet 46), les chauffeurs créés par l'admin activent leur compte par la même
+  page `/accept-invitation`, donc avec la même case (à valider par Oualid pour les salariés).
 - Textes : ne rien affirmer qui ne soit prouvé par le code ou la config des deux dépôts. Une information manquante
   s'affiche en clair entre crochets (`ToComplete` dans la politique, encadré orange dans les CGV), jamais inventée.
   Les annulations des CGV suivent `computeRefund` de l'API (bornes : 24 h pile → 50 %, 2 h pile → 0 %).
@@ -264,12 +267,20 @@ Lire le guide pertinent dans `node_modules/next/dist/docs/` — les APIs, conven
 - Politique : IGN destinataire du texte de l'adresse (via nos serveurs, pas l'IP), cache 24 h / 3 jours / 1 h ; `TERMS_VERSION = "2026-11-26"`. La branche non mergée `docs/politique-journaux` devra prendre une nouvelle version à son merge (conflit trivial sur `lib/legal.ts` et `tests/register.test.ts`).
 - Dans un conteneur sans TTY, `npm test` affiche `# pass N` (TAP) et non `ℹ pass N`.
 
+## Lot 12 (2026-11-27/28, en prod)
+
+- **Invitation des chauffeurs (sujet 46)** : plus de mot de passe temporaire ; l'API envoie une invitation par email (`invitation_sent`). `components/admin/DriverInvitations.tsx` (invitations en attente, `GET /admin/drivers/invitations`) : « Renvoyer l'invitation » (429 + `Retry-After` affiché), « Corriger » l'email (ancien lien expiré), « Annuler l'invitation » (désactive le compte ; l'email reste pris). Déployé après l'API.
+- **Filtre de statut des partenaires (sujet 49)** : `/admin/partners?status=` envoyé à l'API, `lib/partner-status-filter.ts` (`partnersForStatus`) filtre aussi côté web.
+- **Boucle de session sans stockage (sujet 54)** : voir « Session et refresh ». Testé dans Chromium (Playwright en conteneur) avec `sessionStorage` bloqué.
+- API (sans changement web) : approbation atomique (47), désactivation en 409 pendant des courses non terminées (48, message affiché par `errorMessage`), TVA du devis (50), mails de facture et d'annulation (51, 53), refus sans fausse alerte (52).
+- Ouverts : « TVA 20 % » en dur sur la page de paiement et dans les CGV ; pas de test navigateur pour « Corriger » et « Annuler » ; course `/login` à plusieurs onglets.
+
 ## Lot 11 (2026-11-26, en prod)
 
 - **Tableaux de bord sans liste vide trompeuse (sujet 44)** : `lib/list-load.ts` (`loadServerList` pour les Server Components : 401 → `session`, sinon `error`, délai de 10 s ; `loadErrorMessage` : 502/503/504, réseau et délai → « Service momentanément indisponible » avec Retry-After, 404 → « Liste introuvable… », 403 → `errorMessage` ; `canRetryLoad` (pas sur 403) ; `sessionRedirectUrl` passé par `safeRedirectPath`). `components/LoadError.tsx` (`role="alert"`, « Réessayer » ; `RefreshLoadError` → `router.refresh()`). `/dashboard` (client et entreprise) : 401 → `/session?redirect=/dashboard` → retour ou `/login`. Chauffeur, admin (statistiques, `BookingList`), modale d'affectation, historique des ajustements : encadré d'erreur avant l'état vide. 200 [] inchangé.
 - **Refus d'une candidature approuvée (sujet 43)** : `/admin/partners`, bouton « Refuser et désactiver le compte » avec confirmation en deux étapes (`lib/partner-reject.ts`) ; 409 affiché par `errorMessage`, liste relue sur 409/404 ; garde `useRef` contre le double envoi (Approuver, Rejeter, Confirmer). Déployé après l'API.
 - API (sans changement web) : déconnexion d'un appareil (sujet 45) → jeton d'accès refusé aussitôt ; refresh en 503 (cookie gardé) pendant une panne Redis ou base ; montants des mails client (sujet 42) ; refus admin d'une course en 409 pendant un ajustement de prix (affiché par `BookingCard`).
-- Ouverts : boucle `/dashboard` ↔ `/session` possible si `sessionStorage` est bloqué et que l'API refuse un jeton fraîchement renouvelé ; liste périmée sans avertissement après un rechargement raté (chauffeur, admin).
+- Ouvert : liste périmée sans avertissement après un rechargement raté (chauffeur, admin). (Boucle `/session` avec `sessionStorage` bloqué : corrigée au lot 12, sujet 54.)
 
 ## Lot 10 (2026-11-26, en prod)
 
