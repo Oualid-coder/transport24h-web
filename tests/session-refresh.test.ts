@@ -358,9 +358,10 @@ test("resumeSession : 429 / 5xx / réseau → message et nouvel essai, aucune na
   assert.equal((await resumeSession("/booking/new", false, ROLE_COOKIE)).kind, "retry")
 })
 
-test("resumeSession : renouvellement récent déjà tenté → connexion directe, aucun appel (pas de boucle)", async () => {
+test("resumeSession : renouvellement récent déjà tenté → arrêt avec lien de connexion, aucun appel (pas de boucle)", async () => {
   const calls = mockFetch(() => Response.json({ ok: true }))
-  assert.deepEqual(await resumeSession("/dashboard", true, ROLE_COOKIE), nav(`/login?redirect=${encodeURIComponent("/dashboard")}`))
+  assert.deepEqual(await resumeSession("/dashboard", true, ROLE_COOKIE), { kind: "stopped", loginUrl: `/login?redirect=${encodeURIComponent("/dashboard")}` })
+  assert.deepEqual(await resumeSession("//evil.example", true, ROLE_COOKIE), { kind: "stopped", loginUrl: "/login" })
   assert.equal(calls.length, 0)
 })
 

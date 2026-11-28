@@ -131,13 +131,14 @@ const readDocumentCookies = (): string => (typeof document !== "undefined" ? doc
 export type ResumeResult =
   | { kind: "navigate"; to: string }
   | { kind: "retry"; message: string; retryAfter: number | null; loginUrl: string }
+  | { kind: "stopped"; loginUrl: string }
 
 // Page /session (redirection de proxy.ts sans access_token) : que faire après une tentative de refresh.
 // - succès ET cookie user_role visible (posé avec access_token) → page demandée, ou accueil du rôle ;
 //   cookie absent (non enregistré) → connexion, jamais de retour vers la page protégée (boucle) ;
 // - session refusée → connexion ; 429 / indisponible → message et nouvel essai (pas de redirection).
-// recentAttempt : un renouvellement vient déjà de réussir dans cet onglet (garde sessionStorage, en
-// complément) → connexion directe.
+// recentAttempt : des renouvellements viennent déjà de réussir (gardes de lib/session-resume.ts)
+// → arrêt sur /session (message + « Se connecter »), aucun appel ni navigation (pas de boucle).
 function clearDocumentRoleCookie(): void {
   if (typeof document === "undefined") return
   document.cookie = "user_role=; path=/; max-age=0"
@@ -151,7 +152,7 @@ export async function resumeSession(
 ): Promise<ResumeResult> {
   const asked = safeRedirectPath(rawRedirect)
   const loginUrl = (to: string | null) => (to ? `/login?redirect=${encodeURIComponent(to)}` : "/login")
-  if (recentAttempt) return { kind: "navigate", to: loginUrl(asked) }
+  if (recentAttempt) return { kind: "stopped", loginUrl: loginUrl(asked) }
   // Un ancien user_role resté dans le navigateur ne doit pas faire croire que le refresh a
   // posé ses cookies : on l'efface d'abord, sa présence ensuite prouve l'enregistrement.
   clearRoleCookie()
