@@ -1,8 +1,9 @@
 import { ApiError } from "@/lib/api"
 import { errorMessage } from "@/lib/error-message"
-import type { InvitationStatus, PartnerStatus } from "@/lib/types"
+import type { DriverCreated, DriverInvitation, InvitationStatus, PartnerStatus } from "@/lib/types"
 
-// Renvoi par l'admin de l'invitation entreprise (POST /admin/companies/{id}/resend-invitation)
+// Renvoi par l'admin de l'invitation entreprise (POST /admin/companies/{id}/resend-invitation),
+// de l'invitation chauffeur (POST /admin/drivers/{id}/resend-invitation)
 // et du lien d'envoi des documents (POST /admin/partners/{id}/resend-link).
 // L'API limite à 1 renvoi par 5 minutes et 5 par 24 h (429 + Retry-After).
 
@@ -44,4 +45,23 @@ export function invitationResentMessage(email: string): string {
 
 export function partnerLinkResentMessage(email: string): string {
   return email ? `Lien renvoyé à ${email}.` : "Lien renvoyé."
+}
+
+// Création d'un chauffeur CDI : plus de mot de passe à transmettre, le chauffeur reçoit une
+// invitation par e-mail. Mail non parti (invitation_sent absent ou faux) : à renvoyer.
+export function driverCreatedMessage(created: DriverCreated): { sent: boolean; text: string } {
+  return created.invitation_sent === true
+    ? {
+        sent: true,
+        text: `Invitation envoyée à ${created.email}. Le lien d'activation est valable 72 heures.`,
+      }
+    : {
+        sent: false,
+        text: "Compte créé, mais l'invitation n'a pas pu être envoyée. Renvoyez-la depuis « Invitations en attente ».",
+      }
+}
+
+// Statut d'une invitation chauffeur affiché dans l'admin.
+export function driverInvitationStatusLabel(status: DriverInvitation["invitation_status"]): string {
+  return status === "expired" ? "Lien expiré" : "Invitation envoyée"
 }

@@ -15,6 +15,7 @@ import type {
   CreateQuoteBody,
   Driver,
   DriverCreated,
+  DriverInvitation,
   EstimateBody,
   EstimateResult,
   HelpersSurcharge,
@@ -597,7 +598,8 @@ export function getAdminDrivers(): Promise<Driver[]> {
   return apiFetch<Driver[]>("/admin/drivers")
 }
 
-// POST /admin/drivers — crée un compte chauffeur CDI, retourne 201 avec mot de passe temporaire
+// POST /admin/drivers — crée un compte chauffeur CDI inactif et lui envoie une invitation par
+// e-mail (201, sans mot de passe ; invitation_sent indique si le mail est parti)
 export function createDriver(body: {
   email: string
   first_name: string
@@ -659,6 +661,17 @@ export function approvePartner(id: string): Promise<PartnerApplication> {
 // PUT /admin/partners/{id}/reject
 export function rejectPartner(id: string): Promise<PartnerApplication> {
   return apiFetch<PartnerApplication>(`/admin/partners/${id}/reject`, { method: "PUT" })
+}
+
+// GET /admin/drivers/invitations — chauffeurs invités qui n'ont pas encore activé leur compte
+export function getDriverInvitations(): Promise<DriverInvitation[]> {
+  return apiFetch<DriverInvitation[]>("/admin/drivers/invitations")
+}
+
+// POST /admin/drivers/{id}/resend-invitation — nouveau lien (l'ancien ne marche plus).
+// 409 si le compte est actif ou désactivé, 429 + Retry-After (1 / 5 min, 5 / 24 h).
+export function resendDriverInvitation(id: string): Promise<void> {
+  return apiFetch<void>(`/admin/drivers/${encodeURIComponent(id)}/resend-invitation`, { method: "POST" })
 }
 
 // POST /admin/partners/{id}/resend-link — candidature pending : renvoie le mail avec le lien

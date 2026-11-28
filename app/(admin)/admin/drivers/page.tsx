@@ -11,6 +11,7 @@ import type { Driver, DriverEmploymentType } from "@/lib/types"
 import { BackButton } from "@/components/BackButton"
 import { CreateDriverModal } from "@/components/admin/CreateDriverModal"
 import { EditDriverModal } from "@/components/admin/EditDriverModal"
+import { DRIVER_INVITATIONS_QUERY_KEY, DriverInvitations } from "@/components/admin/DriverInvitations"
 
 const EMPLOYMENT_CONFIG: Record<
   DriverEmploymentType,
@@ -229,12 +230,15 @@ export default function DriversPage() {
         </div>
       )}
 
+      <DriverInvitations />
+
+      {/* Création : la modale reste ouverte pour confirmer l'envoi de l'invitation. */}
       <CreateDriverModal
         open={createOpen}
         onClose={() => setCreateOpen(false)}
         onCreated={() => {
           queryClient.invalidateQueries({ queryKey: ["admin-drivers"] })
-          setCreateOpen(false)
+          queryClient.invalidateQueries({ queryKey: DRIVER_INVITATIONS_QUERY_KEY })
         }}
       />
 

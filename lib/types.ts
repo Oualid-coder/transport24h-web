@@ -32,12 +32,28 @@ export interface Driver {
   application_id?: string
 }
 
+// Réponse de POST /admin/drivers : plus de mot de passe, le chauffeur reçoit une invitation
+// par e-mail. invitation_sent = false : compte créé mais mail non parti (à renvoyer).
 export interface DriverCreated {
   id: string
   email: string
   first_name: string
   last_name: string
-  temp_password: string
+  invitation_sent?: boolean
+  created_at: string
+}
+
+// GET /admin/drivers/invitations : chauffeurs (CDI ou partenaires approuvés) qui n'ont pas
+// encore activé leur compte.
+export interface DriverInvitation {
+  id: string
+  first_name: string
+  last_name: string
+  email: string
+  phone: string
+  employment_type: DriverEmploymentType
+  application_id?: string
+  invitation_status: "invited" | "expired"
   created_at: string
 }
 
