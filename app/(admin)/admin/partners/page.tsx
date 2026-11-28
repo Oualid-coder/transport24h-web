@@ -29,6 +29,7 @@ import {
   rejectErrorMessage,
   rejectNeedsConfirmation,
 } from "@/lib/partner-reject"
+import { partnersForStatus } from "@/lib/partner-status-filter"
 import type { PartnerApplication, PartnerStatus } from "@/lib/types"
 import { BackButton } from "@/components/BackButton"
 
@@ -433,11 +434,12 @@ function PartnerCard({
 function PartnerList({ status }: { status?: PartnerStatus }) {
   const queryKey = ["admin-partners", status ?? "all"]
 
-  const { data: partners = [], isLoading, error } = useQuery({
+  const { data = [], isLoading, error } = useQuery({
     queryKey,
     queryFn: () => getAdminPartners(status),
     refetchInterval: 30_000,
   })
+  const partners = partnersForStatus(data, status)
 
   if (isLoading) {
     return (
