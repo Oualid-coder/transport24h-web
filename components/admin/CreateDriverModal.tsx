@@ -4,8 +4,7 @@ import { useState } from "react"
 import { useMutation } from "@tanstack/react-query"
 import {
   AlertTriangle,
-  Check,
-  Copy,
+  CheckCircle,
   Loader2,
   X,
 } from "lucide-react"
@@ -18,6 +17,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog"
 import { createDriver, ApiError } from "@/lib/api"
+import { driverCreatedMessage } from "@/lib/invitation-resend"
 import type { DriverCreated } from "@/lib/types"
 
 export function CreateDriverModal({
@@ -38,7 +38,6 @@ export function CreateDriverModal({
   const [fieldErrors, setFieldErrors] = useState<Partial<Record<keyof typeof fields, string>>>({})
   const [result, setResult] = useState<DriverCreated | null>(null)
   const [serverError, setServerError] = useState<string | null>(null)
-  const [copied, setCopied] = useState(false)
 
   const mutation = useMutation({
     mutationFn: () => createDriver(fields),
@@ -50,6 +49,17 @@ export function CreateDriverModal({
       setServerError(err instanceof ApiError ? err.message : "Erreur lors de la création.")
     },
   })
+
+  // Fermeture : formulaire et confirmation remis à zéro (sinon la confirmation précédente
+  // réapparaîtrait à la prochaine ouverture).
+  const handleClose = () => {
+    setResult(null)
+    setFields({ email: "", first_name: "", last_name: "", phone: "" })
+    setFieldErrors({})
+    setServerError(null)
+    mutation.reset()
+    onClose()
+  }
 
   const set =
     (k: keyof typeof fields) => (e: React.ChangeEvent<HTMLInputElement>) =>
@@ -73,19 +83,12 @@ export function CreateDriverModal({
     mutation.mutate()
   }
 
-  const handleCopy = async () => {
-    if (!result) return
-    await navigator.clipboard.writeText(result.temp_password)
-    setCopied(true)
-    setTimeout(() => setCopied(false), 2000)
-  }
-
   return (
     <Dialog
       open={open}
       onOpenChange={(isOpen) => {
         if (!isOpen && mutation.isPending) return
-        if (!isOpen) onClose()
+        if (!isOpen) handleClose()
       }}
     >
       <DialogContent
@@ -111,41 +114,37 @@ export function CreateDriverModal({
         </div>
 
         {result ? (
-          /* ── État succès : mot de passe temporaire ── */
+          /* ── État succès : invitation envoyée (aucun mot de passe affiché) ── */
           <div className="space-y-4 p-5">
-            <div className="flex items-start gap-3 rounded-lg border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-500">
-              <AlertTriangle className="mt-0.5 size-4 shrink-0" />
-              <p>
-                Transmettez ce mot de passe au chauffeur{" "}
-                <span className="font-semibold">maintenant</span>. Il ne sera
-                plus jamais affiché après fermeture de cette fenêtre.
-              </p>
-            </div>
-            <div>
-              <p className="mb-2 text-sm text-muted-foreground">
-                {result.first_name} {result.last_name} ·{" "}
-                <span className="font-mono text-xs">{result.email}</span>
-              </p>
-              <div className="flex items-center gap-2 rounded-lg border border-border bg-accent/40 px-4 py-3">
-                <code className="flex-1 select-all font-mono text-sm font-bold tracking-widest">
-                  {result.temp_password}
-                </code>
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  className="shrink-0"
-                  onClick={handleCopy}
+            {(() => {
+              const msg = driverCreatedMessage(result)
+              return msg.sent ? (
+                <div
+                  role="status"
+                  className="flex items-start gap-3 rounded-lg border border-emerald-500/30 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-600"
                 >
-                  {copied ? (
-                    <Check className="mr-1.5 size-3.5 text-emerald-500" />
-                  ) : (
-                    <Copy className="mr-1.5 size-3.5" />
-                  )}
-                  {copied ? "Copié !" : "Copier"}
-                </Button>
-              </div>
-            </div>
-            <Button className="w-full" onClick={onClose}>
+                  <CheckCircle className="mt-0.5 size-4 shrink-0" />
+                  <p>{msg.text}</p>
+                </div>
+              ) : (
+                <div
+                  role="alert"
+                  className="flex items-start gap-3 rounded-lg border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-600"
+                >
+                  <AlertTriangle className="mt-0.5 size-4 shrink-0" />
+                  <p>{msg.text}</p>
+                </div>
+              )
+            })()}
+            <p className="text-sm text-muted-foreground">
+              {result.first_name} {result.last_name} ·{" "}
+              <span className="break-all font-mono text-xs">{result.email}</span>
+            </p>
+            <p className="text-xs text-muted-foreground">
+              Le chauffeur choisit lui-même son mot de passe en ouvrant le lien reçu. Son compte
+              apparaît dans « Invitations en attente » jusqu&apos;à l&apos;activation.
+            </p>
+            <Button className="w-full" onClick={handleClose}>
               Fermer
             </Button>
           </div>
